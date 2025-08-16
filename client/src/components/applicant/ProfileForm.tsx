@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import LocationDropdowns from '@/components/common/LocationDropdowns';
-import { Plus, Trash2, Upload, FileText } from 'lucide-react';
+import { Plus, Trash2, Upload, FileText, Shield, Check } from 'lucide-react';
 
 // Step schemas
 const personalDetailsSchema = z.object({
@@ -23,6 +25,10 @@ const personalDetailsSchema = z.object({
   phoneNumber: z.string().min(10, 'Phone number must be at least 10 digits'),
   altPhoneNumber: z.string().optional(),
   nationalId: z.string().min(6, 'National ID is required'),
+  idPassportType: z.enum(['national_id', 'passport', 'alien_id'], {
+    required_error: 'Please select ID/Passport type',
+  }),
+  idPassportNumber: z.string().min(5, 'ID/Passport number is required'),
   dateOfBirth: z.string().min(1, 'Date of birth is required'),
   gender: z.string().min(1, 'Gender is required'),
   nationality: z.string().default('Kenyan'),
@@ -236,6 +242,7 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                 <Label htmlFor="otherName">Other Name</Label>
                 <Input
                   id="otherName"
+                  data-testid="input-otherName"
                   {...form.register('otherName')}
                   placeholder="Enter other name (optional)"
                 />
@@ -245,12 +252,49 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                 <Label htmlFor="nationalId">National ID *</Label>
                 <Input
                   id="nationalId"
+                  data-testid="input-nationalId"
                   {...form.register('nationalId')}
                   placeholder="Enter national ID number"
                 />
                 {form.formState.errors.nationalId && (
                   <p className="text-sm text-red-600 mt-1">
                     {form.formState.errors.nationalId.message as string}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="idPassportType">ID/Passport Type *</Label>
+                <Select onValueChange={(value) => form.setValue('idPassportType', value as any)}>
+                  <SelectTrigger data-testid="select-idPassportType">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="national_id">National ID</SelectItem>
+                    <SelectItem value="passport">Passport</SelectItem>
+                    <SelectItem value="alien_id">Alien ID</SelectItem>
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.idPassportType && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {form.formState.errors.idPassportType.message as string}
+                  </p>
+                )}
+              </div>
+              
+              <div>
+                <Label htmlFor="idPassportNumber">ID/Passport Number *</Label>
+                <Input
+                  id="idPassportNumber"
+                  data-testid="input-idPassportNumber"
+                  {...form.register('idPassportNumber')}
+                  placeholder="Enter ID/Passport number"
+                />
+                {form.formState.errors.idPassportNumber && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {form.formState.errors.idPassportNumber.message as string}
                   </p>
                 )}
               </div>

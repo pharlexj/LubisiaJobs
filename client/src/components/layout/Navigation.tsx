@@ -16,7 +16,7 @@ import AuthDrawer from './AuthDrawer';
 
 export default function Navigation() {
   const [location] = useLocation();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const [showAuthDrawer, setShowAuthDrawer] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
 
@@ -33,9 +33,9 @@ export default function Navigation() {
     setAuthMode(mode);
     setShowAuthDrawer(true);
   };
-
+  
   const handleLogout = () => {
-    window.location.href = '/api/logout';
+    logout();
   };
 
   const getUserInitials = () => {

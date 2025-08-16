@@ -131,8 +131,12 @@ export const applicants = pgTable("applicants", {
   surname: varchar("surname", { length: 100 }),
   otherName: varchar("other_name", { length: 100 }),
   phoneNumber: varchar("phone_number", { length: 20 }),
+  phoneVerified: boolean("phone_verified").default(false),
+  phoneVerifiedAt: timestamp("phone_verified_at"),
   altPhoneNumber: varchar("alt_phone_number", { length: 20 }),
   nationalId: varchar("national_id", { length: 50 }),
+  idPassportNumber: varchar("id_passport_number", { length: 50 }),
+  idPassportType: varchar("id_passport_type", { length: 20 }), // 'national_id', 'passport', 'alien_id'
   dateOfBirth: date("date_of_birth"),
   gender: varchar("gender", { length: 10 }),
   nationality: varchar("nationality", { length: 100 }),
@@ -362,8 +366,26 @@ export const insertNoticeSchema = createInsertSchema(notices).omit({
   updatedAt: true,
 });
 
+// OTP verification table
+export const otpVerification = pgTable("otp_verification", {
+  id: serial("id").primaryKey(),
+  phoneNumber: varchar("phone_number", { length: 20 }).notNull(),
+  otp: varchar("otp", { length: 6 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  verified: boolean("verified").default(false),
+  attempts: integer("attempts").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas for OTP
+export const insertOtpSchema = createInsertSchema(otpVerification).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = z.infer<typeof insertUserSchema>;
+export type OtpVerification = typeof otpVerification.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type Applicant = typeof applicants.$inferSelect;
 export type Job = typeof jobs.$inferSelect;

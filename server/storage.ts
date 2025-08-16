@@ -16,6 +16,7 @@ import {
   employmentHistory,
   referees,
   documents,
+  otpVerification,
   type User,
   type UpsertUser,
   type Applicant,
@@ -29,6 +30,7 @@ import {
   type Designation,
   type Award,
   type CourseOffered,
+  type OtpVerification,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, like, sql } from "drizzle-orm";
@@ -69,6 +71,11 @@ export interface IStorage {
   getNotices(isPublished?: boolean): Promise<Notice[]>;
   createNotice(notice: Omit<Notice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notice>;
   updateNotice(id: number, notice: Partial<Notice>): Promise<Notice>;
+  
+  // OTP operations
+  createOtp(phoneNumber: string, otp: string): Promise<OtpVerification>;
+  verifyOtp(phoneNumber: string, otp: string): Promise<boolean>;
+  cleanupExpiredOtps(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -253,6 +260,70 @@ export class DatabaseStorage implements IStorage {
       .where(eq(notices.id, id))
       .returning();
     return updatedNotice;
+  }
+  // OTP operations
+  async createOtp(phoneNumber: string, otp: string): Promise<OtpVerification> {
+    // Clean up old OTPs for this phone number
+    await db.delete(otpVerification).where(eq(otpVerification.phoneNumber, phoneNumber));
+    
+    // Create new OTP with 5-minute expiration
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    
+    const [newOtp] = await db.insert(otpVerification).values({
+      phoneNumber,
+      otp,
+      expiresAt,
+      verified: false,
+      attempts: 0,
+    }).returning();
+    
+    return newOtp;
+  }
+
+  async verifyOtp(phoneNumber: string, otp: string): Promise<boolean> {
+    const [otpRecord] = await db
+      .select()
+      .from(otpVerification)
+      .where(
+        and(
+          eq(otpVerification.phoneNumber, phoneNumber),
+          eq(otpVerification.otp, otp),
+          eq(otpVerification.verified, false)
+        )
+      )
+      .orderBy(desc(otpVerification.createdAt))
+      .limit(1);
+
+    if (!otpRecord) {
+      return false;
+    }
+
+    // Check if OTP is expired
+    if (new Date() > otpRecord.expiresAt) {
+      return false;
+    }
+
+    // Check if too many attempts
+    if (otpRecord.attempts >= 3) {
+      return false;
+    }
+
+    // Increment attempts
+    await db
+      .update(otpVerification)
+      .set({ 
+        attempts: otpRecord.attempts + 1,
+        verified: true 
+      })
+      .where(eq(otpVerification.id, otpRecord.id));
+
+    return true;
+  }
+
+  async cleanupExpiredOtps(): Promise<void> {
+    await db
+      .delete(otpVerification)
+      .where(sql`${otpVerification.expiresAt} < NOW()`);
   }
 }
 

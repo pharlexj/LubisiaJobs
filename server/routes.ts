@@ -7,6 +7,18 @@ import multer from "multer";
 import path from "path";
 import { insertJobSchema, insertApplicationSchema, insertNoticeSchema } from "@shared/schema";
 
+// OTP utility functions
+function generateOtp(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Simulate SMS sending (in production, integrate with SMS provider like Twilio)
+function sendSms(phoneNumber: string, message: string): Promise<boolean> {
+  console.log(`SMS to ${phoneNumber}: ${message}`);
+  // In development, just log the OTP
+  return Promise.resolve(true);
+}
+
 // File upload configuration
 const upload = multer({
   dest: 'uploads/',
@@ -25,6 +37,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
+  // OTP routes
+  app.post('/api/auth/send-otp', async (req, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ message: 'Phone number is required' });
+      }
+
+      // Generate OTP
+      const otp = generateOtp();
+      
+      // Store OTP in database
+      await storage.createOtp(phoneNumber, otp);
+      
+      // Send SMS (in production, use real SMS service)
+      const message = `Your TNCPSB verification code is: ${otp}. Valid for 5 minutes.`;
+      await sendSms(phoneNumber, message);
+      
+      res.json({ message: 'OTP sent successfully' });
+    } catch (error) {
+      console.error('Error sending OTP:', error);
+      res.status(500).json({ message: 'Failed to send OTP' });
+    }
+  });
+
+  app.post('/api/auth/verify-otp', async (req, res) => {
+    try {
+      const { phoneNumber, otp } = req.body;
+      
+      if (!phoneNumber || !otp) {
+        return res.status(400).json({ message: 'Phone number and OTP are required' });
+      }
+
+      const isValid = await storage.verifyOtp(phoneNumber, otp);
+      
+      if (isValid) {
+        res.json({ message: 'OTP verified successfully', verified: true });
+      } else {
+        res.status(400).json({ message: 'Invalid or expired OTP', verified: false });
+      }
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      res.status(500).json({ message: 'Failed to verify OTP' });
+    }
+  });
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
@@ -41,7 +100,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         applicantProfile = await storage.getApplicant(userId);
       }
 
-      res.json({ ...user, applicantProfile });
+      // Determine redirect URL based on role and profile completion
+      let redirectUrl = '/';
+      if (user.role === 'applicant') {
+        if (!applicantProfile) {
+          redirectUrl = '/profile?step=1&reason=complete_profile';
+        } else if (applicantProfile.profileCompletionPercentage < 100) {
+          redirectUrl = '/profile?step=2&reason=incomplete_profile';
+        } else {
+          redirectUrl = '/dashboard';
+        }
+      } else if (user.role === 'admin') {
+        redirectUrl = '/admin';
+      } else if (user.role === 'board') {
+        redirectUrl = '/board';
+      }
+
+      res.json({ ...user, applicantProfile, redirectUrl });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -181,6 +256,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating profile:', error);
       res.status(500).json({ message: 'Failed to update profile' });
+    }
+  });
+  
+  // Mark phone as verified after OTP verification
+  app.post('/api/applicant/verify-phone', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'applicant') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const profile = await storage.getApplicant(userId);
+      if (!profile) {
+        return res.status(404).json({ message: 'Profile not found' });
+      }
+
+      const { phoneNumber } = req.body;
+      
+      // Update phone verification status
+      const updatedProfile = await storage.updateApplicant(profile.id, {
+        phoneVerified: true,
+        phoneVerifiedAt: new Date(),
+        phoneNumber,
+      });
+      
+      res.json(updatedProfile);
+    } catch (error) {
+      console.error('Error verifying phone:', error);
+      res.status(500).json({ message: 'Failed to verify phone' });
     }
   });
 
