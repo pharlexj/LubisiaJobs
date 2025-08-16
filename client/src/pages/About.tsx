@@ -1,4 +1,5 @@
 import Navigation from '@/components/layout/Navigation';
+import BoardLeadershipCarousel from '@/components/about/BoardLeadershipCarousel';
 import { Card, CardContent } from '@/components/ui/card';
 import { Building, Users, Target, Award, Shield, Heart } from 'lucide-react';
 
@@ -120,39 +121,12 @@ export default function About() {
           </div>
         </div>
 
-        {/* Board Members */}
+        {/* Board Leadership Carousel */}
         <div className="mb-16">
           <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
             Board Leadership
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                name: "Dr. Mary Kiprotich",
-                position: "Chairperson",
-                qualification: "PhD in Public Administration"
-              },
-              {
-                name: "John Wekesa",
-                position: "Vice Chairperson",
-                qualification: "Masters in Human Resource Management"
-              },
-              {
-                name: "Grace Nasimiyu",
-                position: "Member",
-                qualification: "LLB, Advocate of the High Court"
-              }
-            ].map((member, index) => (
-              <Card key={index}>
-                <CardContent className="p-6 text-center">
-                  <div className="w-20 h-20 bg-gray-300 rounded-full mx-auto mb-4"></div>
-                  <h3 className="font-semibold text-gray-900 mb-1">{member.name}</h3>
-                  <p className="text-primary font-medium mb-2">{member.position}</p>
-                  <p className="text-sm text-gray-600">{member.qualification}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <BoardLeadershipCarousel />
         </div>
 
         {/* Contact Information */}
