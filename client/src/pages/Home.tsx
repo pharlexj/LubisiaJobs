@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import Navigation from '@/components/layout/Navigation';
+import HeroCarousel from '@/components/home/HeroCarousel';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,47 +22,8 @@ export default function Home() {
     <div className="min-h-screen bg-neutral-50">
       <Navigation />
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="relative bg-gradient-to-r from-primary to-blue-600 text-white">
-          <div className="absolute inset-0 bg-black opacity-20"></div>
-          <div
-            className="absolute inset-0 opacity-30"
-            style={{
-              backgroundImage: 'url("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1920&h=1080")',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
-          ></div>
-
-          <div className="relative max-w-7xl mx-auto px-4 py-20 sm:px-6 lg:px-8 text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Build Your Career in Public Service
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto opacity-90">
-              Join Trans Nzoia County Public Service Board - Where dedication meets opportunity in serving our community
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                variant="secondary"
-                className="bg-white text-primary hover:bg-gray-100"
-              >
-                <Search className="w-5 h-5 mr-2" />
-                Browse Jobs
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-2 border-white text-white hover:bg-white hover:text-primary"
-              >
-                <UserPlus className="w-5 h-5 mr-2" />
-                Apply Now
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Hero Carousel */}
+      <HeroCarousel />
 
       {/* Stats Section */}
       <section className="py-16 bg-white">
