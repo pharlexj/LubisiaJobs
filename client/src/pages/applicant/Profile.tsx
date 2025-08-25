@@ -24,6 +24,7 @@ export default function ApplicantProfile() {
 
   const steps = [
     { id: 1, name: 'Personal Details', required: true },
+    { id: 1.5, name: 'Employee Details', required: true, conditional: true }, // Only show if verified employee
     { id: 2, name: 'Address Information', required: true },
     { id: 3, name: 'Educational Background', required: true },
     { id: 4, name: 'Short Courses', required: false },
@@ -72,15 +73,45 @@ export default function ApplicantProfile() {
     });
   };
 
+  const isEmployeeVerified = profile?.applicantProfile?.isEmployee && profile?.applicantProfile?.employee;
+  
+  const getNextStep = (current: number) => {
+    if (current === 1 && isEmployeeVerified) {
+      return 1.5; // Go to employee details if verified
+    }
+    if (current === 1 && !isEmployeeVerified) {
+      return 2; // Skip employee details if not verified
+    }
+    if (current === 1.5) {
+      return 2; // From employee details to address
+    }
+    return current + 1;
+  };
+  
+  const getPrevStep = (current: number) => {
+    if (current === 2 && isEmployeeVerified) {
+      return 1.5; // Go back to employee details if verified
+    }
+    if (current === 2 && !isEmployeeVerified) {
+      return 1; // Go back to personal details if not verified
+    }
+    if (current === 1.5) {
+      return 1; // From employee details to personal
+    }
+    return current - 1;
+  };
+
   const handleNextStep = () => {
-    if (currentStep < steps.length) {
-      setCurrentStep(currentStep + 1);
+    const next = getNextStep(currentStep);
+    if (next <= 8) {
+      setCurrentStep(next);
     }
   };
 
   const handlePrevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+    const prev = getPrevStep(currentStep);
+    if (prev >= 1) {
+      setCurrentStep(prev);
     }
   };
 
@@ -168,7 +199,7 @@ export default function ApplicantProfile() {
             <Card>
               <CardHeader>
                 <CardTitle>
-                  Step {currentStep}: {steps[currentStep - 1]?.name}
+                  Step {currentStep}: {steps.find(s => s.id === currentStep)?.name}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -198,7 +229,7 @@ export default function ApplicantProfile() {
                       Save Progress
                     </Button>
                     
-                    {currentStep < steps.length ? (
+                    {currentStep < 8 ? (
                       <Button onClick={handleNextStep}>
                         Next Step
                       </Button>

@@ -39,6 +39,17 @@ const personalDetailsSchema = z.object({
   kraPin: z.string().optional(),
 });
 
+const employeeDetailsSchema = z.object({
+  personalNumber: z.string().min(1, 'Personal number is required'),
+  designation: z.string().min(1, 'Designation is required'),
+  dutyStation: z.string().min(1, 'Duty station is required'),
+  jg: z.string().min(1, 'Job group is required'),
+  actingPosition: z.string().optional(),
+  departmentId: z.string().min(1, 'Department is required'),
+  dofa: z.string().optional(), // Date of first appointment
+  doca: z.string().optional(), // Date of current appointment
+});
+
 const addressSchema = z.object({
   countyId: z.number().min(1, 'County is required'),
   constituencyId: z.number().min(1, 'Constituency is required'),
@@ -73,6 +84,16 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
   const [referees, setReferees] = useState([
     { name: '', position: '', organization: '', email: '', phoneNumber: '', relationship: '' }
   ]);
+  const [employeeData, setEmployeeData] = useState({
+    personalNumber: '',
+    designation: '',
+    dutyStation: '',
+    jg: '',
+    actingPosition: '',
+    departmentId: '',
+    dofa: '',
+    doca: ''
+  });
 
   const { data: config } = usePublicConfig();
 
@@ -89,6 +110,8 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
     switch (step) {
       case 1:
         return personalDetailsSchema;
+      case 1.5: // Employee details step
+        return employeeDetailsSchema;
       case 2:
         return addressSchema;
       case 3:
@@ -116,6 +139,10 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
       if (profile.referees?.length) {
         setReferees(profile.referees);
       }
+      if (profile.employee) {
+        setEmployeeData(profile.employee);
+        setIsVerifiedEmployee(true);
+      }
     }
   }, [profile, form]);
 
@@ -123,6 +150,7 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
     const stepData = {
       ...data,
       educationRecords: step === 3 ? educationRecords : undefined,
+      employee: step === 1.5 ? employeeData : undefined,
       employmentHistory: step === 6 ? employmentHistory : undefined,
       referees: step === 7 ? referees : undefined,
     };
@@ -265,7 +293,7 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
               <div>
                 <Label htmlFor="idPassportType">ID/Passport Type *</Label>
                 <Select onValueChange={(value) => form.setValue('idPassportType', value as any)}>
@@ -281,21 +309,6 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                 {form.formState.errors.idPassportType && (
                   <p className="text-sm text-red-600 mt-1">
                     {form.formState.errors.idPassportType.message as string}
-                  </p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="idPassportNumber">ID/Passport Number *</Label>
-                <Input
-                  id="idPassportNumber"
-                  data-testid="input-idPassportNumber"
-                  {...form.register('idPassportNumber')}
-                  placeholder="Enter ID/Passport number"
-                />
-                {form.formState.errors.idPassportNumber && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {form.formState.errors.idPassportNumber.message as string}
                   </p>
                 )}
               </div>
@@ -450,6 +463,120 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                   id="kraPin"
                   {...form.register('kraPin')}
                   placeholder="Enter KRA PIN (optional)"
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case 1.5: // Employee Details
+        return (
+          <div className="space-y-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <p className="text-blue-800 text-sm">
+                <span className="font-medium">County Employee Verification Successful!</span>
+                <br />Please complete your employment details below. Some fields are pre-filled from verification.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="personalNumber">Personal Number *</Label>
+                <Input
+                  id="personalNumber"
+                  value={employeeData.personalNumber || verifiedEmployeeData?.personalNumber || ''}
+                  onChange={(e) => setEmployeeData({...employeeData, personalNumber: e.target.value})}
+                  disabled={!!verifiedEmployeeData?.personalNumber}
+                  placeholder="Enter personal number"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="designation">Designation *</Label>
+                <Input
+                  id="designation"
+                  value={employeeData.designation || verifiedEmployeeData?.designation || ''}
+                  onChange={(e) => setEmployeeData({...employeeData, designation: e.target.value})}
+                  disabled={!!verifiedEmployeeData?.designation}
+                  placeholder="Enter designation"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="dutyStation">Duty Station *</Label>
+                <Input
+                  id="dutyStation"
+                  value={employeeData.dutyStation}
+                  onChange={(e) => setEmployeeData({...employeeData, dutyStation: e.target.value})}
+                  placeholder="Enter duty station"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="jg">Job Group *</Label>
+                <Select onValueChange={(value) => setEmployeeData({...employeeData, jg: value})} value={employeeData.jg}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select job group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S'].map((group) => (
+                      <SelectItem key={group} value={group}>
+                        Job Group {group}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="actingPosition">Acting Position</Label>
+                <Input
+                  id="actingPosition"
+                  value={employeeData.actingPosition}
+                  onChange={(e) => setEmployeeData({...employeeData, actingPosition: e.target.value})}
+                  placeholder="Enter acting position (if applicable)"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="departmentId">Department *</Label>
+                <Select onValueChange={(value) => setEmployeeData({...employeeData, departmentId: value})} value={employeeData.departmentId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {((config as any)?.departments || []).map((dept: any) => (
+                      <SelectItem key={dept.id} value={dept.id.toString()}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="dofa">Date of First Appointment</Label>
+                <Input
+                  id="dofa"
+                  type="date"
+                  value={employeeData.dofa}
+                  onChange={(e) => setEmployeeData({...employeeData, dofa: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="doca">Date of Current Appointment</Label>
+                <Input
+                  id="doca"
+                  type="date"
+                  value={employeeData.doca}
+                  onChange={(e) => setEmployeeData({...employeeData, doca: e.target.value})}
                 />
               </div>
             </div>
@@ -817,6 +944,17 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
   const handleEmployeeVerificationSuccess = (employeeData: any) => {
     setIsVerifiedEmployee(true);
     setVerifiedEmployeeData(employeeData);
+    // Pre-fill employee data from verification
+    setEmployeeData({
+      personalNumber: employeeData.personalNumber || '',
+      designation: employeeData.designation || '',
+      dutyStation: '',
+      jg: '',
+      actingPosition: '',
+      departmentId: '',
+      dofa: '',
+      doca: ''
+    });
     // Also update the form to save the verification status
     form.setValue('isEmployee', true);
   };
