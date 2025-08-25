@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { useLocation } from 'wouter';
 import Navigation from '@/components/layout/Navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,11 +18,13 @@ import {
   Users, 
   Upload 
 } from 'lucide-react';
+import type { Application } from '@shared/schema';
 
 export default function ApplicantDashboard() {
-  const { user } = useAuth(); 
+  const { user } = useAuth();
+  const [, navigate] = useLocation();
   
-  const { data: applications = [] } = useQuery({
+  const { data: applications = [] } = useQuery<Application[]>({
     queryKey: ['/api/applicant/applications'],
   });
   const [pdCompleted, SetPDCompleted] = useState(false);
@@ -116,7 +119,7 @@ export default function ApplicantDashboard() {
               })}
             </div>
 
-            <Button>Continue Profile Setup</Button>
+            <Button onClick={() => navigate('/profile')}>Continue Profile Setup</Button>
           </CardContent>
         </Card>
 
@@ -174,7 +177,7 @@ export default function ApplicantDashboard() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Recent Applications</CardTitle>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => navigate('/applications')}>
                 View All
               </Button>
             </div>
@@ -185,7 +188,7 @@ export default function ApplicantDashboard() {
                 <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No applications yet</h3>
                 <p className="text-gray-600 mb-4">Start browsing and applying for jobs to see them here.</p>
-                <Button>Browse Jobs</Button>
+                <Button onClick={() => navigate('/jobs')}>Browse Jobs</Button>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -220,7 +223,11 @@ export default function ApplicantDashboard() {
                           </Badge>
                         </td>
                         <td className="py-3 px-4">
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => navigate(`/applications?id=${application.id}`)}
+                          >
                             View Details
                           </Button>
                         </td>

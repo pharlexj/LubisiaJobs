@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import LocationDropdowns from '@/components/common/LocationDropdowns';
 import { Plus, Trash2, Upload, FileText } from 'lucide-react';
 import { usePublicConfig } from '@/hooks/usePublicConfig';
-import EmployeeVerificationDialog from '@/components/applicant/employeeVerificationDialog';
+import EmployeeVerificationDialog from '@/components/applicant/EmployeeVerificationDialog';
 
 // Step schemas
 const personalDetailsSchema = z.object({
@@ -28,7 +28,6 @@ const personalDetailsSchema = z.object({
   idPassportType: z.enum(['national_id', 'passport', 'alien_id'], {
     required_error: 'Please select ID/Passport type',
   }),
-  idPassportNumber: z.string().min(5, 'ID/Passport number is required'),
   dateOfBirth: z.string().min(1, 'Date of birth is required'),
   gender: z.string().min(1, 'Gender is required'),
   nationality: z.string().default('Kenyan'),
@@ -409,10 +408,42 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                 <Checkbox
                   id="isEmployee"
                   {...form.register('isEmployee')}
+                  onCheckedChange={(checked) => {
+                    if (checked && !isVerifiedEmployee) {
+                      setShowEmployeeVerification(true);
+                    }
+                  }}
                 />
                 <Label htmlFor="isEmployee">I am currently a county employee</Label>
               </div>
               
+              {form.watch('isEmployee') && !isVerifiedEmployee && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <h5 className="font-medium text-yellow-800 mb-2">Employee Verification Required</h5>
+                  <p className="text-sm text-yellow-700 mb-3">
+                    Please verify your employee status by providing your personal number.
+                  </p>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowEmployeeVerification(true)}
+                  >
+                    Verify Employee Status
+                  </Button>
+                </div>
+              )}
+              
+              {form.watch('isEmployee') && isVerifiedEmployee && verifiedEmployeeData && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h5 className="font-medium text-green-800 mb-2">✓ Employee Status Verified</h5>
+                  <div className="text-sm text-green-700">
+                    <p><strong>Personal Number:</strong> {verifiedEmployeeData.personalNumber}</p>
+                    <p><strong>Designation:</strong> {verifiedEmployeeData.designation}</p>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <Label htmlFor="kraPin">KRA PIN</Label>
                 <Input
@@ -783,15 +814,31 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
     }
   };
 
+  const handleEmployeeVerificationSuccess = (employeeData: any) => {
+    setIsVerifiedEmployee(true);
+    setVerifiedEmployeeData(employeeData);
+    // Also update the form to save the verification status
+    form.setValue('isEmployee', true);
+  };
+
   return (
-    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-      {renderStepContent()}
-      
-      <div className="flex justify-end">
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Saving...' : 'Save & Continue'}
-        </Button>
-      </div>
-    </form>
+    <>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        {renderStepContent()}
+        
+        <div className="flex justify-end">
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? 'Saving...' : 'Save & Continue'}
+          </Button>
+        </div>
+      </form>
+
+      <EmployeeVerificationDialog
+        open={showEmployeeVerification}
+        onOpenChange={setShowEmployeeVerification}
+        applicantIdNumber={form.getValues('nationalId') || ''}
+        onVerificationSuccess={handleEmployeeVerificationSuccess}
+      />
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { useLocation } from 'wouter';
 import Navigation from '@/components/layout/Navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,6 +29,7 @@ export default function ApplicantApplications() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
@@ -192,7 +194,10 @@ export default function ApplicantApplications() {
                       </SelectContent>
                     </Select>
 
-                    <Button variant="outline">
+                    <Button 
+                      variant="outline"
+                      onClick={() => toast({ title: 'Advanced Filters', description: 'More filtering options coming soon!' })}
+                    >
                       <Filter className="w-4 h-4 mr-2" />
                       More Filters
                     </Button>
@@ -215,7 +220,7 @@ export default function ApplicantApplications() {
                       : 'No applications match your current filters. Try adjusting your search criteria.'}
                   </p>
                   {applications.length === 0 ? (
-                    <Button>Browse Jobs</Button>
+                    <Button onClick={() => setLocation('/jobs')}>Browse Jobs</Button>
                   ) : (
                     <Button 
                       variant="outline"

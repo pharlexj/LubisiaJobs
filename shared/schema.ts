@@ -42,7 +42,6 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   nationalId: varchar("national_id", { length: 11 }),
-  idPassportNumber: varchar("id_passport_number", { length: 11 }),
   idPassportType: varchar("id_passport_type", { length: 20 }),
   phoneNumber: varchar('phone_number'),
   password: varchar("password"),
@@ -141,7 +140,6 @@ export const applicants = pgTable("applicants", {
   phoneVerifiedAt: timestamp("phone_verified_at"),
   altPhoneNumber: varchar("alt_phone_number", { length: 20 }),
   nationalId: varchar("national_id", { length: 50 }),
-  idPassportNumber: varchar("id_passport_number", { length: 50 }),
   idPassportType: varchar("id_passport_type", { length: 20 }), // 'national_id', 'passport', 'alien_id'
   dateOfBirth: date("date_of_birth"),
   gender: varchar("gender", { length: 10 }),
@@ -170,7 +168,7 @@ export const jobs = pgTable("jobs", {
   description: text("description"),
   departmentId: integer("department_id").notNull().references(() => departments.id),
   designationId: integer("designation_id"),
-  requirements: jsonb("requirements"), // Store qualification requirements
+  requirements: text("requirements"), 
   isActive: boolean("is_active").default(true),
   jg: integer("jg_id").notNull().references(()=>JG.id),
   catetogy: varchar("category"),

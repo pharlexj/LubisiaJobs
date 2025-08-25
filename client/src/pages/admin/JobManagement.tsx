@@ -18,6 +18,7 @@ import { isUnauthorizedError } from '@/lib/authUtils';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import type { Job, Department, Designation, Award, CourseOffered } from '@shared/schema';
 import { 
   Plus, 
   Edit, 
@@ -34,7 +35,15 @@ const jobSchema = z.object({
   title: z.string().min(5, 'Job title must be at least 5 characters'),
   description: z.string().min(20, 'Description must be at least 20 characters'),
   departmentId: z.string().min(1, 'Please select a department'),
-  designationId: z.string().min(1, 'Please select a designation'),
+  designationId: z.string().optional(),
+  jg: z.string().min(1, 'Please select a job group'),
+  certificateLevel: z.string().min(1, 'Please select certificate level'),
+  awardId: z.string().min(1, 'Please select required award'),
+  requiredCourses: z.string().min(1, 'Please specify required courses'),
+  posts: z.string().min(1, 'Please specify number of posts'),
+  venue: z.string().min(1, 'Please specify venue'),
+  experience: z.string().min(1, 'Please specify experience requirement'),
+  category: z.string().min(1, 'Please select category'),
   applicationDeadline: z.string().min(1, 'Please select an application deadline'),
   requirements: z.string().optional(),
 });
@@ -51,21 +60,32 @@ export default function AdminJobManagement() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<any>(null);
 
-  const { data: jobs = [], isLoading } = useQuery({
+  const { data: jobs = [], isLoading } = useQuery<Job[]>({
     queryKey: ['/api/public/jobs'],
   });
 
-  const { data: config } = useQuery({
+  const { data: config } = useQuery<{
+    departments: Department[];
+    designations: Designation[];
+    awards: Award[];
+    courses: CourseOffered[];
+    certificateLevels: any[];
+    jobGroups: any[];
+  }>({
     queryKey: ['/api/public/config'],
   });
 
-  const { data: applications = [] } = useQuery({
+  const { data: applications = [] } = useQuery<any[]>({
     queryKey: ['/api/admin/applications'],
     enabled: !!user && user.role === 'admin',
   });
 
   const departments = config?.departments || [];
   const designations = config?.designations || [];
+  const awards = config?.awards || [];
+  const courses = config?.courses || [];
+  const certificateLevels = config?.certificateLevels || [];
+  const jobGroups = config?.jobGroups || [];
 
   const form = useForm<JobFormData>({
     resolver: zodResolver(jobSchema),
@@ -74,6 +94,14 @@ export default function AdminJobManagement() {
       description: '',
       departmentId: '',
       designationId: '',
+      jg: '',
+      certificateLevel: '',
+      awardId: '',
+      requiredCourses: '',
+      posts: '',
+      venue: '',
+      experience: '',
+      category: '',
       applicationDeadline: '',
       requirements: '',
     },
@@ -84,8 +112,16 @@ export default function AdminJobManagement() {
       return await apiRequest('POST', '/api/admin/jobs', {
         ...data,
         departmentId: parseInt(data.departmentId),
-        designationId: parseInt(data.designationId),
-        requirements: data.requirements ? JSON.parse(data.requirements) : null,
+        designationId: data.designationId ? parseInt(data.designationId) : null,
+        awardId: parseInt(data.awardId),
+        posts: parseInt(data.posts),
+        jg: data.jg,
+        certificateLevel: data.certificateLevel,
+        requiredCourses: data.requiredCourses,
+        venue: data.venue,
+        experience: data.experience,
+        category: data.category,
+        requirements: data.requirements || null,
       });
     },
     onSuccess: () => {
@@ -220,7 +256,7 @@ export default function AdminJobManagement() {
                     <DialogTitle>Create New Job Posting</DialogTitle>
                   </DialogHeader>
                   
-                  <form onSubmit={form.handleSubmit(handleCreateJob)} className="space-y-4">
+                  <form onSubmit={form.handleSubmit(handleCreateJob)} className="space-y-4 max-h-96 overflow-y-auto">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="title">Job Title</Label>
@@ -274,12 +310,13 @@ export default function AdminJobManagement() {
                       </div>
                       
                       <div>
-                        <Label htmlFor="designationId">Designation</Label>
+                        <Label htmlFor="designationId">Designation (Optional)</Label>
                         <Select onValueChange={(value) => form.setValue('designationId', value)}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select Designation" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="">None</SelectItem>
                             {designations.map((designation) => (
                               <SelectItem key={designation.id} value={designation.id.toString()}>
                                 {designation.name} - Job Group {designation.jobGroup}
@@ -287,12 +324,154 @@ export default function AdminJobManagement() {
                             ))}
                           </SelectContent>
                         </Select>
-                        {form.formState.errors.designationId && (
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="jg">Job Group</Label>
+                        <Select onValueChange={(value) => form.setValue('jg', value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Job Group" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S'].map((group) => (
+                              <SelectItem key={group} value={group}>
+                                Job Group {group}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {form.formState.errors.jg && (
                           <p className="text-sm text-red-600 mt-1">
-                            {form.formState.errors.designationId.message}
+                            {form.formState.errors.jg.message}
                           </p>
                         )}
                       </div>
+
+                      <div>
+                        <Label htmlFor="posts">Number of Posts</Label>
+                        <Input
+                          id="posts"
+                          type="number"
+                          {...form.register('posts')}
+                          placeholder="e.g., 5"
+                          min="1"
+                        />
+                        {form.formState.errors.posts && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {form.formState.errors.posts.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label htmlFor="category">Category</Label>
+                        <Select onValueChange={(value) => form.setValue('category', value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="permanent">Permanent</SelectItem>
+                            <SelectItem value="contract">Contract</SelectItem>
+                            <SelectItem value="temporary">Temporary</SelectItem>
+                            <SelectItem value="internship">Internship</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {form.formState.errors.category && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {form.formState.errors.category.message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="certificateLevel">Required Certificate Level</Label>
+                        <Select onValueChange={(value) => form.setValue('certificateLevel', value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Certificate Level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="certificate">Certificate</SelectItem>
+                            <SelectItem value="diploma">Diploma</SelectItem>
+                            <SelectItem value="degree">Bachelor's Degree</SelectItem>
+                            <SelectItem value="masters">Master's Degree</SelectItem>
+                            <SelectItem value="phd">PhD</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {form.formState.errors.certificateLevel && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {form.formState.errors.certificateLevel.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label htmlFor="awardId">Required Award/Qualification</Label>
+                        <Select onValueChange={(value) => form.setValue('awardId', value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Award" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {awards.map((award) => (
+                              <SelectItem key={award.id} value={award.id.toString()}>
+                                {award.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {form.formState.errors.awardId && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {form.formState.errors.awardId.message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="requiredCourses">Required Courses/Fields</Label>
+                        <Input
+                          id="requiredCourses"
+                          {...form.register('requiredCourses')}
+                          placeholder="e.g., Computer Science, IT, Engineering"
+                        />
+                        {form.formState.errors.requiredCourses && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {form.formState.errors.requiredCourses.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label htmlFor="experience">Experience Requirement</Label>
+                        <Input
+                          id="experience"
+                          {...form.register('experience')}
+                          placeholder="e.g., 2 years minimum experience"
+                        />
+                        {form.formState.errors.experience && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {form.formState.errors.experience.message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="venue">Work Venue/Location</Label>
+                      <Input
+                        id="venue"
+                        {...form.register('venue')}
+                        placeholder="e.g., Kitale, Trans Nzoia County"
+                      />
+                      {form.formState.errors.venue && (
+                        <p className="text-sm text-red-600 mt-1">
+                          {form.formState.errors.venue.message}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -311,11 +490,11 @@ export default function AdminJobManagement() {
                     </div>
 
                     <div>
-                      <Label htmlFor="requirements">Requirements (JSON format)</Label>
+                      <Label htmlFor="requirements">Additional Requirements (Optional)</Label>
                       <Textarea
                         id="requirements"
                         {...form.register('requirements')}
-                        placeholder='{"education": "Bachelors Degree", "experience": "2 years"}'
+                        placeholder="Any additional requirements or qualifications..."
                         rows={3}
                       />
                     </div>

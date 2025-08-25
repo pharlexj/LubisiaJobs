@@ -1,15 +1,20 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Navigation from '@/components/layout/Navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 import { Calendar, Search, Filter, Download, Eye } from 'lucide-react';
 
 export default function Notices() {
   const { data: notices = [], isLoading } = useQuery({
     queryKey: ['/api/public/notices'],
   });
+  const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [email, setEmail] = useState('');
 
   const getNoticeTypeColor = (type: string) => {
     switch (type) {
@@ -80,15 +85,25 @@ export default function Notices() {
                   <Input
                     placeholder="Search notices..."
                     className="pl-10"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => toast({ title: 'Filter Options', description: 'Advanced filters coming soon!' })}
+                >
                   <Filter className="w-4 h-4 mr-2" />
                   Filter
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => toast({ title: 'Date Range', description: 'Date filtering coming soon!' })}
+                >
                   <Calendar className="w-4 h-4 mr-2" />
                   Date Range
                 </Button>
@@ -149,11 +164,19 @@ export default function Notices() {
                       </div>
 
                       <div className="flex flex-wrap gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => toast({ title: 'Notice Details', description: `Opening full notice: ${notice.title}` })}
+                        >
                           <Eye className="w-4 h-4 mr-2" />
                           Read Full Notice
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => toast({ title: 'Download', description: `Downloading PDF for: ${notice.title}` })}
+                        >
                           <Download className="w-4 h-4 mr-2" />
                           Download PDF
                         </Button>
@@ -179,7 +202,11 @@ export default function Notices() {
         {/* Load More Button */}
         {notices.length > 0 && (
           <div className="text-center mt-8">
-            <Button variant="outline" size="lg">
+            <Button 
+              variant="outline" 
+              size="lg"
+              onClick={() => toast({ title: 'Loading More', description: 'Loading additional notices...' })}
+            >
               Load More Notices
             </Button>
           </div>
@@ -199,8 +226,19 @@ export default function Notices() {
               <Input 
                 placeholder="Enter your email address" 
                 className="flex-1"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
-              <Button>
+              <Button
+                onClick={() => {
+                  if (email) {
+                    toast({ title: 'Subscribed!', description: `You'll receive updates at ${email}` });
+                    setEmail('');
+                  } else {
+                    toast({ title: 'Email Required', description: 'Please enter a valid email address', variant: 'destructive' });
+                  }
+                }}
+              >
                 Subscribe
               </Button>
             </div>

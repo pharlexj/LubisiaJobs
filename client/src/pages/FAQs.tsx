@@ -3,9 +3,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 import { Search, MessageCircle, Phone, Mail } from 'lucide-react';
 
 export default function FAQs() {
+  const { toast } = useToast();
   const faqCategories = [
     { id: 'all', label: 'All Questions', count: 24 },
     { id: 'application', label: 'Application Process', count: 8 },
@@ -168,7 +170,14 @@ export default function FAQs() {
                 <p className="text-gray-600 text-sm mb-3">
                   Call us during business hours for immediate assistance
                 </p>
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText('+254 713 635 352');
+                    toast({ title: 'Phone Number Copied', description: 'Phone number copied to clipboard' });
+                  }}
+                >
                    +254 713 635 352
                 </Button>
               </div>
@@ -179,7 +188,14 @@ export default function FAQs() {
                 <p className="text-gray-600 text-sm mb-3">
                   Send us an email and we'll respond within 24 hours
                 </p>
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText('support@cpsbtransnzoia.co.ke');
+                    toast({ title: 'Email Copied', description: 'Email address copied to clipboard' });
+                  }}
+                >
                   support@cpsbtransnzoia.co.ke
                 </Button>
               </div>
@@ -190,7 +206,10 @@ export default function FAQs() {
                 <p className="text-gray-600 text-sm mb-3">
                   Chat with our support team in real-time
                 </p>
-                <Button size="sm">
+                <Button 
+                  size="sm"
+                  onClick={() => toast({ title: 'Live Chat', description: 'Live chat feature coming soon!' })}
+                >
                   Start Chat
                 </Button>
               </div>
