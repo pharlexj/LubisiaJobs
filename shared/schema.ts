@@ -1,4 +1,4 @@
-import { sql, relations } from "drizzle-orm";
+import { sql, relations, isNotNull } from "drizzle-orm";
 import {
   pgTable,
   text,
@@ -41,6 +41,12 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  nationalId: varchar("national_id", { length: 11 }),
+  idPassportNumber: varchar("id_passport_number", { length: 11 }),
+  idPassportType: varchar("id_passport_type", { length: 20 }),
+  phoneNumber: varchar('phone_number'),
+  password: varchar("password"),
+  passwordHash: varchar("password_hash").notNull(),
   role: userRoleEnum("role").default("applicant"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -159,18 +165,37 @@ export const applicants = pgTable("applicants", {
 // Jobs
 export const jobs = pgTable("jobs", {
   id: serial("id").primaryKey(),
+  advertNumb: varchar("code"),
   title: varchar("title", { length: 250 }).notNull(),
   description: text("description"),
   departmentId: integer("department_id").notNull().references(() => departments.id),
-  designationId: integer("designation_id").notNull().references(() => designations.id),
+  designationId: integer("designation_id"),
   requirements: jsonb("requirements"), // Store qualification requirements
-  applicationDeadline: date("application_deadline"),
   isActive: boolean("is_active").default(true),
+  jg: integer("jg_id").notNull().references(()=>JG.id),
+  catetogy: varchar("category"),
+  experience: varchar("experience"),
+  posts: integer("posts"),
+  venue: varchar("venue"),
+  requiredCourses: varchar("required_courses"),
+  certificateLevel: integer("cert_level_id").notNull().references(()=>certificateLevel.id),
+  awardId: integer("award_id").notNull().references(()=>awards.id),
+  isReleased: integer("is_released"),
+  advertType: varchar("advert_type"),
+  status: varchar("status"),
+  startDate: date("start_date"),
+  applicationDeadline: date("application_deadline"),
+  endDate: date("end_date"),
   createdBy: varchar("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
-
+//Certificate Level
+export const certificateLevel = pgTable("certificate_level", {
+  id: serial('id').primaryKey(),
+  name: varchar("name"),
+  createdAt: timestamp("created_at")
+});
 // Applications
 export const applications = pgTable("applications", {
   id: serial("id").primaryKey(),
@@ -197,6 +222,84 @@ export const educationRecords = pgTable("education_records", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const studyArea = pgTable("study_area", {
+  id: serial("id").primaryKey(),
+  name: varchar('name',{ length: 250 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const JG = pgTable("jg", {
+  id: serial("id").primaryKey(),
+  name: varchar('name',{ length: 250 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const religion = pgTable("religions", {
+  id: serial("id").primaryKey(),
+  name: varchar('name',{ length: 250 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+//Payroll Employees
+export const payroll = pgTable("payroll", {
+  id: serial("id").primaryKey(),
+  designation: varchar('designation', { length: 250 }).notNull(),
+  personalNumber: varchar('personal_number', { length: 13 }).notNull(),  
+  idNumber: varchar('id_number', { length: 13 }).notNull(),  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+// County employees table for verification
+export const employees = pgTable("employees", {
+  id: serial("id").primaryKey(),
+  applicantId: integer("applicant_id").references(() => applicants.id),
+  personalNumber: varchar("personal_number", { length: 50 }).notNull().unique(),
+  designation: varchar("designation", { length: 150 }).notNull(),
+  idNumber: varchar("id_number", { length: 50 }).notNull(),
+  dutyStation: varchar("duty_station", { length: 200 }),
+  jg: varchar("jg", { length: 10 }), // Job Group
+  actingPosition: varchar("acting_position", { length: 150 }),
+  departmentId: integer("department_id").references(() => departments.id),
+  dofa: date("dofa"), // Date of First Appointment
+  doca: date("doca"), // Date of Current Appointment
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+//Panel Scores
+export const panelScores = pgTable("panel_scores", {
+  scoreId: serial("score_id").primaryKey(),
+  applicationId: integer("application_id").notNull(),
+  panelId: integer("panel_id").notNull(),
+  academicScore: integer("academic_score").default(0),
+  experienceScore: integer("experience_score").default(0),
+  skillsScore: integer("skills_score").default(0),
+  leadershipScore: integer("leadership_score").default(0),
+  generalScore: integer("general_score").default(0),
+  negativeScore: integer("negative_score").default(0),
+  remarks: text("remarks"),
+  scoredOn: timestamp("scored_on", { withTimezone: false }).defaultNow().notNull(),
+  createAt: timestamp("create_at", { withTimezone: false }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: false }).notNull(),
+});
+//Professional Qualifications
+export const professionalQualifications = pgTable("professional_qualifications", {
+  id: serial("id").primaryKey(),
+  applicantId: integer("applicant_id").notNull(),
+  institution: varchar("institution", { length: 255 }).notNull(),
+  studentNo: varchar("student_no", { length: 100 }),
+  areaOfStudyId: integer("area_of_study_id").notNull(),
+  specialisationId: integer("specialisation_id").notNull(),
+  course: varchar("course", { length: 255 }).notNull(),
+  awardId: integer("award_id").notNull(),
+  gradeId: varchar("grade_id", { length: 10 }).notNull(),
+  examiner: varchar("examiner", { length: 255 }),
+  certificateNo: varchar("certificate_no", { length: 100 }),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: false })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: false })
+    .defaultNow()
+    .notNull(),
+});
 // Employment history
 export const employmentHistory = pgTable("employment_history", {
   id: serial("id").primaryKey(),
@@ -279,11 +382,26 @@ export const applicantsRelations = relations(applicants, ({ one, many }) => ({
     fields: [applicants.professionId],
     references: [professions.id],
   }),
+  employee: one(employees, {
+    fields: [applicants.id],
+    references: [employees.applicantId],
+  }),
   applications: many(applications),
   educationRecords: many(educationRecords),
   employmentHistory: many(employmentHistory),
   referees: many(referees),
   documents: many(documents),
+}));
+
+export const employeesRelations = relations(employees, ({ one }) => ({
+  applicant: one(applicants, {
+    fields: [employees.applicantId],
+    references: [applicants.id],
+  }),
+  department: one(departments, {
+    fields: [employees.departmentId],
+    references: [departments.id],
+  }),
 }));
 
 export const countiesRelations = relations(counties, ({ many }) => ({
@@ -336,6 +454,11 @@ export const applicationsRelations = relations(applications, ({ one }) => ({
 }));
 
 // Insert schemas
+export const insertEmployeeSchema = createInsertSchema(employees).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -403,3 +526,11 @@ export type EducationRecord = typeof educationRecords.$inferSelect;
 export type EmploymentHistory = typeof employmentHistory.$inferSelect;
 export type Referee = typeof referees.$inferSelect;
 export type Document = typeof documents.$inferSelect;
+export type StudyArea = typeof studyArea.$inferSelect;
+export type Jg = typeof JG.$inferSelect;
+export type Religion = typeof religion.$inferSelect;
+export type Payroll = typeof payroll.$inferSelect;
+export type PanelScores = typeof panelScores.$inferSelect;
+export type ProfessionalQualification = typeof professionalQualifications.$inferSelect;
+export type Employee = typeof employees.$inferSelect;
+export type InsertEmployee = typeof employees.$inferInsert;

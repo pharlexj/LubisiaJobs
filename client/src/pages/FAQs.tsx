@@ -169,7 +169,7 @@ export default function FAQs() {
                   Call us during business hours for immediate assistance
                 </p>
                 <Button variant="outline" size="sm">
-                  +254 700 000 000
+                   +254 713 635 352
                 </Button>
               </div>
 
@@ -180,7 +180,7 @@ export default function FAQs() {
                   Send us an email and we'll respond within 24 hours
                 </p>
                 <Button variant="outline" size="sm">
-                  support@tncpsb.go.ke
+                  support@cpsbtransnzoia.co.ke
                 </Button>
               </div>
 
@@ -200,8 +200,7 @@ export default function FAQs() {
               <h4 className="font-semibold text-gray-900 mb-2">Office Hours</h4>
               <div className="text-sm text-gray-600 space-y-1">
                 <p>Monday - Friday: 8:00 AM - 5:00 PM</p>
-                <p>Saturday: 8:00 AM - 12:00 PM</p>
-                <p>Sunday: Closed</p>
+                <p>Holidays, Saturday and Sunday: Closed</p>
               </div>
             </div>
           </CardContent>

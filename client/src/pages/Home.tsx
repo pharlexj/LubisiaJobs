@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Building, Search, UserPlus, Calendar, GraduationCap, MapPin } from 'lucide-react';
+import { datetime } from 'drizzle-orm/mysql-core';
 
 export default function Home() {
   const { data: jobs = [] } = useQuery({
@@ -224,8 +225,8 @@ export default function Home() {
               <h4 className="font-semibold mb-4">Contact Info</h4>
               <div className="space-y-2 text-sm text-gray-300">
                 <p><MapPin className="w-4 h-4 inline mr-2" />Kitale, Trans Nzoia County</p>
-                <p>📞 +254 700 000 000</p>
-                <p>✉️ info@tncpsb.go.ke</p>
+                <p>📞 +254 713 635 352</p>
+                <p>✉️ info@cpsbtransnzoia.co.ke</p>
               </div>
             </div>
           </div>

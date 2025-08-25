@@ -53,7 +53,7 @@ export default function ApplicantProfile() {
           variant: 'destructive',
         });
         setTimeout(() => {
-          window.location.href = '/api/login';
+          // window.location.href = '/api/login';
         }, 500);
         return;
       }
@@ -92,7 +92,7 @@ export default function ApplicantProfile() {
         variant: 'destructive',
       });
       setTimeout(() => {
-        window.location.href = '/api/login';
+        // window.location.href = '/api/login';
       }, 500);
       return;
     }

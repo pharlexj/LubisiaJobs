@@ -7,6 +7,7 @@ interface User {
   firstName?: string;
   lastName?: string;
   role: 'applicant' | 'admin' | 'board';
+  password?: string;
   profileImageUrl?: string;
 }
 

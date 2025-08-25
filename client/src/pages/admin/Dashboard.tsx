@@ -19,7 +19,6 @@ import {
 
 export default function AdminDashboard() {
   const { user } = useAuth();
-
   const { data: jobs = [] } = useQuery({
     queryKey: ['/api/public/jobs'],
   });
@@ -48,7 +47,6 @@ export default function AdminDashboard() {
     { month: 'May', applications: 44, hires: 11 },
     { month: 'Jun', applications: 58, hires: 16 },
   ];
-
   return (
     <div className="min-h-screen bg-neutral-50">
       <Navigation />

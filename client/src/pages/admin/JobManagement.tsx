@@ -127,7 +127,7 @@ export default function AdminJobManagement() {
         description: 'Job posting has been updated successfully.',
       });
       queryClient.invalidateQueries({ queryKey: ['/api/public/jobs'] });
-      setEditingJob(null);
+      setEditingJob(true);
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {

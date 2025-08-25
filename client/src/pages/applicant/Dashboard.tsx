@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { useState } from 'react';
 import { 
   FileText, 
   CheckCircle, 
@@ -18,24 +19,29 @@ import {
 } from 'lucide-react';
 
 export default function ApplicantDashboard() {
-  const { user } = useAuth();
-
+  const { user } = useAuth(); 
+  
   const { data: applications = [] } = useQuery({
     queryKey: ['/api/applicant/applications'],
   });
-
+  const [pdCompleted, SetPDCompleted] = useState(false);
+  const [aiCompleted, SetAICompleted] = useState(false);
+  const [edCompleted, SetEdCompleted] = useState(false);
+  const [ehCompleted, SetEHCompleted] = useState(false);
+  const [refCompleted, SetRefCompleted] = useState(false);
+  const [uploadCompleted, SetUploadCompleted] = useState(false);
+  
   const completionSteps = [
-    { id: 1, name: 'Personal Details', icon: User, completed: true },
-    { id: 2, name: 'Address Info', icon: MapPin, completed: true },
-    { id: 3, name: 'Education', icon: GraduationCap, completed: true },
-    { id: 4, name: 'Employment History', icon: Briefcase, completed: false, current: true },
-    { id: 5, name: 'Referees', icon: Users, completed: false },
-    { id: 6, name: 'Uploads', icon: Upload, completed: false },
+    { id: 1, name: 'Personal Details', icon: User, completed: pdCompleted },
+    { id: 2, name: 'Address Info', icon: MapPin, completed: aiCompleted },
+    { id: 3, name: 'Education', icon: GraduationCap, completed: edCompleted }, // make dynamic
+    { id: 4, name: 'Employment History', icon: Briefcase, completed: false, current: ehCompleted },
+    { id: 5, name: 'Referees', icon: Users, completed: refCompleted },
+    { id: 6, name: 'Uploads', icon: Upload, completed: uploadCompleted },
   ];
 
   const completedSteps = completionSteps.filter(step => step.completed).length;
   const completionPercentage = (completedSteps / completionSteps.length) * 100;
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'submitted':

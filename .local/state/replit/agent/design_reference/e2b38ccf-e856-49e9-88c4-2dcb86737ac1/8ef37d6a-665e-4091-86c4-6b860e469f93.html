@@ -1,0 +1,1460 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trans Nzoia County Public Service Board - Job Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'inter': ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#E3F2FD',
+                            100: '#BBDEFB',
+                            200: '#90CAF9',
+                            300: '#64B5F6',
+                            400: '#42A5F5',
+                            500: '#1976D2',
+                            600: '#1565C0',
+                            700: '#0D47A1',
+                            800: '#0D47A1',
+                            900: '#0D47A1'
+                        },
+                        secondary: {
+                            50: '#FAFAFA',
+                            100: '#F5F5F5',
+                            200: '#EEEEEE',
+                            300: '#E0E0E0',
+                            400: '#BDBDBD',
+                            500: '#9E9E9E',
+                            600: '#757575',
+                            700: '#616161',
+                            800: '#424242',
+                            900: '#212121'
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .drawer-enter { transform: translateX(100%); }
+        .drawer-enter-active { transform: translateX(0); transition: transform 300ms ease-out; }
+        .drawer-exit { transform: translateX(0); }
+        .drawer-exit-active { transform: translateX(100%); transition: transform 300ms ease-out; }
+    This is a comprehensive job application and recruitment web system with three distinct user roles: Applicants, Admins, and Board Committee. I need to analyze the requirements and create a high-quality design mockup.
+
+Let me analyze this using the design decision framework:
+
+1. Initial Analysis
+- No specific aesthetic requirements mentioned
+- Need to evaluate using the design decision framework factors
+
+A. Purpose & User Needs: This is a government/public service portal focused on functionality and efficiency, so utility-focused
+B. Content Characteristics: Information-dense with forms, tables, applications data
+C. Market Context: Function-differentiated - performance and usability matter most in government systems
+D. Update Frequency: Stability-valued - government systems should remain consistent
+E. Component Complexity: Standard patterns sufficient - forms, tables, dashboards are well-established patterns
+
+This scores 4/5 for Utility-Focused/Function, so I should use a design system approach. For a government/public service system with high data density and need for professionalism, I'll use a design system inspired by modern government design systems and Material Design principles for consistency and usability.
+
+Key features to implement in the mockup:
+- Public pages accessible without auth
+- Right-slide drawer for authentication
+- Three different dashboards for different user roles  
+- Progressive form completion with progress indicators
+- Dynamic dropdowns for location hierarchy
+- Job listings and application management
+- Admin interfaces for managing jobs and applications
+- Board committee interface for shortlisting
+- Responsive design
+
+I'll create a comprehensive mockup that shows:
+1. Public homepage with navigation
+2. Authentication drawer
+3. Sample of each user role dashboard
+4. Key interfaces like job application form, admin job management, etc.
+
+For the design approach, I'll use a modern, professional government-style interface with clean typography, good contrast, and functional layouts.EpwRCkgIBhACGAIqQFiuM7SSU9iu2xLMHw+9ZpOd9drfrN2LUa7wVoLWEGx1CxvZVyb5gU5c/Je0cvS5eWociRPa1rzxqD1NCPR0r8ISDCW3qY3pQdiOQ3/C1xoMnnNJfX4ZZRXg1fouIjDKbjZIb3NfU5yal2YAnHLPTBSIQJrQCN2CkhJ3ywN5RkwDiAkTlSjONPS3igsYIXIqgRChWzbNYtYwgQuKnUAeLKeCcCjphijj0iISQyVdGcFVO2DiENIXSfSPRAHmr5ofDcfUVumEIAnS3Q5xlb0PNf9hBTnFQUezgD3/6FzuLFeLetQi6kBua3K2OaCPxACGNmqALs051IRdzDXf2cC1ZdVI20nN9vifJ1NNPsIVUyK4YpFoo8oplDt5gLhejNTnGdbMsto+kgNrosD3TmqDMhMxjojx535Bed8IRCrE4AygMuw04AAYYllL7ducRmSfkxB4OCHCihfJavjyjpVNaKvNA+iNqs3tl0IiOpFNwI79dwhBKvvHRJdWE453HdbDel9ONmMBXbFCbE1gV1XVS6A2fddgc9djpxBe+f1U4gDOMoiAhj2hAOT0dokJAMKKJnpAEfLDxvSeDYY333TiKRFfbBBl14DF3dhIlWCo3pROnKuUtge4P2Y8bOO8LDu1pECzQsJRWIQqp9dlJWTVTuDTiAgF0sMYAQEqdGsHSQaDa+hxqN5ZlR/Ysq8fcPjloFSiUdOi2anjySrWBcgsNGf+Y5Wch+1pxm51wCnLmXfGhBsFkfvFBSegBSoO1QjcB0/2oldiK9Jq2j65tdPqXTzNyTcZq6EvcqC133I0xRJ/U11AiGN90SFK3hwMzNYD1FSaiJgT1P110/zm8NQASuV+V8y1e27StshBOHr11/PsY91IgF/VOXhwNOCeBJeedc+WtxgzdqJH/asOlhXYz6tu2BHHYJoaUGTJlcBYAFIoGYGFcoKZp9P5Sn+TwBZ3eWu8jozfsEZ/lDbB9n/cJUF2x4fDXJAOK8LUFC3JID3fInbsE/mR5zik8lx3f8MOQYRESD3ZbhoQNM5OJMsS4I5155KykCDC+k/tzHOGGknjaz5YLxcE75VBKHG6ip+ouWcK1Y+6DGZS+Z6FzzqJvjTvYEMQXTxBtLIgakB83QnFglhF7YlXmwD7HLDfJl4Vh6NCuV3K12O0eFUcwmdsQgp8Ay5a1dMBE8jZKLjr+nR7xbccVGhzHfuEWzRBcLY0c+SwX1vDB0YsD4p9LN/N/HXB3g0Ch54yUpwrrhkstWghaGe5o9BpegkYRCytDqBB5yuvY7DbrZWv/Y2fECizJis2g2w4OtHJggy+OPykh4vvsvIH4fzbhHnLKIZqldwpCs0g3m93Ib8UYkrXXsixDq5cwmqEgK+gwwvPN88+dxNHkvyzZ28z25ALQsD+eOwelac1k3eP4adoNZQUrcPfUYajWTJafQtM7FOrWIy8TShZuvPgb0ao4/qdH1eGQbFkyWYDTd+kdHX/TmsXDdN8EiMGlr5/W8aQKvFk5VsQEPsTT/oD4/COa/7ZxoexwFT13z3Z8ONejjf/3+fra817nN05KscEKvqSlQdsKff1g5VF3iGgMc8es25tqixIOg/8hySrtSyCsCZ0EQI8Yk/b/6SGD6U3gIMcB6pKgGC3RYNXuQGZeKFzIKG7SGUhF3JgfvauCDeJvZKUH4vE68ykth6+R0HFrtne1VMiq4noLAM/LdWqp3hn8Ze4KsyJJk79zKyXG3pTLjy3ZLUSdx0PnfxhY5SvsrEk2YISaP71hktbyhAMC6RGjKT10mWC5witIghUbBqs52j3lsny261h1ijqhnBgxdKfQ1inMGA5bSPuBNJSkwF9T1fp4j4bIVV7+pC7pj3Ym060R67JT4kT8gbo3V6pHzhsW3Vw7ByqCv60NbYXijfWjD0stJ9g3lasRdeq1282hC9fuyXlIHp4ZHlPIW2Tri4nrqvr8gNikj4ppwXQKOzdlE3N+Y/5/WcetS/hu2EkVri0wJzPMONJs7NLMItYxh1fndSUYGBVvgePpB6VnLlipzWbh+d7moZIxTv/50P5u88IvlUaeIC0cT9fMW2xLCZl4UI+jTwgn4hGufj0MDBQTE5JI94bXRpsvh5701mwGdQvipLE6IPszD5oZpvFBUubCwXb46x+u75JRaw/NrLkfH7LwDaQZojYC9UQU9p3rT0DhqIylOixebHkY6tshVx/JbDriPeb9UX0/Cy4imUssiq6c7DzGAWVpWm9V8mrWVbvjMFNbPYeZXfg6WEf5k1B8g+qNCD6q0kviD3V9kETJBocPK14AOEdMfmg4Sg1v5v7yXvNOWIWntmoobcDxXct80XzeYzTbmynjNxsOPld6LuFrdypBxLoZuvoZ6+BpG0sT/1tr98jR0HgFwTiRH4UCaPRo3l/QasMatVazstErMdtyjQeqTveCTHhihTJl7KURaXVpDUjaKCtPlQFrHk+1m06wRGlEpL2KIhQhFfgxW41FRS6dPxs3EKPq3L3dGXmrlT5tbL6BRlZ0jmXs2b8lcnZx1ZTJ6pNi7nUv2e0fSNqEDq6Ihd3rN7lAi62/jYgiSCJe0VqeaSvXTsS18rhJ2V67ieUdhZn98tU2u9cKZdxLWVhND4qOz2CgqfCi6d1gVZ+n9QViSI3y2Qs4b23kPiwcsuoSdOE7s7MR+wi60Xy3qVY3QfMPwrU2PKfYbVjCq38IIYy5xdJRRWc08ZBmThsvrhMBIfdvfZVUV4VGBfzt+kR0DpcKn5DO/U1ahigNKCrXGSQLPZocigeFyoOyUr82rIFCJlD4kXQ+8Om5aD+TptFglBT0bWssuxVepoRJEsZpkjzTNbPWo8DzrjQPzSH+A38Q/bCSoL6VgBQ8nImTm/qXL/ynPHr4CAAhG7CwBTwuW/enOAGxFuna5eW4NroJHctuQ/FCrkYAQ==# style
+**Design System Approach**: Modern government/public service portal inspired by Material Design and Carbon Design principles, prioritizing functionality, accessibility, and professional appearance.
+
+**Color Palette**: 
+- Primary: #1E40AF (Professional blue)
+- Secondary: #059669 (Success green) 
+- Accent: #DC2626 (Alert red)
+- Neutral: #374151, #6B7280, #F9FAFB
+- Background: #FFFFFF, #F8FAFC
+
+**Typography**: Inter font family for clean readability, hierarchical sizing (text-xs to text-4xl), appropriate font weights for content hierarchy.
+
+**Layout**: Mobile-first responsive design using CSS Grid and Flexbox, consistent spacing with Tailwind's spacing scale, card-based content organization.
+
+**Components**: Clean form inputs with proper validation states, data tables with sorting/filtering, progress indicators, slide-in authentication drawer, step-based wizards, notification toasts, and role-based navigation.
+
+**Interaction Patterns**: Hover states, loading indicators, smooth transitions, clear focus states for accessibility, and intuitive navigation patterns.
+
+# directory_structure
+```json
+[
+     {"path": "production_design_mockup.html", "status": "new"}
+]
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trans Nzoia County Public Service Board - Job Application Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1E40AF',
+                        secondary: '#059669',
+                        accent: '#DC2626',
+                        neutral: {
+                            600: '#374151',
+                            500: '#6B7280',
+                            50: '#F9FAFB'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-neutral-50 font-sans">
+    <!-- Navigation Header -->
+    <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <!-- County logo placeholder -->
+                    <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                        <i class="fas fa-building text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-semibold text-gray-900">TNCPSB</h1>
+                        <p class="text-xs text-gray-600">Job Portal</p>
+                    </div>
+                </div>
+
+                <!-- Public Navigation -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#" class="text-gray-700 hover:text-primary font-medium">Home</a>
+                    <a href="#" class="text-gray-700 hover:text-primary font-medium">About</a>
+                    <a href="#" class="text-gray-700 hover:text-primary font-medium">Gallery</a>
+                    <a href="#" class="text-gray-700 hover:text-primary font-medium">FAQs</a>
+                    <a href="#" class="text-gray-700 hover:text-primary font-medium">Notices</a>
+                    <a href="#" class="text-gray-700 hover:text-primary font-medium">Jobs</a>
+                </div>
+
+                <!-- Auth Buttons -->
+                <div class="flex items-center space-x-4">
+                    <button id="loginBtn" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-sign-in-alt mr-2"></i>Login
+                    </button>
+                    <button id="signupBtn" class="border border-primary text-primary px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors">
+                        Sign Up
+                    </button>
+                </div>
+
+                <!-- Mobile menu button -->
+                <button class="md:hidden">
+                    <i class="fas fa-bars text-gray-700"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="mainContent">
+        <!-- @COMPONENT: PublicHomepage -->
+        <section class="hero-section relative overflow-hidden">
+            <!-- Hero background with government building -->
+            <div class="relative bg-gradient-to-r from-primary to-blue-600 text-white">
+                <div class="absolute inset-0 bg-black opacity-20"></div>
+                <!-- Professional government building facade during daytime -->
+                <div class="absolute inset-0" style="background-image: url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1920&h=1080'); background-size: cover; background-position: center; opacity: 0.3;"></div>
+                
+                <div class="relative max-w-7xl mx-auto px-4 py-20 sm:px-6 lg:px-8 text-center">
+                    <h1 class="text-4xl md:text-6xl font-bold mb-6">
+                        Build Your Career in Public Service
+                    </h1>
+                    <p class="text-xl md:text-2xl mb-8 max-w-3xl mx-auto opacity-90">
+                        Join Trans Nzoia County Public Service Board - Where dedication meets opportunity in serving our community
+                    </p>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                        <button class="bg-white text-primary px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                            <i class="fas fa-search mr-2"></i>Browse Jobs
+                        </button>
+                        <button class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-primary transition-colors">
+                            <i class="fas fa-user-plus mr-2"></i>Apply Now
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats Section -->
+        <section class="py-16 bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
+                    <div class="bg-neutral-50 rounded-xl p-6">
+                        <div class="text-3xl font-bold text-primary mb-2">150+</div>
+                        <div class="text-gray-600">Active Jobs</div>
+                    </div>
+                    <div class="bg-neutral-50 rounded-xl p-6">
+                        <div class="text-3xl font-bold text-secondary mb-2">2,500+</div>
+                        <div class="text-gray-600">Applications</div>
+                    </div>
+                    <div class="bg-neutral-50 rounded-xl p-6">
+                        <div class="text-3xl font-bold text-primary mb-2">85%</div>
+                        <div class="text-gray-600">Success Rate</div>
+                    </div>
+                    <div class="bg-neutral-50 rounded-xl p-6">
+                        <div class="text-3xl font-bold text-secondary mb-2">19</div>
+                        <div class="text-gray-600">Departments</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Featured Jobs Section -->
+        <section class="py-16 bg-neutral-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-gray-900 mb-4">Featured Opportunities</h2>
+                    <p class="text-gray-600 max-w-2xl mx-auto">Discover exciting career opportunities across various departments in Trans Nzoia County</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- @MAP: featuredJobs.map(job => ( -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-900 mb-2" data-bind="job.title">ICT Officer</h3>
+                                <p class="text-gray-600 text-sm mb-2" data-bind="job.department">County Public Service Board</p>
+                                <p class="text-primary font-medium" data-bind="job.grade">Job Group K</p>
+                            </div>
+                            <span class="bg-secondary/10 text-secondary px-2 py-1 rounded-full text-xs font-medium">New</span>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <p class="text-gray-600 text-sm mb-3" data-bind="job.description">Manage IT infrastructure and provide technical support for county operations...</p>
+                            
+                            <div class="flex items-center text-sm text-gray-500 mb-2">
+                                <i class="fas fa-graduation-cap mr-2"></i>
+                                <span data-bind="job.qualification">Bachelor's Degree in ICT</span>
+                            </div>
+                            
+                            <div class="flex items-center text-sm text-gray-500">
+                                <i class="fas fa-calendar mr-2"></i>
+                                <span data-bind="job.deadline">Deadline: Dec 31, 2024</span>
+                            </div>
+                        </div>
+                        
+                        <button class="w-full bg-primary text-white py-2 rounded-lg hover:bg-blue-700 transition-colors" data-event="click:applyToJob">
+                            Apply Now
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-900 mb-2">Administrative Officer</h3>
+                                <p class="text-gray-600 text-sm mb-2">Finance and Economic Planning</p>
+                                <p class="text-primary font-medium">Job Group J</p>
+                            </div>
+                            <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">Urgent</span>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <p class="text-gray-600 text-sm mb-3">Support administrative functions and coordinate departmental activities...</p>
+                            
+                            <div class="flex items-center text-sm text-gray-500 mb-2">
+                                <i class="fas fa-graduation-cap mr-2"></i>
+                                <span>Diploma in Business Administration</span>
+                            </div>
+                            
+                            <div class="flex items-center text-sm text-gray-500">
+                                <i class="fas fa-calendar mr-2"></i>
+                                <span>Deadline: Jan 15, 2025</span>
+                            </div>
+                        </div>
+                        
+                        <button class="w-full bg-primary text-white py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            Apply Now
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow p-6">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-900 mb-2">Health Records Officer</h3>
+                                <p class="text-gray-600 text-sm mb-2">Health Services</p>
+                                <p class="text-primary font-medium">Job Group H</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <p class="text-gray-600 text-sm mb-3">Manage patient records and health information systems...</p>
+                            
+                            <div class="flex items-center text-sm text-gray-500 mb-2">
+                                <i class="fas fa-graduation-cap mr-2"></i>
+                                <span>Diploma in Health Records</span>
+                            </div>
+                            
+                            <div class="flex items-center text-sm text-gray-500">
+                                <i class="fas fa-calendar mr-2"></i>
+                                <span>Deadline: Jan 30, 2025</span>
+                            </div>
+                        </div>
+                        
+                        <button class="w-full bg-primary text-white py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            Apply Now
+                        </button>
+                    </div>
+                    <!-- @END_MAP )) -->
+                </div>
+
+                <div class="text-center mt-8">
+                    <button class="bg-white border border-primary text-primary px-6 py-3 rounded-lg hover:bg-blue-50 transition-colors">
+                        View All Jobs <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recent Notices Section -->
+        <section class="py-16 bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-3xl font-bold text-gray-900">Latest Notices</h2>
+                    <a href="#" class="text-primary hover:text-blue-700 font-medium">View All</a>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- @MAP: notices.map(notice => ( -->
+                    <div class="border border-gray-200 rounded-lg p-6 hover:shadow-sm transition-shadow">
+                        <div class="flex items-start justify-between mb-3">
+                            <span class="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium" data-bind="notice.type">Announcement</span>
+                            <span class="text-gray-500 text-sm" data-bind="notice.date">Dec 15, 2024</span>
+                        </div>
+                        <h3 class="font-semibold text-gray-900 mb-2" data-bind="notice.title">Interview Schedule for Administrative Officers</h3>
+                        <p class="text-gray-600 text-sm" data-bind="notice.excerpt">Shortlisted candidates for Administrative Officer positions are invited for interviews...</p>
+                        <button class="text-primary hover:text-blue-700 text-sm font-medium mt-3">Read More <i class="fas fa-arrow-right ml-1"></i></button>
+                    </div>
+
+                    <div class="border border-gray-200 rounded-lg p-6 hover:shadow-sm transition-shadow">
+                        <div class="flex items-start justify-between mb-3">
+                            <span class="bg-secondary/10 text-secondary px-3 py-1 rounded-full text-sm font-medium">Update</span>
+                            <span class="text-gray-500 text-sm">Dec 12, 2024</span>
+                        </div>
+                        <h3 class="font-semibold text-gray-900 mb-2">New Job Opportunities in Health Department</h3>
+                        <p class="text-gray-600 text-sm">The Health Services Department has announced 15 new positions across various specializations...</p>
+                        <button class="text-primary hover:text-blue-700 text-sm font-medium mt-3">Read More <i class="fas fa-arrow-right ml-1"></i></button>
+                    </div>
+                    <!-- @END_MAP )) -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Application Process Section -->
+        <section class="py-16 bg-neutral-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-gray-900 mb-4">Application Process</h2>
+                    <p class="text-gray-600 max-w-2xl mx-auto">Follow these simple steps to apply for your dream job</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-primary text-white rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">1</div>
+                        <h3 class="font-semibold text-gray-900 mb-2">Create Account</h3>
+                        <p class="text-gray-600 text-sm">Register with your email and verify via OTP</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-primary text-white rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">2</div>
+                        <h3 class="font-semibold text-gray-900 mb-2">Complete Profile</h3>
+                        <p class="text-gray-600 text-sm">Fill in your personal, educational, and work details</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-primary text-white rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">3</div>
+                        <h3 class="font-semibold text-gray-900 mb-2">Apply for Jobs</h3>
+                        <p class="text-gray-600 text-sm">Browse and apply for positions that match your qualifications</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-primary text-white rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">4</div>
+                        <h3 class="font-semibold text-gray-900 mb-2">Track Progress</h3>
+                        <p class="text-gray-600 text-sm">Monitor your application status and receive updates</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- @END_COMPONENT: PublicHomepage -->
+    </main>
+
+    <!-- Authentication Drawer (Right Slide-in) -->
+    <div id="authDrawer" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black bg-opacity-50" id="drawerOverlay"></div>
+        <div class="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl transform translate-x-full transition-transform duration-300 ease-in-out" id="drawerContent">
+            <!-- @COMPONENT: AuthenticationDrawer -->
+            <div class="flex flex-col h-full">
+                <div class="flex items-center justify-between p-6 border-b border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-900" id="authTitle">Login to Your Account</h2>
+                    <button id="closeDrawer" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-6">
+                    <!-- Login Form -->
+                    <div id="loginForm">
+                        <div class="mb-6">
+                            <p class="text-gray-600">Welcome back! Please sign in to continue.</p>
+                        </div>
+
+                        <form class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                                <input type="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Enter your email">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                                <div class="relative">
+                                    <input type="password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Enter your password">
+                                    <button type="button" class="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between">
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary">
+                                    <span class="ml-2 text-sm text-gray-600">Remember me</span>
+                                </label>
+                                <a href="#" class="text-sm text-primary hover:text-blue-700">Forgot password?</a>
+                            </div>
+
+                            <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium" data-event="click:handleLogin">
+                                Sign In
+                            </button>
+                        </form>
+
+                        <div class="mt-6">
+                            <div class="relative">
+                                <div class="absolute inset-0 flex items-center">
+                                    <div class="w-full border-t border-gray-300"></div>
+                                </div>
+                                <div class="relative flex justify-center text-sm">
+                                    <span class="px-2 bg-white text-gray-500">Or login with</span>
+                                </div>
+                            </div>
+
+                            <button class="w-full mt-4 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-phone mr-2"></i>Phone + OTP
+                            </button>
+                        </div>
+
+                        <div class="mt-6 text-center">
+                            <p class="text-gray-600">Don't have an account? 
+                                <button id="switchToSignup" class="text-primary hover:text-blue-700 font-medium">Sign up</button>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Registration Form (Hidden by default) -->
+                    <div id="signupForm" class="hidden">
+                        <div class="mb-6">
+                            <p class="text-gray-600">Create your account to start applying for jobs.</p>
+                        </div>
+
+                        <form class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                                    <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="First name">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Surname</label>
+                                    <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Surname">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                                <input type="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Enter your email">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                <input type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="0711234567">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                                <input type="password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Create password">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                                <input type="password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Confirm password">
+                            </div>
+
+                            <div class="flex items-center">
+                                <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary">
+                                <span class="ml-2 text-sm text-gray-600">I agree to the <a href="#" class="text-primary hover:text-blue-700">Terms and Conditions</a></span>
+                            </div>
+
+                            <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium" data-event="click:handleSignup">
+                                Create Account
+                            </button>
+                        </form>
+
+                        <div class="mt-6 text-center">
+                            <p class="text-gray-600">Already have an account? 
+                                <button id="switchToLogin" class="text-primary hover:text-blue-700 font-medium">Sign in</button>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: AuthenticationDrawer -->
+        </div>
+    </div>
+
+    <!-- Applicant Dashboard (Hidden by default) -->
+    <div id="applicantDashboard" class="hidden min-h-screen bg-neutral-50">
+        <!-- @COMPONENT: ApplicantDashboard -->
+        <div class="flex">
+            <!-- Sidebar -->
+            <aside class="w-64 bg-white shadow-sm h-screen sticky top-0">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold">
+                            MW
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900" data-bind="user.name">Moses Wafula</p>
+                            <p class="text-sm text-gray-600">Applicant</p>
+                        </div>
+                    </div>
+                </div>
+
+                <nav class="p-4 space-y-2">
+                    <a href="#" class="flex items-center space-x-3 text-primary bg-blue-50 px-3 py-2 rounded-lg">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 text-gray-700 hover:text-primary hover:bg-gray-50 px-3 py-2 rounded-lg">
+                        <i class="fas fa-user"></i>
+                        <span>Profile</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 text-gray-700 hover:text-primary hover:bg-gray-50 px-3 py-2 rounded-lg">
+                        <i class="fas fa-briefcase"></i>
+                        <span>Job Applications</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 text-gray-700 hover:text-primary hover:bg-gray-50 px-3 py-2 rounded-lg">
+                        <i class="fas fa-search"></i>
+                        <span>Browse Jobs</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 text-gray-700 hover:text-primary hover:bg-gray-50 px-3 py-2 rounded-lg">
+                        <i class="fas fa-file-upload"></i>
+                        <span>Documents</span>
+                    </a>
+                </nav>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="flex-1 p-6">
+                <!-- Profile Completion Progress -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold text-gray-900">Profile Completion</h2>
+                        <span class="text-primary font-semibold" data-bind="profile.completionPercentage">75%</span>
+                    </div>
+                    
+                    <div class="w-full bg-gray-200 rounded-full h-3 mb-4">
+                        <div class="bg-primary h-3 rounded-full transition-all duration-300" style="width: 75%"></div>
+                    </div>
+
+                    <!-- @STATE: completionSteps:array = [...] -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-6 h-6 bg-secondary rounded-full flex items-center justify-center">
+                                <i class="fas fa-check text-white text-xs"></i>
+                            </div>
+                            <span class="text-sm text-gray-600">Personal Details</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="w-6 h-6 bg-secondary rounded-full flex items-center justify-center">
+                                <i class="fas fa-check text-white text-xs"></i>
+                            </div>
+                            <span class="text-sm text-gray-600">Address Info</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="w-6 h-6 bg-secondary rounded-full flex items-center justify-center">
+                                <i class="fas fa-check text-white text-xs"></i>
+                            </div>
+                            <span class="text-sm text-gray-600">Education</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                                <span class="text-white text-xs font-bold">4</span>
+                            </div>
+                            <span class="text-sm text-primary font-medium">Employment History</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center">
+                                <span class="text-gray-600 text-xs font-bold">5</span>
+                            </div>
+                            <span class="text-sm text-gray-400">Referees</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center">
+                                <span class="text-gray-600 text-xs font-bold">6</span>
+                            </div>
+                            <span class="text-sm text-gray-400">Uploads</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            Continue Profile Setup
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dashboard Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm">Applications Submitted</p>
+                                <p class="text-2xl font-bold text-gray-900" data-bind="stats.applicationsSubmitted">3</p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-file-alt text-primary text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm">Shortlisted</p>
+                                <p class="text-2xl font-bold text-gray-900" data-bind="stats.shortlisted">1</p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-list-check text-secondary text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm">Interview Invites</p>
+                                <p class="text-2xl font-bold text-gray-900" data-bind="stats.interviews">0</p>
+                            </div>
+                            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-calendar-check text-yellow-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Applications -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900">Recent Applications</h3>
+                        <a href="#" class="text-primary hover:text-blue-700 text-sm font-medium">View All</a>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Job Title</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Department</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Applied Date</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Status</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- @MAP: applications.map(application => ( -->
+                                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                    <td class="py-3 px-4">
+                                        <div class="font-medium text-gray-900" data-bind="application.jobTitle">ICT Officer</div>
+                                        <div class="text-sm text-gray-600" data-bind="application.jobGrade">Job Group K</div>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600" data-bind="application.department">County Public Service Board</td>
+                                    <td class="py-3 px-4 text-gray-600" data-bind="application.appliedDate">Dec 10, 2024</td>
+                                    <td class="py-3 px-4">
+                                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium" data-bind="application.status">Shortlisted</span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <button class="text-primary hover:text-blue-700 text-sm font-medium">View Details</button>
+                                    </td>
+                                </tr>
+
+                                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                    <td class="py-3 px-4">
+                                        <div class="font-medium text-gray-900">Administrative Officer</div>
+                                        <div class="text-sm text-gray-600">Job Group J</div>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600">Finance and Economic Planning</td>
+                                    <td class="py-3 px-4 text-gray-600">Dec 5, 2024</td>
+                                    <td class="py-3 px-4">
+                                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">Submitted</span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <button class="text-primary hover:text-blue-700 text-sm font-medium">View Details</button>
+                                    </td>
+                                </tr>
+                                <!-- @END_MAP )) -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+        <!-- @END_COMPONENT: ApplicantDashboard -->
+    </div>
+
+    <!-- Admin Dashboard (Hidden by default) -->
+    <div id="adminDashboard" class="hidden min-h-screen bg-neutral-50">
+        <!-- @COMPONENT: AdminDashboard -->
+        <div class="flex">
+            <!-- Admin Sidebar -->
+            <aside class="w-64 bg-white shadow-sm h-screen sticky top-0">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-accent rounded-full flex items-center justify-center text-white font-semibold">
+                            <i class="fas fa-user-shield"></i>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">Admin User</p>
+                            <p class="text-sm text-gray-600">Administrator</p>
+                        </div>
+                    </div>
+                </div>
+
+                <nav class="p-4 space-y-2">
+                    <a href="#" class="flex items-center space-x-3 text-accent bg-red-50 px-3 py-2 rounded-lg">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 text-gray-700 hover:text-accent hover:bg-gray-50 px-3 py-2 rounded-lg">
+                        <i class="fas fa-briefcase"></i>
+                        <span>Job Management</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 text-gray-700 hover:text-accent hover:bg-gray-50 px-3 py-2 rounded-lg">
+                        <i class="fas fa-users"></i>
+                        <span>Applications</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 text-gray-700 hover:text-accent hover:bg-gray-50 px-3 py-2 rounded-lg">
+                        <i class="fas fa-cog"></i>
+                        <span>System Config</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 text-gray-700 hover:text-accent hover:bg-gray-50 px-3 py-2 rounded-lg">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Reports</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 text-gray-700 hover:text-accent hover:bg-gray-50 px-3 py-2 rounded-lg">
+                        <i class="fas fa-bell"></i>
+                        <span>Notifications</span>
+                    </a>
+                </nav>
+            </aside>
+
+            <!-- Admin Main Content -->
+            <main class="flex-1 p-6">
+                <!-- Admin Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm">Active Jobs</p>
+                                <p class="text-2xl font-bold text-gray-900">47</p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-briefcase text-primary text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm">Total Applications</p>
+                                <p class="text-2xl font-bold text-gray-900">1,245</p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-file-alt text-secondary text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm">Pending Review</p>
+                                <p class="text-2xl font-bold text-gray-900">89</p>
+                            </div>
+                            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-clock text-yellow-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm">Hired This Month</p>
+                                <p class="text-2xl font-bold text-gray-900">12</p>
+                            </div>
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-user-check text-purple-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Job Management Section -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900">Job Management</h3>
+                        <button class="bg-accent text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                            <i class="fas fa-plus mr-2"></i>Post New Job
+                        </button>
+                    </div>
+
+                    <!-- Job Posting Form (Condensed View) -->
+                    <div class="border border-gray-200 rounded-lg p-4 mb-4">
+                        <h4 class="font-medium text-gray-900 mb-3">Quick Job Post</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Job Title</label>
+                                <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent" placeholder="e.g., ICT Officer">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                                <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent">
+                                    <option>Select Department</option>
+                                    <option>County Public Service Board</option>
+                                    <option>Finance and Economic Planning</option>
+                                    <option>Health Services</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Job Grade</label>
+                                <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent">
+                                    <option>Select Grade</option>
+                                    <option>Job Group K</option>
+                                    <option>Job Group J</option>
+                                    <option>Job Group H</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex space-x-4">
+                            <button class="bg-accent text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                                Create Job
+                            </button>
+                            <button class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-upload mr-2"></i>Upload Job Advert
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Active Jobs Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Job Title</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Department</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Applications</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Deadline</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Status</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                    <td class="py-3 px-4">
+                                        <div class="font-medium text-gray-900">ICT Officer</div>
+                                        <div class="text-sm text-gray-600">Job Group K</div>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600">County Public Service Board</td>
+                                    <td class="py-3 px-4">
+                                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">23 Applications</span>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600">Dec 31, 2024</td>
+                                    <td class="py-3 px-4">
+                                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">Active</span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="flex space-x-2">
+                                            <button class="text-primary hover:text-blue-700 text-sm">View</button>
+                                            <button class="text-gray-600 hover:text-gray-800 text-sm">Edit</button>
+                                            <button class="text-accent hover:text-red-700 text-sm">Close</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Recent Applications -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900">Recent Applications</h3>
+                        <div class="flex space-x-2">
+                            <button class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                                <i class="fas fa-filter mr-2"></i>Filter
+                            </button>
+                            <button class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                                <i class="fas fa-download mr-2"></i>Export
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Applicant</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Job Applied</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Qualifications</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Applied Date</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Status</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">MW</div>
+                                            <div>
+                                                <div class="font-medium text-gray-900">Moses Wafula</div>
+                                                <div class="text-sm text-gray-600">moses@email.com</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="font-medium text-gray-900">ICT Officer</div>
+                                        <div class="text-sm text-gray-600">Job Group K</div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">Qualified</span>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600">Dec 10, 2024</td>
+                                    <td class="py-3 px-4">
+                                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">Submitted</span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="flex space-x-2">
+                                            <button class="text-primary hover:text-blue-700 text-sm">Review</button>
+                                            <button class="text-secondary hover:text-green-700 text-sm">Shortlist</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+        <!-- @END_COMPONENT: AdminDashboard -->
+    </div>
+
+    <!-- Board Committee Dashboard (Hidden by default) -->
+    <div id="boardDashboard" class="hidden min-h-screen bg-neutral-50">
+        <!-- @COMPONENT: BoardCommitteeDashboard -->
+        <div class="flex">
+            <!-- Board Sidebar -->
+            <aside class="w-64 bg-white shadow-sm h-screen sticky top-0">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-secondary rounded-full flex items-center justify-center text-white font-semibold">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">Board Member</p>
+                            <p class="text-sm text-gray-600">Committee</p>
+                        </div>
+                    </div>
+                </div>
+
+                <nav class="p-4 space-y-2">
+                    <a href="#" class="flex items-center space-x-3 text-secondary bg-green-50 px-3 py-2 rounded-lg">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 text-gray-700 hover:text-secondary hover:bg-gray-50 px-3 py-2 rounded-lg">
+                        <i class="fas fa-list-check"></i>
+                        <span>Shortlisting</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 text-gray-700 hover:text-secondary hover:bg-gray-50 px-3 py-2 rounded-lg">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Interviews</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 text-gray-700 hover:text-secondary hover:bg-gray-50 px-3 py-2 rounded-lg">
+                        <i class="fas fa-award"></i>
+                        <span>Scoring</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 text-gray-700 hover:text-secondary hover:bg-gray-50 px-3 py-2 rounded-lg">
+                        <i class="fas fa-file-pdf"></i>
+                        <span>Reports</span>
+                    </a>
+                </nav>
+            </aside>
+
+            <!-- Board Main Content -->
+            <main class="flex-1 p-6">
+                <!-- Board Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm">Pending Review</p>
+                                <p class="text-2xl font-bold text-gray-900">45</p>
+                            </div>
+                            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-clock text-yellow-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm">Shortlisted</p>
+                                <p class="text-2xl font-bold text-gray-900">23</p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-list-check text-secondary text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm">Interviews Scheduled</p>
+                                <p class="text-2xl font-bold text-gray-900">12</p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-calendar-check text-primary text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm">Appointed</p>
+                                <p class="text-2xl font-bold text-gray-900">8</p>
+                            </div>
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-user-check text-purple-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shortlisting Interface -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900">Shortlisting Panel</h3>
+                        <div class="flex space-x-2">
+                            <select class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                <option>All Jobs</option>
+                                <option>ICT Officer</option>
+                                <option>Administrative Officer</option>
+                            </select>
+                            <button class="bg-secondary text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm">
+                                <i class="fas fa-download mr-2"></i>Export List
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Application Review Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Applicant</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Qualification Match</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Documents</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Score</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Status</th>
+                                    <th class="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">MW</div>
+                                            <div>
+                                                <div class="font-medium text-gray-900">Moses Wafula</div>
+                                                <div class="text-sm text-gray-600">Bachelor in ICT</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="w-4 h-4 bg-secondary rounded-full"></div>
+                                            <span class="text-sm text-gray-600">100% Match</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <button class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs hover:bg-blue-200 transition-colors">
+                                            <i class="fas fa-file-pdf mr-1"></i>View PDF
+                                        </button>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <input type="number" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm" placeholder="0-100" max="100">
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <select class="border border-gray-300 rounded px-2 py-1 text-sm">
+                                            <option>Pending</option>
+                                            <option>Shortlisted</option>
+                                            <option>Rejected</option>
+                                        </select>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="flex space-x-2">
+                                            <button class="bg-secondary text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors">
+                                                Shortlist
+                                            </button>
+                                            <button class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-xs hover:bg-gray-300 transition-colors">
+                                                View Profile
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Interview Scheduling -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900">Interview Schedule</h3>
+                        <button class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-calendar-plus mr-2"></i>Schedule Interview
+                        </button>
+                    </div>
+
+                    <!-- Interview Calendar/List View -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Scheduled Interviews -->
+                        <div>
+                            <h4 class="font-medium text-gray-900 mb-4">Upcoming Interviews</h4>
+                            <div class="space-y-3">
+                                <div class="border border-gray-200 rounded-lg p-4">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="font-medium text-gray-900">ICT Officer Interviews</span>
+                                        <span class="text-sm text-gray-600">Dec 20, 2024</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600 mb-2">8 candidates scheduled</p>
+                                    <div class="flex space-x-2">
+                                        <button class="text-primary hover:text-blue-700 text-sm">View List</button>
+                                        <button class="text-gray-600 hover:text-gray-800 text-sm">Print Sheets</button>
+                                    </div>
+                                </div>
+
+                                <div class="border border-gray-200 rounded-lg p-4">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="font-medium text-gray-900">Admin Officer Interviews</span>
+                                        <span class="text-sm text-gray-600">Dec 22, 2024</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600 mb-2">5 candidates scheduled</p>
+                                    <div class="flex space-x-2">
+                                        <button class="text-primary hover:text-blue-700 text-sm">View List</button>
+                                        <button class="text-gray-600 hover:text-gray-800 text-sm">Print Sheets</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Interview Scoring -->
+                        <div>
+                            <h4 class="font-medium text-gray-900 mb-4">Interview Scoring</h4>
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Interview Session</label>
+                                    <select class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                                        <option>ICT Officer - Dec 20, 2024</option>
+                                        <option>Admin Officer - Dec 22, 2024</option>
+                                    </select>
+                                </div>
+
+                                <!-- @FUNCTIONALITY: Interview scoring should allow input of marks for each parameter defined in the database -->
+                                <div class="space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-gray-700">Technical Knowledge</span>
+                                        <input type="number" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm" placeholder="0-30" max="30">
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-gray-700">Communication Skills</span>
+                                        <input type="number" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm" placeholder="0-25" max="25">
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-gray-700">Problem Solving</span>
+                                        <input type="number" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm" placeholder="0-25" max="25">
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-gray-700">Leadership Potential</span>
+                                        <input type="number" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm" placeholder="0-20" max="20">
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 pt-4 border-t border-gray-200">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <span class="font-medium text-gray-900">Total Score:</span>
+                                        <span class="text-lg font-bold text-primary">0/100</span>
+                                    </div>
+                                    <textarea class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" rows="3" placeholder="Interview comments and remarks..."></textarea>
+                                    <button class="w-full mt-3 bg-secondary text-white py-2 rounded-lg hover:bg-green-700 transition-colors">
+                                        Save Score & Comments
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+        <!-- @END_COMPONENT: BoardCommitteeDashboard -->
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center space-x-2 mb-4">
+                        <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                            <i class="fas fa-building text-white"></i>
+                        </div>
+                        <span class="font-semibold">TNCPSB</span>
+                    </div>
+                    <p class="text-gray-300 text-sm">Trans Nzoia County Public Service Board - Building careers in public service excellence.</p>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-4">Quick Links</h4>
+                    <ul class="space-y-2 text-sm text-gray-300">
+                        <li><a href="#" class="hover:text-white">About Us</a></li>
+                        <li><a href="#" class="hover:text-white">Job Opportunities</a></li>
+                        <li><a href="#" class="hover:text-white">Application Process</a></li>
+                        <li><a href="#" class="hover:text-white">Contact</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-4">Services</h4>
+                    <ul class="space-y-2 text-sm text-gray-300">
+                        <li><a href="#" class="hover:text-white">Recruitment</a></li>
+                        <li><a href="#" class="hover:text-white">Career Development</a></li>
+                        <li><a href="#" class="hover:text-white">HR Advisory</a></li>
+                        <li><a href="#" class="hover:text-white">Training</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-4">Contact Info</h4>
+                    <div class="space-y-2 text-sm text-gray-300">
+                        <p><i class="fas fa-map-marker-alt mr-2"></i>Kitale, Trans Nzoia County</p>
+                        <p><i class="fas fa-phone mr-2"></i>+254 700 000 000</p>
+                        <p><i class="fas fa-envelope mr-2"></i>info@tncpsb.go.ke</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+                <p>&copy; 2024 Trans Nzoia County Public Service Board. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // TODO: Implement business logic, API calls, and state management
+        
+        (function() {
+            // Authentication Drawer Management
+            const authDrawer = document.getElementById('authDrawer');
+            const drawerContent = document.getElementById('drawerContent');
+            const drawerOverlay = document.getElementById('drawerOverlay');
+            const loginBtn = document.getElementById('loginBtn');
+            const signupBtn = document.getElementById('signupBtn');
+            const closeDrawer = document.getElementById('closeDrawer');
+            const loginForm = document.getElementById('loginForm');
+            const signupForm = document.getElementById('signupForm');
+            const authTitle = document.getElementById('authTitle');
+            const switchToSignup = document.getElementById('switchToSignup');
+            const switchToLogin = document.getElementById('switchToLogin');
+
+            // Dashboard Elements
+            const mainContent = document.getElementById('mainContent');
+            const applicantDashboard = document.getElementById('applicantDashboard');
+            const adminDashboard = document.getElementById('adminDashboard');
+            const boardDashboard = document.getElementById('boardDashboard');
+
+            // Current active dashboard state
+            let activeDashboard = 'public';
+
+            function openDrawer(mode = 'login') {
+                authDrawer.classList.remove('hidden');
+                setTimeout(() => {
+                    drawerContent.classList.remove('translate-x-full');
+                }, 10);
+
+                if (mode === 'login') {
+                    showLoginForm();
+                } else {
+                    showSignupForm();
+                }
+            }
+
+            function closeDrawerPanel() {
+                drawerContent.classList.add('translate-x-full');
+                setTimeout(() => {
+                    authDrawer.classList.add('hidden');
+                }, 300);
+            }
+
+            function showLoginForm() {
+                loginForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+                authTitle.textContent = 'Login to Your Account';
+            }
+
+            function showSignupForm() {
+                loginForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+                authTitle.textContent = 'Create Your Account';
+            }
+
+            function showDashboard(type) {
+                // Hide all dashboards and main content
+                mainContent.classList.add('hidden');
+                applicantDashboard.classList.add('hidden');
+                adminDashboard.classList.add('hidden');
+                boardDashboard.classList.add('hidden');
+
+                // Show selected dashboard
+                switch(type) {
+                    case 'applicant':
+                        applicantDashboard.classList.remove('hidden');
+                        activeDashboard = 'applicant';
+                        break;
+                    case 'admin':
+                        adminDashboard.classList.remove('hidden');
+                        activeDashboard = 'admin';
+                        break;
+                    case 'board':
+                        boardDashboard.classList.remove('hidden');
+                        activeDashboard = 'board';
+                        break;
+                    default:
+                        mainContent.classList.remove('hidden');
+                        activeDashboard = 'public';
+                }
+            }
+
+            // Event Listeners
+            loginBtn.addEventListener('click', () => openDrawer('login'));
+            signupBtn.addEventListener('click', () => openDrawer('signup'));
+            closeDrawer.addEventListener('click', closeDrawerPanel);
+            drawerOverlay.addEventListener('click', closeDrawerPanel);
+            switchToSignup.addEventListener('click', showSignupForm);
+            switchToLogin.addEventListener('click', showLoginForm);
+
+            // Demo dashboard switching (for mockup purposes)
+            // In real implementation, this would be handled by authentication and routing
+            document.addEventListener('keydown', function(e) {
+                if (e.altKey) {
+                    switch(e.key) {
+                        case '1':
+                            showDashboard('public');
+                            break;
+                        case '2':
+                            showDashboard('applicant');
+                            break;
+                        case '3':
+                            showDashboard('admin');
+                            break;
+                        case '4':
+                            showDashboard('board');
+                            break;
+                    }
+                }
+            });
+
+            // Progressive form validation simulation
+            function updateProgressBar(percentage) {
+                const progressBar = document.querySelector('.bg-primary.h-3');
+                if (progressBar) {
+                    progressBar.style.width = percentage + '%';
+                }
+            }
+
+            // Dynamic dropdown simulation for location hierarchy
+            function setupLocationDropdowns() {
+                // This would be replaced with actual API calls in production
+                const counties = ['Trans Nzoia', 'Bungoma', 'Uasin Gishu'];
+                const constituencies = {
+                    'Trans Nzoia': ['Kiminini', 'Saboti', 'Kwanza', 'Cherangany', 'Endebess']
+                };
+                const wards = {
+                    'Kiminini': ['Kiminini', 'Waitaluk', 'Sirende', 'Hospital'],
+                    'Saboti': ['Saboti', 'Matisi', 'Tuwani']
+                };
+            }
+
+            // Initialize on page load
+            setupLocationDropdowns();
+
+            // Accessibility improvements
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && !authDrawer.classList.contains('hidden')) {
+                    closeDrawerPanel();
+                }
+            });
+
+            // Focus management for drawer
+            authDrawer.addEventListener('transitionend', function(e) {
+                if (e.target === drawerContent && !drawerContent.classList.contains('translate-x-full')) {
+                    const firstInput = drawerContent.querySelector('input');
+                    if (firstInput) firstInput.focus();
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

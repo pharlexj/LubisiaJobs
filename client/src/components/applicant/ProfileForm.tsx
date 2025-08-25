@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import LocationDropdowns from '@/components/common/LocationDropdowns';
-import { Plus, Trash2, Upload, FileText, Shield, Check } from 'lucide-react';
+import { Plus, Trash2, Upload, FileText } from 'lucide-react';
+import { usePublicConfig } from '@/hooks/usePublicConfig';
+import EmployeeVerificationDialog from '@/components/applicant/employeeVerificationDialog';
 
 // Step schemas
 const personalDetailsSchema = z.object({
@@ -75,13 +75,15 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
     { name: '', position: '', organization: '', email: '', phoneNumber: '', relationship: '' }
   ]);
 
-  const { data: config } = useQuery({
-    queryKey: ['/api/public/config'],
-  });
+  const { data: config } = usePublicConfig();
 
   const institutions = config?.institutions || [];
   const awards = config?.awards || [];
   const courses = config?.courses || [];
+   // Employee verification state
+  const [showEmployeeVerification, setShowEmployeeVerification] = useState(false);
+  const [isVerifiedEmployee, setIsVerifiedEmployee] = useState(false);
+  const [verifiedEmployeeData, setVerifiedEmployeeData] = useState<any>(null);
 
   // Form setup based on current step
   const getFormSchema = () => {
@@ -344,7 +346,7 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                 <Input
                   id="phoneNumber"
                   {...form.register('phoneNumber')}
-                  placeholder="e.g., 0711234567"
+                  placeholder="e.g., 0711293263"
                 />
                 {form.formState.errors.phoneNumber && (
                   <p className="text-sm text-red-600 mt-1">

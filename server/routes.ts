@@ -1,11 +1,15 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import express from "express";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
-import { insertJobSchema, insertApplicationSchema, insertNoticeSchema } from "@shared/schema";
+import bcrypt from "bcrypt";
+import { insertJobSchema, insertApplicationSchema, insertNoticeSchema, users } from "@shared/schema";
+import passport from "passport";
+import { sendOtpHandler, verifyOtpHandler } from "../client/src/lib/africastalking-sms";
 
 // OTP utility functions
 function generateOtp(): string {
@@ -24,7 +28,7 @@ const upload = multer({
   dest: 'uploads/',
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -32,12 +36,195 @@ const upload = multer({
     }
   }
 });
+// Profile photo upload config with extensions preserved
+const profilePhotoStorage = multer.diskStorage({
+  destination: "uploads/profile-photos/",
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname); // .jpg / .png
+    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, uniqueName);
+  },
+});
+// Profile photo upload configuration  
+const profilePhotoUpload = multer({
+  storage: profilePhotoStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit for profile photos
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Profile photo must be JPEG or PNG format'));
+    }
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
   await setupAuth(app);
+  app.use('/uploads', express.static('uploads'));
 
+  // Profile photo upload endpoint
+  app.post('/api/upload/profile-photo', profilePhotoUpload.single('profilePhoto'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      // Basic validation
+      const file = req.file;
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.mimetype)) {
+        return res.status(400).json({ message: 'Invalid file type. Only JPEG and PNG are allowed.' });
+      }
+
+      // Generate file URL
+      const fileUrl = `/uploads/profile-photos/${file.filename}`;
+      
+      res.json({ 
+        message: 'Photo uploaded successfully',
+        url: fileUrl,
+        filename: file.filename
+      });
+    } catch (error) {
+      console.error('Error uploading profile photo:', error);
+      res.status(500).json({ message: 'Failed to upload photo' });
+    }
+  });
+
+  // --- Signup ---
+  app.post("/api/auth/signup", profilePhotoUpload.single("profilePhoto"), async (req, res) => {
+    try {
+      const { email, password, lastName, phoneNumber,idPassportNumber } = req.body;      
+      const profilePhoto = req.file ? req.file.filename : "default.jpg";
+      const fileUrl = `/uploads/profile-photos/${profilePhoto}`
+      const isValidEmail = await storage.verifyEmail(email);
+    if (isValidEmail) {
+      return res.status(401).json({ message: `Your email ${email} already registered` });
+    }
+    if (!password) {
+      return res.status(400).json({ message: "Password is required" });
+    }
+      const hashedPassword = await bcrypt.hash(password, 10);
+    
+      const newUser = await storage.upsertUser({
+        ...req.body,
+        password: hashedPassword,
+        passwordHash: hashedPassword,
+        lastName: lastName,
+        phoneNumber,
+        profileImageUrl: fileUrl,
+        idPassportNumber
+      });
+
+      // Immediately log the user in
+      req.login(newUser, (err) => {
+        if (err) {
+          console.error("Login after signup failed:", err);
+          return res.status(500).json({ message: "Failed to login after signup" });
+        }
+        res.status(201).json({ user: newUser });
+      });
+    } catch (err: any) {
+      console.error("Signup error:", err);
+      res.status(500).json({ message: err.message || "Signup failed" });
+    }
+  });
+
+  // --- Login ---
+  app.post(
+    "/api/auth/login",
+    passport.authenticate("local"),
+    (req, res) => {
+      res.json({ user: req.user });
+    }
+  );
+
+  // --- Logout ---
+  app.post("/api/auth/logout", (req, res) => {
+    req.logout(() => {
+      res.json({ message: "Logged out" });
+    });
+  });
+  app.get("/api/auth/me", (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+
+  // Decide redirectUrl based on role or other logic
+  // --- Get current session user ---
+    let redirectUrl = "/"; // default
+
+switch (req.user?.role) {
+  case "admin":
+    redirectUrl = "/admin";
+    break;
+  case "applicant":
+    redirectUrl = "/dashboard";
+    break;
+  default:
+    redirectUrl = "/";
+    break;
+}
+
+  res.json({ user: req.user, redirectUrl });
+});
+// Employee verification routes
+  app.post('/api/employee/verify', async (req, res) => {
+    try {
+      const { personalNumber, idNumber } = req.body;
+      
+      if (!personalNumber || !idNumber) {
+        return res.status(400).json({ message: 'Personal number and ID number are required' });
+      }
+
+      // Check if employee exists with matching personal number and ID
+      const employee = await storage.verifyEmployee(personalNumber, idNumber);
+      
+      if (!employee) {
+        return res.status(404).json({ message: 'Employee not found or ID number does not match' });
+      }
+
+      res.json({ 
+        message: 'Employee verified successfully',
+        employee: {
+          personalNumber: employee.personalNumber,
+          designation: employee.designation,
+        }
+      });
+    } catch (error) {
+      console.error('Error verifying employee:', error);
+      res.status(500).json({ message: 'Failed to verify employee' });
+    }
+  });
+
+  app.post('/api/employee/details', isAuthenticated, async (req:any, res) => {
+    try {
+      const userId = req.user.id;
+      const employeeData = req.body;
+
+      // Get applicant profile first
+      const applicant = await storage.getApplicant(userId);
+      if (!applicant) {
+        return res.status(404).json({ message: 'Applicant profile not found' });
+      }
+
+      // Create or update employee record
+      const employee = await storage.upsertEmployeeDetails(applicant.id, employeeData);
+      
+      res.json({ 
+        message: 'Employee details saved successfully',
+        employee 
+      });
+    } catch (error) {
+      console.error('Error saving employee details:', error);
+      res.status(500).json({ message: 'Failed to save employee details' });
+    }
+  });
   // OTP routes
+
+app.post("/api/auth/send-otp", sendOtpHandler);
+app.post("/api/auth/verify-otp", verifyOtpHandler);
+
   app.post('/api/auth/send-otp', async (req, res) => {
     try {
       const { phoneNumber } = req.body;
@@ -87,7 +274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -105,7 +292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (user.role === 'applicant') {
         if (!applicantProfile) {
           redirectUrl = '/profile?step=1&reason=complete_profile';
-        } else if (applicantProfile.profileCompletionPercentage < 100) {
+        } else if ((applicantProfile.profileCompletionPercentage || 0) < 100) {
           redirectUrl = '/profile?step=2&reason=incomplete_profile';
         } else {
           redirectUrl = '/dashboard';
@@ -204,13 +391,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to fetch configuration' });
     }
   });
-
-  // Protected applicant routes
-  
+  // Protected applicant routes  
   // Create applicant profile
   app.post('/api/applicant/profile', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || user.role !== 'applicant') {
@@ -239,13 +424,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update applicant profile
   app.put('/api/applicant/profile', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || user.role !== 'applicant') {
         return res.status(403).json({ message: 'Access denied' });
       }
-
       const profile = await storage.getApplicant(userId);
       if (!profile) {
         return res.status(404).json({ message: 'Profile not found' });
@@ -262,7 +446,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mark phone as verified after OTP verification
   app.post('/api/applicant/verify-phone', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || user.role !== 'applicant') {
@@ -293,7 +477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get applicant's applications
   app.get('/api/applicant/applications', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || user.role !== 'applicant') {
@@ -316,7 +500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Apply for a job
   app.post('/api/applicant/apply', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || user.role !== 'applicant') {
@@ -345,6 +529,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         applicantId: profile.id,
         status: 'submitted',
         submittedOn: new Date().toISOString().split('T')[0],
+        remarks: null,
+        interviewDate: null,
+        interviewScore: null,
       });
 
       res.json(application);
@@ -359,7 +546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all applications (admin)
   app.get('/api/admin/applications', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
       }
@@ -378,15 +565,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create job (admin)
   app.post('/api/admin/jobs', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
       }
 
-      const jobData = insertJobSchema.parse({
+      const jobData = {
         ...req.body,
         createdBy: user.id,
-      });
+        description: req.body.description || null,
+      };
 
       const job = await storage.createJob(jobData);
       res.json(job);
@@ -399,7 +587,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update job (admin)
   app.put('/api/admin/jobs/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
       }
@@ -416,15 +604,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create notice (admin)
   app.post('/api/admin/notices', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
       }
 
-      const noticeData = insertNoticeSchema.parse({
+      const noticeData = {
         ...req.body,
         createdBy: user.id,
-      });
+        type: req.body.type || null,
+      };
 
       const notice = await storage.createNotice(noticeData);
       res.json(notice);
@@ -439,7 +628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get applications for review (board)
   app.get('/api/board/applications', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user || user.role !== 'board') {
         return res.status(403).json({ message: 'Access denied' });
       }
@@ -458,7 +647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update application status (board)
   app.put('/api/board/applications/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user || user.role !== 'board') {
         return res.status(403).json({ message: 'Access denied' });
       }

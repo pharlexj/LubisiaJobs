@@ -38,9 +38,9 @@ export default function Navigation() {
     logout();
   };
 
-  const getUserInitials = () => {
-    if (!user?.firstName && !user?.lastName) return 'U';
-    return `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase();
+  const getUserInitials = () => {    
+    if (!user?.firstName && !user?.id) return 'U';
+    return `${user?.firstName || ''}${user?.lastName || ''}`.toUpperCase();
   };
 
   const getDashboardUrl = () => {

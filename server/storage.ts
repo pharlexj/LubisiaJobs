@@ -17,6 +17,8 @@ import {
   referees,
   documents,
   otpVerification,
+  employees,
+  payroll,
   type User,
   type UpsertUser,
   type Applicant,
@@ -29,8 +31,11 @@ import {
   type Department,
   type Designation,
   type Award,
+  type Employee,
   type CourseOffered,
   type OtpVerification,
+  type InsertEmployee,
+  type Payroll
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, like, sql } from "drizzle-orm";
@@ -71,10 +76,18 @@ export interface IStorage {
   getNotices(isPublished?: boolean): Promise<Notice[]>;
   createNotice(notice: Omit<Notice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notice>;
   updateNotice(id: number, notice: Partial<Notice>): Promise<Notice>;
+
+   // Employee operations
+  verifyEmployee(personalNumber: string, idNumber: string): Promise<Payroll | undefined>;
+  upsertEmployeeDetails(applicantId: number, employeeData: Partial<InsertEmployee>): Promise<Employee>;
+
   
   // OTP operations
   createOtp(phoneNumber: string, otp: string): Promise<OtpVerification>;
+  comparePasswords(password: string): Promise<boolean>;
   verifyOtp(phoneNumber: string, otp: string): Promise<boolean>;
+  getUserByEmail(email: string): Promise<User>;
+  verifyEmail(email: string): Promise<boolean>;
   cleanupExpiredOtps(): Promise<void>;
 }
 
@@ -128,17 +141,22 @@ export class DatabaseStorage implements IStorage {
 
   // Job operations
   async getJobs(filters?: { isActive?: boolean; departmentId?: number }): Promise<Job[]> {
-    let query = db.select().from(jobs);
+    const conditions = [];
     
     if (filters?.isActive !== undefined) {
-      query = query.where(eq(jobs.isActive, filters.isActive));
+      conditions.push(eq(jobs.isActive, filters.isActive));
     }
     
     if (filters?.departmentId) {
-      query = query.where(eq(jobs.departmentId, filters.departmentId));
+      conditions.push(eq(jobs.departmentId, filters.departmentId));
     }
     
-    return query.orderBy(desc(jobs.createdAt));
+    let query = db.select().from(jobs);
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    return await query.orderBy(desc(jobs.createdAt));
   }
 
   async getJob(id: number): Promise<Job | undefined> {
@@ -179,7 +197,7 @@ export class DatabaseStorage implements IStorage {
       query = query.where(and(...conditions));
     }
     
-    return query.orderBy(desc(applications.createdAt));
+    return await query.orderBy(desc(applications.createdAt));
   }
 
   async createApplication(application: Omit<Application, 'id' | 'createdAt' | 'updatedAt'>): Promise<Application> {
@@ -245,7 +263,7 @@ export class DatabaseStorage implements IStorage {
       query = query.where(eq(notices.isPublished, isPublished));
     }
     
-    return query.orderBy(desc(notices.createdAt));
+    return await query.orderBy(desc(notices.createdAt));
   }
 
   async createNotice(notice: Omit<Notice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notice> {
@@ -280,6 +298,33 @@ export class DatabaseStorage implements IStorage {
     return newOtp;
   }
 
+  async verifyEmail(email: string): Promise<boolean> {
+    const [emailRet] = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.email, email)))
+      .limit(1);
+    if (!emailRet) {
+      return false;
+    }
+    
+    return true;
+  }
+  async comparePasswords(password: string): Promise<boolean> {
+    const [passwordRes] = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.passwordHash, password)))
+      .limit(1);
+    if (!passwordRes) {
+      return false;
+    }
+    return true;
+  }
+  async getUserByEmail(email: string):Promise<User> {
+  const [user] = await db.select().from(users).where(eq(users.email, email));
+  return user;
+}
   async verifyOtp(phoneNumber: string, otp: string): Promise<boolean> {
     const [otpRecord] = await db
       .select()
@@ -297,14 +342,13 @@ export class DatabaseStorage implements IStorage {
     if (!otpRecord) {
       return false;
     }
-
     // Check if OTP is expired
     if (new Date() > otpRecord.expiresAt) {
       return false;
     }
 
     // Check if too many attempts
-    if (otpRecord.attempts >= 3) {
+    if ((otpRecord.attempts || 0) >= 3) {
       return false;
     }
 
@@ -312,7 +356,7 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(otpVerification)
       .set({ 
-        attempts: otpRecord.attempts + 1,
+        attempts: (otpRecord.attempts || 0) + 1,
         verified: true 
       })
       .where(eq(otpVerification.id, otpRecord.id));
@@ -324,6 +368,45 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(otpVerification)
       .where(sql`${otpVerification.expiresAt} < NOW()`);
+  }
+  // Employee operations
+  async verifyEmployee(personalNumber: string, idNumber: string): Promise<Payroll | undefined> {
+    const [payrol] = await db
+      .select()
+      .from(payroll)
+      .where(
+        and(
+          eq(payroll.personalNumber, personalNumber),
+          eq(payroll.idNumber, idNumber)
+        )
+      );
+    return payrol;
+  }
+
+  async upsertEmployeeDetails(applicantId: number, employeeData: Partial<InsertEmployee>): Promise<Employee> {
+    const existingEmployee = await db
+      .select()
+      .from(employees)
+      .where(eq(employees.applicantId, applicantId))
+      .then(rows => rows[0]);
+
+    if (existingEmployee) {
+      const [updatedEmployee] = await db
+        .update(employees)
+        .set({ ...employeeData, updatedAt: new Date() })
+        .where(eq(employees.id, existingEmployee.id))
+        .returning();
+      return updatedEmployee;
+    } else {
+      const [newEmployee] = await db
+        .insert(employees)
+        .values({
+          applicantId,
+          ...employeeData,
+        } as InsertEmployee)
+        .returning();
+      return newEmployee;
+    }
   }
 }
 

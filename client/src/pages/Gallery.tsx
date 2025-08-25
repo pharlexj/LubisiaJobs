@@ -161,10 +161,10 @@ export default function Gallery() {
             </p>
             <div className="flex justify-center space-x-4">
               <Badge variant="outline" className="text-primary">
-                📧 gallery@tncpsb.go.ke
+                📧 gallery@cpsbtransnzoia.go.ke 
               </Badge>
               <Badge variant="outline" className="text-primary">
-                📞 +254 700 000 000
+                📞  +254 713 635 352
               </Badge>
             </div>
           </CardContent>

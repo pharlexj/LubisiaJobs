@@ -140,24 +140,23 @@ export default function About() {
                 <h4 className="font-semibold text-gray-900 mb-2">Office Location</h4>
                 <p className="text-gray-600">
                   Trans Nzoia County Headquarters<br />
-                  P.O. Box 123-30200<br />
+                  P.O. Box 4210-30200<br />
                   Kitale, Kenya
                 </p>
               </div>
               <div>
                 <h4 className="font-semibold text-gray-900 mb-2">Contact</h4>
                 <p className="text-gray-600">
-                  Phone: +254 700 000 000<br />
-                  Email: info@tncpsb.go.ke<br />
-                  Website: www.tncpsb.go.ke
+                  Phone: +254 713 635 352<br />
+                  Email: info@cpsbtransnzoia.co.ke<br />
+                  Website: www.cpsbtransnzoia.co.ke
                 </p>
               </div>
               <div>
                 <h4 className="font-semibold text-gray-900 mb-2">Office Hours</h4>
                 <p className="text-gray-600">
                   Monday - Friday: 8:00 AM - 5:00 PM<br />
-                  Saturday: 8:00 AM - 12:00 PM<br />
-                  Sunday: Closed
+                  Saturday & Sunday: Closed
                 </p>
               </div>
             </div>

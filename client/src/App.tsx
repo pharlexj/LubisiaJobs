@@ -3,8 +3,8 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 // Public pages
 import Home from "@/pages/Home";
@@ -40,18 +40,20 @@ function Router() {
       <Route path="/notices" component={Notices} />
       <Route path="/jobs" component={Jobs} />
 
-      {/* Protected routes - will handle auth check within each component */}
-      <Route path="/dashboard" component={ApplicantDashboard} />
-      <Route path="/profile" component={ApplicantProfile} />
-      <Route path="/applications" component={ApplicantApplications} />
+      {/* Applicant routes */}
+      <ProtectedRoute path="/dashboard" component={ApplicantDashboard} allowedRoles={["applicant"]} />
+      <ProtectedRoute path="/profile" component={ApplicantProfile} allowedRoles={["applicant"]} />
+      <ProtectedRoute path="/applications" component={ApplicantApplications} allowedRoles={["applicant"]} />
 
-      <Route path="/admin" component={AdminDashboard} />
-      <Route path="/admin/jobs" component={AdminJobManagement} />
-      <Route path="/admin/applications" component={AdminApplications} />
+      {/* Admin routes */}
+      <ProtectedRoute path="/admin" component={AdminDashboard} allowedRoles={["admin"]} />
+      <ProtectedRoute path="/admin/jobs" component={AdminJobManagement} allowedRoles={["admin"]} />
+      <ProtectedRoute path="/admin/applications" component={AdminApplications} allowedRoles={["admin"]} />
 
-      <Route path="/board" component={BoardDashboard} />
-      <Route path="/board/shortlisting" component={BoardShortlisting} />
-      <Route path="/board/interviews" component={BoardInterviews} />
+      {/* Board routes */}
+      <ProtectedRoute path="/board" component={BoardDashboard} allowedRoles={["board"]} />
+      <ProtectedRoute path="/board/shortlisting" component={BoardShortlisting} allowedRoles={["board"]} />
+      <ProtectedRoute path="/board/interviews" component={BoardInterviews} allowedRoles={["board"]} />
 
       {/* Fallback */}
       <Route component={NotFound} />

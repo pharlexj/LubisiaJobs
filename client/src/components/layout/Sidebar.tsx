@@ -30,7 +30,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
   const { user } = useAuth();
 
   const getUserInitials = () => {
-    if (!user?.firstName && !user?.lastName) return 'U';
+    if (!user?.firstName && !user?.lastName) return 'User';
     return `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase();
   };
 
@@ -195,7 +195,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="font-medium text-gray-900 truncate">
-              {user?.firstName} {user?.lastName}
+              {user?.firstName.toUpperCase()} {user?.lastName}
             </p>
             <p className="text-sm text-gray-600 truncate">{user?.email}</p>
           </div>

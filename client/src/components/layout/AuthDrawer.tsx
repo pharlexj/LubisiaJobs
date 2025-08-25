@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,9 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
-import { Eye, EyeOff, Phone, Shield } from 'lucide-react';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { Eye, EyeOff, Phone, Shield, Upload, User } from 'lucide-react';
+import { useLocation } from "wouter";
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -22,16 +24,17 @@ const loginSchema = z.object({
 
 const signupSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
-  surname: z.string().min(2, 'Surname must be at least 2 characters'),
+  lastName: z.string().min(2, 'lastName must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   phoneNumber: z.string().min(10, 'Phone number must be at least 10 digits'),
   idPassportType: z.enum(['national_id', 'passport', 'alien_id'], {
-    required_error: 'Please select ID/Passport type',
+  required_error: 'Please select ID/Passport type',
   }),
   idPassportNumber: z.string().min(5, 'ID/Passport number is required'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
-  agreeToTerms: z.boolean().refine(val => val === true, 'You must agree to the terms'),
+  profilePhoto: z.instanceof(File, "Please select a profile photo"),
+  agreeToTerms: z.boolean().refine(val => val === true, 'You must agree to the terms and conditions'),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -41,7 +44,6 @@ const otpSchema = z.object({
   phoneNumber: z.string().min(10, 'Phone number must be at least 10 digits'),
   otp: z.string().length(6, 'OTP must be 6 digits'),
 });
-
 interface AuthDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -53,7 +55,11 @@ export default function AuthDrawer({ open, onOpenChange, mode, onModeChange }: A
   const [showPassword, setShowPassword] = useState(false);
   const [showOtpStep, setShowOtpStep] = useState(false);
   const [pendingPhoneNumber, setPendingPhoneNumber] = useState('');
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const [,setLocation] = useLocation();
 
   const loginForm = useForm({
     resolver: zodResolver(loginSchema),
@@ -63,18 +69,28 @@ export default function AuthDrawer({ open, onOpenChange, mode, onModeChange }: A
       rememberMe: false,
     },
   });
-
+  // 🟢 Types
+type SignupData = z.infer<typeof signupSchema>;
+type OtpData = z.infer<typeof otpSchema>;
+ // --- Helper: refresh session ---
+  const refreshSession = async () => {
+    const res = await apiRequest("GET", "/api/auth/me");
+    const data = await res.json();
+    queryClient.setQueryData(["/api/auth/me"], data);
+    return data;
+  };
   const signupForm = useForm({
     resolver: zodResolver(signupSchema),
     defaultValues: {
       firstName: '',
-      surname: '',
+      lastName: '',
       email: '',
       phoneNumber: '',
       idPassportType: undefined,
       idPassportNumber: '',
       password: '',
       confirmPassword: '',
+      profilePhoto: undefined,
       agreeToTerms: false,
     },
   });
@@ -86,93 +102,205 @@ export default function AuthDrawer({ open, onOpenChange, mode, onModeChange }: A
       otp: '',
     },
   });
-
+  // --- Login Mutation ---
   const loginMutation = useMutation({
     mutationFn: async (data: z.infer<typeof loginSchema>) => {
-      // For Replit Auth, we redirect to the login endpoint
-      window.location.href = '/api/login';
+      const res = await apiRequest('POST', '/api/auth/login', data);
+      return res.json();
     },
-    onError: (error) => {
+    onSuccess: async () => {
+        const { user, redirectUrl } = await refreshSession();
+      queryClient.setQueryData(['auth', 'me'], user);
+
+      toast({
+        title: 'Login Successful',
+        description: `Welcome, ${user?.firstName || 'user'}!`,
+      });
+      if (redirectUrl) {
+        setLocation(redirectUrl);
+      }
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
       toast({
         title: 'Login Failed',
-        description: error.message,
+        description: error.message || 'Login failed.',
         variant: 'destructive',
       });
     },
   });
+ // --- Signup Mutation ---
+  const signupMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: (res) => {
+      const { user } = res;
 
+      // ✅ save phone for OTP step
+      setPendingPhoneNumber(user.phoneNumber);
+
+      toast({
+        title: "Account Created",
+        description: "Please verify your phone number with the OTP we sent.",
+      });
+
+      // ✅ send OTP automatically
+      if (user.phoneNumber) {
+        sendOtpMutation.mutate(user.phoneNumber);
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Signup Failed",
+        description: error.message || "Signup failed.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // --- Send OTP Mutation ---
   const sendOtpMutation = useMutation({
     mutationFn: async (phoneNumber: string) => {
-      return await apiRequest('POST', '/api/auth/send-otp', { phoneNumber });
+      return await apiRequest("POST", "/api/auth/send-otp", { phoneNumber });
     },
     onSuccess: () => {
       toast({
-        title: 'OTP Sent',
-        description: 'Please check your phone for the verification code.',
+        title: "OTP Sent",
+        description: "Check your phone for the verification code.",
       });
       setShowOtpStep(true);
     },
     onError: (error: any) => {
       toast({
-        title: 'Failed to Send OTP',
-        description: error.message || 'Please try again',
-        variant: 'destructive',
+        title: "Failed to Send OTP",
+        description: error.message || "Please try again",
+        variant: "destructive",
       });
     },
   });
-
-  const verifyOtpMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof otpSchema>) => {
-      return await apiRequest('POST', '/api/auth/verify-otp', data);
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Phone Verified',
-        description: 'Your phone number has been verified successfully.',
-      });
-      // Now redirect to Replit auth
-      window.location.href = '/api/login';
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Verification Failed',
-        description: error.message || 'Invalid OTP code',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const signupMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof signupSchema>) => {
-      // Store signup data temporarily and send OTP
-      setPendingPhoneNumber(data.phoneNumber);
-      otpForm.setValue('phoneNumber', data.phoneNumber);
-      return await sendOtpMutation.mutateAsync(data.phoneNumber);
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Signup Failed',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const handleLogin = (data: z.infer<typeof loginSchema>) => {
-    loginMutation.mutate(data);
-  };
-
-  const handleSignup = (data: z.infer<typeof signupSchema>) => {
-    signupMutation.mutate(data);
-  };
-  
-  const handleOtpVerification = (data: z.infer<typeof otpSchema>) => {
-    verifyOtpMutation.mutate(data);
-  };
-  
-  const handleSendOtp = () => {
+const handleSendOtp = () => {
     if (pendingPhoneNumber) {
       sendOtpMutation.mutate(pendingPhoneNumber);
+    }
+  };
+  // --- Verify OTP Mutation ---
+  const verifyOtpMutation = useMutation({
+    mutationFn: async (data: OtpData) => {
+      return await apiRequest("POST", "/api/auth/verify-otp", data);
+    },
+    onSuccess: async () => {
+      toast({
+        title: "Phone Verified",
+        description: "Your phone number has been verified successfully.",
+      });
+
+      // ✅ now login
+      const { user, redirectUrl } = await refreshSession();
+      queryClient.setQueryData(["auth", "me"], user);
+
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
+      } else {
+        window.location.href = "/";
+      }
+
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Verification Failed",
+        description: error.message || "Invalid OTP code",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // --- Handlers ---
+  const handleSignup = (data: SignupData) => {
+    const formData = new FormData();
+    formData.append("firstName", data.firstName);
+    formData.append("lastName", data.lastName);
+    formData.append("email", data.email);
+    formData.append("password", data.password);
+    formData.append("phoneNumber", data.phoneNumber);
+    formData.append("idPassportType", data.idPassportType);
+    formData.append("idPassportNumber", data.idPassportNumber);
+
+    if (profilePhoto) {
+      formData.append("profilePhoto", profilePhoto);
+    }
+
+    signupMutation.mutate(formData);
+  };
+
+  const handleOtpVerificationz = (data: z.infer<typeof otpSchema>) => verifyOtpMutation.mutate(data);
+const handleOtpVerification = (data: z.infer<typeof otpSchema>) => {
+  if (!pendingPhoneNumber) {
+    toast({
+      title: "Missing Phone",
+      description: "We couldn't find your phone number. Please sign up again.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  verifyOtpMutation.mutate({
+    otp: data.otp,
+    phoneNumber: pendingPhoneNumber,
+  });
+};
+
+  const handleLogin = (data: z.infer<typeof loginSchema>) => loginMutation.mutate(data);
+
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!validTypes.includes(file.type)) {
+        toast({
+          title: 'Invalid File Type',
+          description: 'Please select a JPEG or PNG image file.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: 'File Too Large',
+          description: 'Please select an image under 5MB.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setProfilePhoto(file);
+      signupForm.setValue('profilePhoto', file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPhotoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removePhoto = () => {
+    setProfilePhoto(null);
+    setPhotoPreview(null);
+    signupForm.setValue('profilePhoto', undefined);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
   
@@ -186,24 +314,24 @@ export default function AuthDrawer({ open, onOpenChange, mode, onModeChange }: A
   };
 
   const handlePhoneLogin = () => {
-    window.location.href = '/api/login';
+    window.location.href = '/';
   };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full max-w-md">
-        <SheetHeader>
+      <SheetContent side="right" className="w-full max-w-md flex flex-col h-full">
+        <SheetHeader className="flex-shrink-0">
           <SheetTitle>
             {mode === 'login' ? 'Login to Your Account' : 'Create Your Account'}
           </SheetTitle>
         </SheetHeader>
 
-        <div className="mt-6">
+        <div className="flex-1 overflow-y-auto mt-6 pr-2 pb-4">
           {mode === 'login' ? (
             <div>
               <p className="text-gray-600 mb-6">Welcome back! Please sign in to continue.</p>
               
-              <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+              <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4 max-h-none">
                 <div>
                   <Label htmlFor="email">Email Address</Label>
                   <Input
@@ -311,7 +439,7 @@ export default function AuthDrawer({ open, onOpenChange, mode, onModeChange }: A
               <p className="text-gray-600 mb-6">Create your account to start applying for jobs.</p>
               
 {!showOtpStep ? (
-                <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4">
+                <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4 max-h-none">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="firstName">First Name</Label>
@@ -328,16 +456,16 @@ export default function AuthDrawer({ open, onOpenChange, mode, onModeChange }: A
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="surname">Surname</Label>
+                      <Label htmlFor="lastName">Last Name</Label>
                       <Input
-                        id="surname"
-                        data-testid="input-surname"
-                        placeholder="Surname"
-                        {...signupForm.register('surname')}
+                        id="lastName"
+                        data-testid="input-lastName"
+                        placeholder="Last Name"
+                        {...signupForm.register('lastName')}
                       />
-                      {signupForm.formState.errors.surname && (
+                      {signupForm.formState.errors.lastName && (
                         <p className="text-sm text-red-600 mt-1">
-                          {signupForm.formState.errors.surname.message}
+                          {signupForm.formState.errors.lastName.message}
                         </p>
                       )}
                     </div>
@@ -445,17 +573,78 @@ export default function AuthDrawer({ open, onOpenChange, mode, onModeChange }: A
                     )}
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  {/* Profile Photo Upload */}
+                  <div>
+                    <Label htmlFor="profilePhoto">Profile Photo</Label>
+                    <p className="text-xs text-gray-600 mb-2">
+                      Upload a passport-size photo where your face is clearly visible. 
+                      No inappropriate content allowed. (JPEG/PNG, max 5MB)
+                    </p>
+                    <div className="flex items-center space-x-4">
+                      <Avatar className="w-20 h-20">
+                        {photoPreview ? (
+                          <AvatarImage src={photoPreview} alt="Profile preview" />
+                        ) : (
+                          <AvatarFallback>
+                            <User className="w-8 h-8" />
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      <div className="flex flex-col space-y-2">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png"
+                          onChange={handlePhotoUpload}
+                          className="hidden"
+                          id="profilePhoto"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fileInputRef.current?.click()}
+                          data-testid="button-uploadPhoto"
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          Upload Photo
+                        </Button>
+                        {profilePhoto && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={removePhoto}
+                            data-testid="button-removePhoto"
+                          >
+                            Remove Photo
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    {signupForm.formState.errors.profilePhoto && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {signupForm.formState.errors.profilePhoto.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-start space-x-2">
                     <Checkbox
                       id="agreeToTerms"
                       data-testid="checkbox-agreeToTerms"
-                      {...signupForm.register('agreeToTerms')}
+                      checked={signupForm.watch('agreeToTerms')}
+                      onCheckedChange={(checked) => {
+                        signupForm.setValue('agreeToTerms', !!checked);
+                      }}
                     />
-                    <Label htmlFor="agreeToTerms" className="text-sm">
+                    <Label htmlFor="agreeToTerms" className="text-sm leading-relaxed">
                       I agree to the{' '}
-                      <Button variant="link" className="p-0 h-auto text-primary">
+                      <Button variant="link" className="p-0 h-auto text-primary underline">
                         Terms and Conditions
                       </Button>
+                      {' '}and confirm that my uploaded photo is appropriate, passport-sized, 
+                      and clearly shows my face.
                     </Label>
                   </div>
                   {signupForm.formState.errors.agreeToTerms && (

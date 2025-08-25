@@ -166,7 +166,7 @@ export default function HeroCarousel() {
                           >
                             <IconComponent 
                               className="w-32 h-32" 
-                              style={{ color: slide.accent === '#EEF200' ? '#1D523A' : slide.accent }}
+                              style={{ color: slide.accent === '#a4a70fff' ? '#1D523A' : slide.accent }}
                             />
                           </div>
                         </div>
@@ -185,7 +185,7 @@ export default function HeroCarousel() {
         className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-200 z-10"
         onClick={scrollPrev}
         data-testid="carousel-prev"
-        style={{ color: '#FFFFFF' }}
+        style={{ color: '#762364ff' }}
       >
         <ChevronLeft className="w-6 h-6" />
       </button>
@@ -194,7 +194,7 @@ export default function HeroCarousel() {
         className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-200 z-10"
         onClick={scrollNext}
         data-testid="carousel-next"
-        style={{ color: '#FFFFFF' }}
+        style={{ color: '#2a5f81ff' }}
       >
         <ChevronRight className="w-6 h-6" />
       </button>
