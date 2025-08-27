@@ -298,6 +298,23 @@ export const professionalQualifications = pgTable("professional_qualifications",
     .defaultNow()
     .notNull(),
 });
+
+//Short Courses
+export const shortCourse = pgTable("short_course", {
+  id: serial("id").primaryKey(),
+  institutionName: varchar("institution_name", { length: 255 }).notNull(),
+  applicantId: integer("applicant_id").notNull(),
+  course: varchar("course", { length: 255 }).notNull(),
+  certificateNo: varchar("certificate_no", { length: 100 }),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: false })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: false })
+    .defaultNow()
+    .notNull(),
+});
 // Employment history
 export const employmentHistory = pgTable("employment_history", {
   id: serial("id").primaryKey(),

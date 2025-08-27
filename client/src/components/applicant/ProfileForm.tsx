@@ -84,6 +84,20 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
   const [referees, setReferees] = useState([
     { name: '', position: '', organization: '', email: '', phoneNumber: '', relationship: '' }
   ]);
+  const [professionalQualifications, setProfessionalQualifications] = useState([
+    { institution: '', studentNo: '', areaOfStudyId: 0, specialisationId: 0, course: '', awardId: 0, gradeId: '', examiner: '', certificateNo: '', startDate: '', endDate: '' }
+  ]);
+  const [shortCourses, setShortCourses] = useState([
+    { institutionName: '', course: '', certificateNo: '', startDate: '', endDate: '' }
+  ]);
+  const [uploadedDocuments, setUploadedDocuments] = useState<{[key: string]: File | null}>({
+    national_id: null,
+    certificates: null,
+    transcripts: null,
+    professional_certs: null,
+    kra_pin: null,
+    good_conduct: null,
+  });
   const [employeeData, setEmployeeData] = useState({
     personalNumber: '',
     designation: '',
@@ -151,8 +165,13 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
       ...data,
       educationRecords: step === 3 ? educationRecords : undefined,
       employee: step === 1.5 ? employeeData : undefined,
+      professionalQualifications: step === 5 ? professionalQualifications : undefined,
+      shortCourses: step === 4 ? shortCourses : undefined,
       employmentHistory: step === 6 ? employmentHistory : undefined,
       referees: step === 7 ? referees : undefined,
+      documents: step === 8 ? uploadedDocuments : undefined,
+      // Include verification status for step 1 to ensure proper navigation
+      isVerifiedEmployee: step === 1 ? isVerifiedEmployee : undefined,
     };
     
     onSave(stepData);
@@ -213,6 +232,54 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
     const updated = [...referees];
     updated[index] = { ...updated[index], [field]: value };
     setReferees(updated);
+  };
+
+  // Professional Qualifications handlers
+  const addProfessionalQualification = () => {
+    setProfessionalQualifications([
+      ...professionalQualifications,
+      { institution: '', studentNo: '', areaOfStudyId: 0, specialisationId: 0, course: '', awardId: 0, gradeId: '', examiner: '', certificateNo: '', startDate: '', endDate: '' }
+    ]);
+  };
+
+  const removeProfessionalQualification = (index: number) => {
+    if (professionalQualifications.length > 1) {
+      setProfessionalQualifications(professionalQualifications.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateProfessionalQualification = (index: number, field: string, value: any) => {
+    const updated = [...professionalQualifications];
+    updated[index] = { ...updated[index], [field]: value };
+    setProfessionalQualifications(updated);
+  };
+
+  // Short Courses handlers
+  const addShortCourse = () => {
+    setShortCourses([
+      ...shortCourses,
+      { institutionName: '', course: '', certificateNo: '', startDate: '', endDate: '' }
+    ]);
+  };
+
+  const removeShortCourse = (index: number) => {
+    if (shortCourses.length > 1) {
+      setShortCourses(shortCourses.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateShortCourse = (index: number, field: string, value: any) => {
+    const updated = [...shortCourses];
+    updated[index] = { ...updated[index], [field]: value };
+    setShortCourses(updated);
+  };
+
+  // Document upload handler
+  const handleFileUpload = (documentType: string, file: File | null) => {
+    setUploadedDocuments(prev => ({
+      ...prev,
+      [documentType]: file
+    }));
   };
 
   const renderStepContent = () => {
@@ -404,7 +471,8 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="isPwd"
-                  {...form.register('isPwd')}
+                  checked={form.watch('isPwd')}
+                  onCheckedChange={(checked) => form.setValue('isPwd', checked as boolean)}
                 />
                 <Label htmlFor="isPwd">I am a Person with Disability (PWD)</Label>
               </div>
@@ -423,8 +491,9 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="isEmployee"
-                  {...form.register('isEmployee')}
+                  checked={form.watch('isEmployee')}
                   onCheckedChange={(checked) => {
+                    form.setValue('isEmployee', checked as boolean);
                     if (checked && !isVerifiedEmployee) {
                       setShowEmployeeVerification(true);
                     }
@@ -692,6 +761,241 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
           </div>
         );
 
+      case 4: // Short Courses
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium text-gray-900">Short Courses</h4>
+              <Button type="button" variant="outline" onClick={addShortCourse}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Short Course
+              </Button>
+            </div>
+
+            {shortCourses.map((course, index) => (
+              <Card key={index}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h5 className="font-medium">Short Course {index + 1}</h5>
+                    {shortCourses.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeShortCourse(index)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Institution Name</Label>
+                      <Input
+                        value={course.institutionName}
+                        onChange={(e) => updateShortCourse(index, 'institutionName', e.target.value)}
+                        placeholder="Name of institution"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Course</Label>
+                      <Input
+                        value={course.course}
+                        onChange={(e) => updateShortCourse(index, 'course', e.target.value)}
+                        placeholder="Course name"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Certificate Number</Label>
+                      <Input
+                        value={course.certificateNo}
+                        onChange={(e) => updateShortCourse(index, 'certificateNo', e.target.value)}
+                        placeholder="Certificate number (optional)"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Start Date</Label>
+                      <Input
+                        type="date"
+                        value={course.startDate}
+                        onChange={(e) => updateShortCourse(index, 'startDate', e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>End Date</Label>
+                      <Input
+                        type="date"
+                        value={course.endDate}
+                        onChange={(e) => updateShortCourse(index, 'endDate', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        );
+
+      case 5: // Professional Qualifications
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium text-gray-900">Professional Qualifications</h4>
+              <Button type="button" variant="outline" onClick={addProfessionalQualification}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Professional Qualification
+              </Button>
+            </div>
+
+            {professionalQualifications.map((qualification, index) => (
+              <Card key={index}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h5 className="font-medium">Professional Qualification {index + 1}</h5>
+                    {professionalQualifications.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeProfessionalQualification(index)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Institution</Label>
+                      <Input
+                        value={qualification.institution}
+                        onChange={(e) => updateProfessionalQualification(index, 'institution', e.target.value)}
+                        placeholder="Institution name"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Student Number</Label>
+                      <Input
+                        value={qualification.studentNo}
+                        onChange={(e) => updateProfessionalQualification(index, 'studentNo', e.target.value)}
+                        placeholder="Student/Registration number"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Area of Study</Label>
+                      <Select onValueChange={(value) => updateProfessionalQualification(index, 'areaOfStudyId', parseInt(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select area of study" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {((config as any)?.studyArea || []).map((area: any) => (
+                            <SelectItem key={area.id} value={area.id.toString()}>
+                              {area.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Specialisation</Label>
+                      <Select onValueChange={(value) => updateProfessionalQualification(index, 'specialisationId', parseInt(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select specialisation" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {((config as any)?.specializations || []).map((spec: any) => (
+                            <SelectItem key={spec.id} value={spec.id.toString()}>
+                              {spec.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Course</Label>
+                      <Input
+                        value={qualification.course}
+                        onChange={(e) => updateProfessionalQualification(index, 'course', e.target.value)}
+                        placeholder="Course name"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Award</Label>
+                      <Select onValueChange={(value) => updateProfessionalQualification(index, 'awardId', parseInt(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select award" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {awards.map((award) => (
+                            <SelectItem key={award.id} value={award.id.toString()}>
+                              {award.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Grade</Label>
+                      <Input
+                        value={qualification.gradeId}
+                        onChange={(e) => updateProfessionalQualification(index, 'gradeId', e.target.value)}
+                        placeholder="Grade obtained"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Examiner</Label>
+                      <Input
+                        value={qualification.examiner}
+                        onChange={(e) => updateProfessionalQualification(index, 'examiner', e.target.value)}
+                        placeholder="Examining body"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Certificate Number</Label>
+                      <Input
+                        value={qualification.certificateNo}
+                        onChange={(e) => updateProfessionalQualification(index, 'certificateNo', e.target.value)}
+                        placeholder="Certificate number"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Start Date</Label>
+                      <Input
+                        type="date"
+                        value={qualification.startDate}
+                        onChange={(e) => updateProfessionalQualification(index, 'startDate', e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>End Date</Label>
+                      <Input
+                        type="date"
+                        value={qualification.endDate}
+                        onChange={(e) => updateProfessionalQualification(index, 'endDate', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        );
+
       case 6: // Employment History
         return (
           <div className="space-y-6">
@@ -900,7 +1204,7 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                       )}
                     </div>
 
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center relative">
                       <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                       <p className="text-sm text-gray-600 mb-2">
                         Click to upload or drag and drop
@@ -910,13 +1214,47 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                         type="file"
                         accept=".pdf"
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          if (file) {
+                            // Validate file size (5MB = 5 * 1024 * 1024 bytes)
+                            if (file.size > 5 * 1024 * 1024) {
+                              alert('File size must be less than 5MB');
+                              return;
+                            }
+                            // Validate file type
+                            if (file.type !== 'application/pdf') {
+                              alert('Only PDF files are allowed');
+                              return;
+                            }
+                          }
+                          handleFileUpload(doc.key, file);
+                        }}
                       />
                     </div>
 
                     <div className="mt-3">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <FileText className="w-4 h-4 mr-2" />
-                        <span>No file uploaded</span>
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center text-gray-600">
+                          <FileText className="w-4 h-4 mr-2" />
+                          <span>
+                            {uploadedDocuments[doc.key] 
+                              ? uploadedDocuments[doc.key]!.name 
+                              : 'No file uploaded'
+                            }
+                          </span>
+                        </div>
+                        {uploadedDocuments[doc.key] && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleFileUpload(doc.key, null)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
