@@ -63,21 +63,25 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  passport.use(
-    new GoogleStrategy(
-      {
-        clientID: process.env.GOOGLE_CLIENT!,
-        clientSecret: process.env.GOOGLE_SECRET!,
-        callbackURL: `http://${process.env.REPLIT_DOMAINS}/api/google/callback`,
-      },
-      async (accessToken, refreshToken, profile, done) => {
-        const user: any = {};
-        updateUserSession(user, profile);
-        await upsertUser(profile);
-        done(null, user);
-      }
-    )
-  );
+  // TODO: Implement Replit OIDC authentication
+  // Temporarily disable Google OAuth until proper Replit auth is configured
+  if (process.env.GOOGLE_CLIENT && process.env.GOOGLE_SECRET) {
+    passport.use(
+      new GoogleStrategy(
+        {
+          clientID: process.env.GOOGLE_CLIENT!,
+          clientSecret: process.env.GOOGLE_SECRET!,
+          callbackURL: `http://${process.env.REPLIT_DOMAINS}/api/google/callback`,
+        },
+        async (accessToken, refreshToken, profile, done) => {
+          const user: any = {};
+          updateUserSession(user, profile);
+          await upsertUser(profile);
+          done(null, user);
+        }
+      )
+    );
+  }
 
   passport.serializeUser((user, cb) => cb(null, user));
   passport.deserializeUser((user, cb) => cb(null, user||null));
