@@ -12,6 +12,7 @@ import {
   index,
   serial
 } from "drizzle-orm/pg-core";
+
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -55,7 +56,6 @@ export const users = pgTable("users", {
 // Counties
 export const counties = pgTable("counties", {
   id: serial("id").primaryKey(),
-  code: varchar("code", { length: 11 }).notNull().unique(),
   name: varchar("name", { length: 100 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -63,7 +63,6 @@ export const counties = pgTable("counties", {
 // Constituencies
 export const constituencies = pgTable("constituencies", {
   id: serial("id").primaryKey(),
-  code: varchar("code", { length: 11 }).notNull().unique(),
   name: varchar("name", { length: 100 }).notNull(),
   countyId: integer("county_id").notNull().references(() => counties.id),
 });
@@ -71,7 +70,6 @@ export const constituencies = pgTable("constituencies", {
 // Wards
 export const wards = pgTable("wards", {
   id: serial("id").primaryKey(),
-  code: varchar("code", { length: 11 }).notNull().unique(),
   name: varchar("name", { length: 100 }).notNull(),
   constituencyId: integer("constituency_id").notNull().references(() => constituencies.id),
 });

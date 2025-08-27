@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import LocationDropdowns from '@/components/common/LocationDropdowns';
 import { Plus, Trash2, Upload, FileText } from 'lucide-react';
 import { usePublicConfig } from '@/hooks/usePublicConfig';
-import EmployeeVerificationDialog from '@/components/applicant/employeeVerificationDialog';
+import EmployeeVerificationDialog from '@/components/applicant/EmployeeVerificationDialog';
 
 // Step schemas
 const personalDetailsSchema = z.object({
@@ -28,7 +28,6 @@ const personalDetailsSchema = z.object({
   idPassportType: z.enum(['national_id', 'passport', 'alien_id'], {
     required_error: 'Please select ID/Passport type',
   }),
-  idPassportNumber: z.string().min(5, 'ID/Passport number is required'),
   dateOfBirth: z.string().min(1, 'Date of birth is required'),
   gender: z.string().min(1, 'Gender is required'),
   nationality: z.string().default('Kenyan'),
@@ -38,6 +37,17 @@ const personalDetailsSchema = z.object({
   pwdNumber: z.string().optional(),
   isEmployee: z.boolean().default(false),
   kraPin: z.string().optional(),
+});
+
+const employeeDetailsSchema = z.object({
+  personalNumber: z.string().min(1, 'Personal number is required'),
+  designation: z.string().min(1, 'Designation is required'),
+  dutyStation: z.string().min(1, 'Duty station is required'),
+  jg: z.string().min(1, 'Job group is required'),
+  actingPosition: z.string().optional(),
+  departmentId: z.string().min(1, 'Department is required'),
+  dofa: z.string().optional(), // Date of first appointment
+  doca: z.string().optional(), // Date of current appointment
 });
 
 const addressSchema = z.object({
@@ -74,6 +84,16 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
   const [referees, setReferees] = useState([
     { name: '', position: '', organization: '', email: '', phoneNumber: '', relationship: '' }
   ]);
+  const [employeeData, setEmployeeData] = useState({
+    personalNumber: '',
+    designation: '',
+    dutyStation: '',
+    jg: '',
+    actingPosition: '',
+    departmentId: '',
+    dofa: '',
+    doca: ''
+  });
 
   const { data: config } = usePublicConfig();
 
@@ -90,6 +110,8 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
     switch (step) {
       case 1:
         return personalDetailsSchema;
+      case 1.5: // Employee details step
+        return employeeDetailsSchema;
       case 2:
         return addressSchema;
       case 3:
@@ -117,6 +139,10 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
       if (profile.referees?.length) {
         setReferees(profile.referees);
       }
+      if (profile.employee) {
+        setEmployeeData(profile.employee);
+        setIsVerifiedEmployee(true);
+      }
     }
   }, [profile, form]);
 
@@ -124,6 +150,7 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
     const stepData = {
       ...data,
       educationRecords: step === 3 ? educationRecords : undefined,
+      employee: step === 1.5 ? employeeData : undefined,
       employmentHistory: step === 6 ? employmentHistory : undefined,
       referees: step === 7 ? referees : undefined,
     };
@@ -193,7 +220,7 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
       case 1: // Personal Details
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <Label htmlFor="salutation">Salutation *</Label>
                 <Select onValueChange={(value) => form.setValue('salutation', value)}>
@@ -237,9 +264,6 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                   </p>
                 )}
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="otherName">Other Name</Label>
                 <Input
@@ -249,24 +273,9 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                   placeholder="Enter other name (optional)"
                 />
               </div>
-              
-              <div>
-                <Label htmlFor="nationalId">National ID *</Label>
-                <Input
-                  id="nationalId"
-                  data-testid="input-nationalId"
-                  {...form.register('nationalId')}
-                  placeholder="Enter national ID number"
-                />
-                {form.formState.errors.nationalId && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {form.formState.errors.nationalId.message as string}
-                  </p>
-                )}
-              </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">              
+              <div>
               <div>
                 <Label htmlFor="idPassportType">ID/Passport Type *</Label>
                 <Select onValueChange={(value) => form.setValue('idPassportType', value as any)}>
@@ -285,24 +294,21 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                   </p>
                 )}
               </div>
-              
+            </div>
               <div>
-                <Label htmlFor="idPassportNumber">ID/Passport Number *</Label>
+                <Label htmlFor="nationalId">National ID *</Label>
                 <Input
-                  id="idPassportNumber"
-                  data-testid="input-idPassportNumber"
-                  {...form.register('idPassportNumber')}
-                  placeholder="Enter ID/Passport number"
+                  id="nationalId"
+                  data-testid="input-nationalId"
+                  {...form.register('nationalId')}
+                  placeholder="Enter national ID number"
                 />
-                {form.formState.errors.idPassportNumber && (
+                {form.formState.errors.nationalId && (
                   <p className="text-sm text-red-600 mt-1">
-                    {form.formState.errors.idPassportNumber.message as string}
+                    {form.formState.errors.nationalId.message as string}
                   </p>
                 )}
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="dateOfBirth">Date of Birth *</Label>
                 <Input
@@ -315,8 +321,7 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                     {form.formState.errors.dateOfBirth.message as string}
                   </p>
                 )}
-              </div>
-              
+              </div>              
               <div>
                 <Label htmlFor="gender">Gender *</Label>
                 <Select onValueChange={(value) => form.setValue('gender', value)}>
@@ -329,18 +334,21 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div>
-                <Label htmlFor="nationality">Nationality</Label>
-                <Input
-                  id="nationality"
-                  {...form.register('nationality')}
-                  defaultValue="Kenyan"
-                />
-              </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <Label htmlFor="nationality">Nationality</Label>                
+                <Select onValueChange={(value) => form.setValue('nationality', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select nationality" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Kenyan">Kenyan</SelectItem>
+                    <SelectItem value="Ugandan">Ugandan</SelectItem>
+                    <SelectItem value="Tanzanian">Tanzanian</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div>
                 <Label htmlFor="phoneNumber">Phone Number *</Label>
                 <Input
@@ -363,9 +371,6 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                   placeholder="e.g., 0711234567 (optional)"
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="ethnicity">Ethnicity</Label>
                 <Input
@@ -373,14 +378,24 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                   {...form.register('ethnicity')}
                   placeholder="e.g., Luhya"
                 />
-              </div>
-              
+              </div> 
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">                           
               <div>
                 <Label htmlFor="religion">Religion</Label>
                 <Input
                   id="religion"
                   {...form.register('religion')}
                   placeholder="e.g., Christianity"
+                />
+              </div>
+              <div>
+                <Label htmlFor="kraPin">KRA PIN</Label>
+                <Input
+                  id="kraPin"
+                  {...form.register('kraPin')}
+                  placeholder="Enter KRA PIN (optional)"
                 />
               </div>
             </div>
@@ -409,16 +424,153 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                 <Checkbox
                   id="isEmployee"
                   {...form.register('isEmployee')}
+                  onCheckedChange={(checked) => {
+                    if (checked && !isVerifiedEmployee) {
+                      setShowEmployeeVerification(true);
+                    }
+                  }}
                 />
                 <Label htmlFor="isEmployee">I am currently a county employee</Label>
               </div>
               
+              {form.watch('isEmployee') && !isVerifiedEmployee && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <h5 className="font-medium text-yellow-800 mb-2">Employee Verification Required</h5>
+                  <p className="text-sm text-yellow-700 mb-3">
+                    Please verify your employee status by providing your personal number.
+                  </p>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowEmployeeVerification(true)}
+                  >
+                    Verify Employee Status
+                  </Button>
+                </div>
+              )}
+              
+              {form.watch('isEmployee') && isVerifiedEmployee && verifiedEmployeeData && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h5 className="font-medium text-green-800 mb-2">✓ Employee Status Verified</h5>
+                  <div className="text-sm text-green-700">
+                    <p><strong>Personal Number:</strong> {verifiedEmployeeData.personalNumber}</p>
+                    <p><strong>Designation:</strong> {verifiedEmployeeData.designation}</p>
+                  </div>
+                </div>
+              )}              
+            </div>
+          </div>
+        );
+
+      case 1.5: // Employee Details
+        return (
+          <div className="space-y-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <p className="text-blue-800 text-sm">
+                <span className="font-medium">County Employee Verification Successful!</span>
+                <br />Please complete your employment details below. Some fields are pre-filled from verification.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="kraPin">KRA PIN</Label>
+                <Label htmlFor="personalNumber">Personal Number *</Label>
                 <Input
-                  id="kraPin"
-                  {...form.register('kraPin')}
-                  placeholder="Enter KRA PIN (optional)"
+                  id="personalNumber"
+                  value={employeeData.personalNumber || verifiedEmployeeData?.personalNumber || ''}
+                  onChange={(e) => setEmployeeData({...employeeData, personalNumber: e.target.value})}
+                  disabled={!!verifiedEmployeeData?.personalNumber}
+                  placeholder="Enter personal number"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="designation">Designation *</Label>
+                <Input
+                  id="designation"
+                  value={employeeData.designation || verifiedEmployeeData?.designation || ''}
+                  onChange={(e) => setEmployeeData({...employeeData, designation: e.target.value})}
+                  disabled={!!verifiedEmployeeData?.designation}
+                  placeholder="Enter designation"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="dutyStation">Duty Station *</Label>
+                <Input
+                  id="dutyStation"
+                  value={employeeData.dutyStation}
+                  onChange={(e) => setEmployeeData({...employeeData, dutyStation: e.target.value})}
+                  placeholder="Enter duty station"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="jg">Job Group *</Label>
+                <Select onValueChange={(value) => setEmployeeData({...employeeData, jg: value})} value={employeeData.jg}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select job group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S'].map((group) => (
+                      <SelectItem key={group} value={group}>
+                        Job Group {group}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="actingPosition">Acting Position</Label>
+                <Input
+                  id="actingPosition"
+                  value={employeeData.actingPosition}
+                  onChange={(e) => setEmployeeData({...employeeData, actingPosition: e.target.value})}
+                  placeholder="Enter acting position (if applicable)"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="departmentId">Department *</Label>
+                <Select onValueChange={(value) => setEmployeeData({...employeeData, departmentId: value})} value={employeeData.departmentId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {((config as any)?.departments || []).map((dept: any) => (
+                      <SelectItem key={dept.id} value={dept.id.toString()}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="dofa">Date of First Appointment</Label>
+                <Input
+                  id="dofa"
+                  type="date"
+                  value={employeeData.dofa}
+                  onChange={(e) => setEmployeeData({...employeeData, dofa: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="doca">Date of Current Appointment</Label>
+                <Input
+                  id="doca"
+                  type="date"
+                  value={employeeData.doca}
+                  onChange={(e) => setEmployeeData({...employeeData, doca: e.target.value})}
                 />
               </div>
             </div>
@@ -783,15 +935,42 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
     }
   };
 
+  const handleEmployeeVerificationSuccess = (employeeData: any) => {
+    setIsVerifiedEmployee(true);
+    setVerifiedEmployeeData(employeeData);
+    // Pre-fill employee data from verification
+    setEmployeeData({
+      personalNumber: employeeData.personalNumber || '',
+      designation: employeeData.designation || '',
+      dutyStation: '',
+      jg: '',
+      actingPosition: '',
+      departmentId: '',
+      dofa: '',
+      doca: ''
+    });
+    // Also update the form to save the verification status
+    form.setValue('isEmployee', true);
+  };
+
   return (
-    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-      {renderStepContent()}
-      
-      <div className="flex justify-end">
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Saving...' : 'Save & Continue'}
-        </Button>
-      </div>
-    </form>
+    <>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        {renderStepContent()}
+        
+        <div className="flex justify-end">
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? 'Saving...' : 'Save & Continue'}
+          </Button>
+        </div>
+      </form>
+
+      <EmployeeVerificationDialog
+        open={showEmployeeVerification}
+        onOpenChange={setShowEmployeeVerification}
+        applicantIdNumber={form.getValues('nationalId') || ''}
+        onVerificationSuccess={handleEmployeeVerificationSuccess}
+      />
+    </>
   );
 }
