@@ -149,9 +149,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateApplicant(id: number, applicant: Partial<Applicant>): Promise<Applicant> {
+    // Handle date fields properly
+    const processedApplicant = { ...applicant };
+    
+    // Convert string dates to proper Date objects or null
+    if (processedApplicant.dateOfBirth) {
+      if (typeof processedApplicant.dateOfBirth === 'string') {
+        processedApplicant.dateOfBirth = processedApplicant.dateOfBirth ? new Date(processedApplicant.dateOfBirth) : null;
+      }
+    }
+    
+    // Handle employee date fields if they exist
+    if (processedApplicant.employee) {
+      const employee = processedApplicant.employee as any;
+      if (employee.dofa && typeof employee.dofa === 'string') {
+        employee.dofa = employee.dofa ? new Date(employee.dofa) : null;
+      }
+      if (employee.doca && typeof employee.doca === 'string') {
+        employee.doca = employee.doca ? new Date(employee.doca) : null;
+      }
+    }
+
     const [updatedApplicant] = await db
       .update(applicants)
-      .set({ ...applicant, updatedAt: new Date() })
+      .set({ ...processedApplicant, updatedAt: new Date() })
       .where(eq(applicants.id, id))
       .returning();
     return updatedApplicant;
