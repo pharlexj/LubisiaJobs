@@ -9,7 +9,10 @@ import {
   departments,
   designations,
   awards,
+  institutions,
+  studyArea,
   specializations,
+  ethnicity,
   coursesOffered,
   notices,
   educationRecords,
@@ -32,6 +35,9 @@ import {
   type Department,
   type Designation,
   type Award,
+  type Institution,
+  type StudyArea,
+  type Specialization,
   type Employee,
   type CourseOffered,
   type OtpVerification,
@@ -266,6 +272,22 @@ export class DatabaseStorage implements IStorage {
 
   async getCoursesOffered(): Promise<CourseOffered[]> {
     return db.select().from(coursesOffered).orderBy(coursesOffered.name);
+  }
+
+  async getInstitutions(): Promise<Institution[]> {
+    return db.select().from(institutions).orderBy(institutions.name);
+  }
+
+  async getStudyArea(): Promise<StudyArea[]> {
+    return db.select().from(studyArea).orderBy(studyArea.name);
+  }
+
+  async getSpecializations(): Promise<Specialization[]> {
+    return db.select().from(specializations).orderBy(specializations.name);
+  }
+
+  async getEthnicity(): Promise<any[]> {
+    return db.select().from(ethnicity).orderBy(ethnicity.name);
   }
 
   // Notice operations

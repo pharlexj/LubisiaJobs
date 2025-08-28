@@ -58,12 +58,17 @@ const addressSchema = z.object({
 });
 
 const educationSchema = z.object({
-  educationRecords: z.array(z.object({
-    institutionId: z.number(),
+  education: z.array(z.object({
     courseId: z.number().optional(),
-    awardId: z.number(),
-    yearCompleted: z.number(),
+    certificateLevelId: z.number(),
+    specializationId: z.number(),
+    studyArea: z.string(),
+    institution: z.string(),
+    qualification: z.string(),
     grade: z.string(),
+    yearFrom: z.number(),
+    yearCompleted: z.number(),
+    certificatePath: z.string().optional(),
   })),
 });
 
@@ -76,7 +81,18 @@ interface ProfileFormProps {
 
 export default function ProfileForm({ step, profile, onSave, isLoading }: ProfileFormProps) {
   const [educationRecords, setEducationRecords] = useState([
-    { institutionId: 0, courseId: 0, awardId: 0, yearCompleted: new Date().getFullYear(), grade: '' }
+    { 
+      courseId: undefined,
+      certificateLevelId: 0,
+      specializationId: 0,
+      studyArea: '',
+      institution: '',
+      qualification: '',
+      grade: '',
+      yearFrom: new Date().getFullYear() - 4,
+      yearCompleted: new Date().getFullYear(),
+      certificatePath: ''
+    }
   ]);
   const [employmentHistory, setEmploymentHistory] = useState([
     { employer: '', position: '', startDate: '', endDate: '', isCurrent: false, duties: '' }
@@ -144,7 +160,10 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
   useEffect(() => {
     if (profile) {
       form.reset(profile);
-      if (profile.educationRecords?.length) {
+      if (profile.education?.length) {
+        setEducationRecords(profile.education);
+      } else if (profile.educationRecords?.length) {
+        // Backward compatibility
         setEducationRecords(profile.educationRecords);
       }
       if (profile.employmentHistory?.length) {
@@ -163,7 +182,7 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
   const handleSubmit = (data: any) => {
     const stepData = {
       ...data,
-      educationRecords: step === 3 ? educationRecords : undefined,
+      education: step === 3 ? educationRecords : undefined,
       employee: step === 1.5 ? employeeData : undefined,
       professionalQualifications: step === 5 ? professionalQualifications : undefined,
       shortCourses: step === 4 ? shortCourses : undefined,
@@ -180,7 +199,18 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
   const addEducationRecord = () => {
     setEducationRecords([
       ...educationRecords,
-      { institutionId: 0, courseId: 0, awardId: 0, yearCompleted: new Date().getFullYear(), grade: '' }
+      { 
+        courseId: undefined,
+        certificateLevelId: 0,
+        specializationId: 0,
+        studyArea: '',
+        institution: '',
+        qualification: '',
+        grade: '',
+        yearFrom: new Date().getFullYear() - 4,
+        yearCompleted: new Date().getFullYear(),
+        certificatePath: ''
+      }
     ]);
   };
 
@@ -440,11 +470,18 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
               </div>
               <div>
                 <Label htmlFor="ethnicity">Ethnicity</Label>
-                <Input
-                  id="ethnicity"
-                  {...form.register('ethnicity')}
-                  placeholder="e.g., Luhya"
-                />
+                <Select onValueChange={(value) => form.setValue('ethnicity', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select ethnicity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {((config as any)?.ethnicity || []).map((eth: any) => (
+                      <SelectItem key={eth.id} value={eth.name}>
+                        {eth.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div> 
             </div>
 
@@ -705,14 +742,23 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label>Institution</Label>
-                      <Select onValueChange={(value) => updateEducationRecord(index, 'institutionId', parseInt(value))}>
+                      <Input
+                        value={record.institution}
+                        onChange={(e) => updateEducationRecord(index, 'institution', e.target.value)}
+                        placeholder="Name of institution"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Study Area</Label>
+                      <Select onValueChange={(value) => updateEducationRecord(index, 'studyArea', value)}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select institution" />
+                          <SelectValue placeholder="Select study area" />
                         </SelectTrigger>
                         <SelectContent>
-                          {institutions.map((institution) => (
-                            <SelectItem key={institution.id} value={institution.id.toString()}>
-                              {institution.name}
+                          {((config as any)?.studyArea || []).map((area: any) => (
+                            <SelectItem key={area.id} value={area.name}>
+                              {area.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -720,10 +766,26 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                     </div>
 
                     <div>
-                      <Label>Award Level</Label>
-                      <Select onValueChange={(value) => updateEducationRecord(index, 'awardId', parseInt(value))}>
+                      <Label>Specialization</Label>
+                      <Select onValueChange={(value) => updateEducationRecord(index, 'specializationId', parseInt(value))}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select award level" />
+                          <SelectValue placeholder="Select specialization" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {((config as any)?.specializations || []).map((spec: any) => (
+                            <SelectItem key={spec.id} value={spec.id.toString()}>
+                              {spec.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Certificate Level</Label>
+                      <Select onValueChange={(value) => updateEducationRecord(index, 'certificateLevelId', parseInt(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select certificate level" />
                         </SelectTrigger>
                         <SelectContent>
                           {awards.map((award) => (
@@ -733,6 +795,42 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    <div>
+                      <Label>Qualification</Label>
+                      <Input
+                        value={record.qualification}
+                        onChange={(e) => updateEducationRecord(index, 'qualification', e.target.value)}
+                        placeholder="e.g., Bachelor of Science"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Course (Optional)</Label>
+                      <Select onValueChange={(value) => updateEducationRecord(index, 'courseId', value ? parseInt(value) : undefined)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select course" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {((config as any)?.courses || []).map((course: any) => (
+                            <SelectItem key={course.id} value={course.id.toString()}>
+                              {course.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Year From</Label>
+                      <Input
+                        type="number"
+                        min="1950"
+                        max={new Date().getFullYear()}
+                        value={record.yearFrom}
+                        onChange={(e) => updateEducationRecord(index, 'yearFrom', parseInt(e.target.value))}
+                      />
                     </div>
 
                     <div>
@@ -746,7 +844,7 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                       />
                     </div>
 
-                    <div>
+                    <div className="md:col-span-2">
                       <Label>Grade/Score</Label>
                       <Input
                         value={record.grade}

@@ -67,13 +67,29 @@ export default function ApplicantProfile() {
   });
 
   const handleSaveStep = (stepData: any) => {
-    updateProfileMutation.mutate({
+    const profileData = {
       ...profile?.applicantProfile,
       ...stepData,
+    };
+    
+    // Remove undefined fields to prevent database errors
+    Object.keys(profileData).forEach(key => {
+      if (profileData[key] === undefined) {
+        delete profileData[key];
+      }
     });
+    
+    updateProfileMutation.mutate(profileData);
+    
+    // After successful save on step 1 with employee verification, move to step 1.5
+    if (currentStep === 1 && stepData.isVerifiedEmployee) {
+      setTimeout(() => {
+        setCurrentStep(1.5);
+      }, 1000);
+    }
   };
 
-  const isEmployeeVerified = profile?.applicantProfile?.isEmployee && profile?.applicantProfile?.employee;
+  const isEmployeeVerified = profile?.applicantProfile?.isEmployee && (profile?.applicantProfile?.employee || profile?.applicantProfile?.isVerifiedEmployee);
   
   const getNextStep = (current: number) => {
     if (current === 1 && isEmployeeVerified) {
