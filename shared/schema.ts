@@ -12,6 +12,7 @@ import {
   index,
   serial
 } from "drizzle-orm/pg-core";
+
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -54,7 +55,6 @@ export const users = pgTable("users", {
 // Counties
 export const counties = pgTable("counties", {
   id: serial("id").primaryKey(),
-  code: varchar("code", { length: 11 }).notNull().unique(),
   name: varchar("name", { length: 100 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -62,7 +62,6 @@ export const counties = pgTable("counties", {
 // Constituencies
 export const constituencies = pgTable("constituencies", {
   id: serial("id").primaryKey(),
-  code: varchar("code", { length: 11 }).notNull().unique(),
   name: varchar("name", { length: 100 }).notNull(),
   countyId: integer("county_id").notNull().references(() => counties.id),
 });
@@ -70,7 +69,6 @@ export const constituencies = pgTable("constituencies", {
 // Wards
 export const wards = pgTable("wards", {
   id: serial("id").primaryKey(),
-  code: varchar("code", { length: 11 }).notNull().unique(),
   name: varchar("name", { length: 100 }).notNull(),
   constituencyId: integer("constituency_id").notNull().references(() => constituencies.id),
 });
@@ -99,6 +97,13 @@ export const awards = pgTable("awards", {
 
 // Specializations
 export const specializations = pgTable("specializations", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Ethnicity
+export const ethnicity = pgTable("ethnicity", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -209,16 +214,24 @@ export const applications = pgTable("applications", {
 });
 
 // Education records
-export const educationRecords = pgTable("education_records", {
+export const education = pgTable("education", {
   id: serial("id").primaryKey(),
   applicantId: integer("applicant_id").notNull().references(() => applicants.id),
-  institutionId: integer("institution_id").notNull().references(() => institutions.id),
   courseId: integer("course_id").references(() => coursesOffered.id),
-  awardId: integer("award_id").notNull().references(() => awards.id),
-  yearCompleted: integer("year_completed"),
-  grade: varchar("grade", { length: 10 }),
+  certificateLevelId: integer("certificate_level_id").notNull().references(() => awards.id),
+  specializationId: integer("specialization_id").notNull().references(() => specializations.id),
+  studyArea: varchar("study_area", { length: 255 }).notNull(),
+  institution: varchar("institution", { length: 255 }).notNull(),
+  qualification: varchar("qualification", { length: 255 }).notNull(),
+  grade: varchar("grade", { length: 50 }),
+  yearFrom: integer("year_from").notNull(),
+  yearCompleted: integer("year_completed").notNull(),
+  certificatePath: varchar("certificate_path", { length: 500 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Alias for backward compatibility
+export const educationRecords = education;
 
 export const studyArea = pgTable("study_area", {
   id: serial("id").primaryKey(),
@@ -288,6 +301,23 @@ export const professionalQualifications = pgTable("professional_qualifications",
   awardId: integer("award_id").notNull(),
   gradeId: varchar("grade_id", { length: 10 }).notNull(),
   examiner: varchar("examiner", { length: 255 }),
+  certificateNo: varchar("certificate_no", { length: 100 }),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: false })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: false })
+    .defaultNow()
+    .notNull(),
+});
+
+//Short Courses
+export const shortCourse = pgTable("short_course", {
+  id: serial("id").primaryKey(),
+  institutionName: varchar("institution_name", { length: 255 }).notNull(),
+  applicantId: integer("applicant_id").notNull(),
+  course: varchar("course", { length: 255 }).notNull(),
   certificateNo: varchar("certificate_no", { length: 100 }),
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),

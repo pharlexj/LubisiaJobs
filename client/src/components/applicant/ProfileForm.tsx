@@ -58,12 +58,17 @@ const addressSchema = z.object({
 });
 
 const educationSchema = z.object({
-  educationRecords: z.array(z.object({
-    institutionId: z.number(),
+  education: z.array(z.object({
     courseId: z.number().optional(),
-    awardId: z.number(),
-    yearCompleted: z.number(),
+    certificateLevelId: z.number(),
+    specializationId: z.number(),
+    studyArea: z.string(),
+    institution: z.string(),
+    qualification: z.string(),
     grade: z.string(),
+    yearFrom: z.number(),
+    yearCompleted: z.number(),
+    certificatePath: z.string().optional(),
   })),
 });
 
@@ -76,7 +81,18 @@ interface ProfileFormProps {
 
 export default function ProfileForm({ step, profile, onSave, isLoading }: ProfileFormProps) {
   const [educationRecords, setEducationRecords] = useState([
-    { institutionId: 0, courseId: 0, awardId: 0, yearCompleted: new Date().getFullYear(), grade: '' }
+    { 
+      courseId: undefined,
+      certificateLevelId: 0,
+      specializationId: 0,
+      studyArea: '',
+      institution: '',
+      qualification: '',
+      grade: '',
+      yearFrom: new Date().getFullYear() - 4,
+      yearCompleted: new Date().getFullYear(),
+      certificatePath: ''
+    }
   ]);
   const [employmentHistory, setEmploymentHistory] = useState([
     { employer: '', position: '', startDate: '', endDate: '', isCurrent: false, duties: '' }
@@ -84,6 +100,23 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
   const [referees, setReferees] = useState([
     { name: '', position: '', organization: '', email: '', phoneNumber: '', relationship: '' }
   ]);
+<<<<<<< HEAD
+=======
+  const [professionalQualifications, setProfessionalQualifications] = useState([
+    { institution: '', studentNo: '', areaOfStudyId: 0, specialisationId: 0, course: '', awardId: 0, gradeId: '', examiner: '', certificateNo: '', startDate: '', endDate: '' }
+  ]);
+  const [shortCourses, setShortCourses] = useState([
+    { institutionName: '', course: '', certificateNo: '', startDate: '', endDate: '' }
+  ]);
+  const [uploadedDocuments, setUploadedDocuments] = useState<{[key: string]: File | null}>({
+    national_id: null,
+    certificates: null,
+    transcripts: null,
+    professional_certs: null,
+    kra_pin: null,
+    good_conduct: null,
+  });
+>>>>>>> 275b0a479a7b515b74738db528b03ef6c0a03aa8
   const [employeeData, setEmployeeData] = useState({
     personalNumber: '',
     designation: '',
@@ -130,7 +163,10 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
   useEffect(() => {
     if (profile) {
       form.reset(profile);
-      if (profile.educationRecords?.length) {
+      if (profile.education?.length) {
+        setEducationRecords(profile.education);
+      } else if (profile.educationRecords?.length) {
+        // Backward compatibility
         setEducationRecords(profile.educationRecords);
       }
       if (profile.employmentHistory?.length) {
@@ -149,10 +185,20 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
   const handleSubmit = (data: any) => {
     const stepData = {
       ...data,
+<<<<<<< HEAD
       educationRecords: step === 3 ? educationRecords : undefined,
       employee: step === 1.5 ? employeeData : undefined,
+=======
+      education: step === 3 ? educationRecords : undefined,
+      employee: step === 1.5 ? employeeData : undefined,
+      professionalQualifications: step === 5 ? professionalQualifications : undefined,
+      shortCourses: step === 4 ? shortCourses : undefined,
+>>>>>>> 275b0a479a7b515b74738db528b03ef6c0a03aa8
       employmentHistory: step === 6 ? employmentHistory : undefined,
       referees: step === 7 ? referees : undefined,
+      documents: step === 8 ? uploadedDocuments : undefined,
+      // Include verification status for step 1 to ensure proper navigation
+      isVerifiedEmployee: step === 1 ? isVerifiedEmployee : undefined,
     };
     
     onSave(stepData);
@@ -161,7 +207,18 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
   const addEducationRecord = () => {
     setEducationRecords([
       ...educationRecords,
-      { institutionId: 0, courseId: 0, awardId: 0, yearCompleted: new Date().getFullYear(), grade: '' }
+      { 
+        courseId: undefined,
+        certificateLevelId: 0,
+        specializationId: 0,
+        studyArea: '',
+        institution: '',
+        qualification: '',
+        grade: '',
+        yearFrom: new Date().getFullYear() - 4,
+        yearCompleted: new Date().getFullYear(),
+        certificatePath: ''
+      }
     ]);
   };
 
@@ -215,12 +272,60 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
     setReferees(updated);
   };
 
+  // Professional Qualifications handlers
+  const addProfessionalQualification = () => {
+    setProfessionalQualifications([
+      ...professionalQualifications,
+      { institution: '', studentNo: '', areaOfStudyId: 0, specialisationId: 0, course: '', awardId: 0, gradeId: '', examiner: '', certificateNo: '', startDate: '', endDate: '' }
+    ]);
+  };
+
+  const removeProfessionalQualification = (index: number) => {
+    if (professionalQualifications.length > 1) {
+      setProfessionalQualifications(professionalQualifications.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateProfessionalQualification = (index: number, field: string, value: any) => {
+    const updated = [...professionalQualifications];
+    updated[index] = { ...updated[index], [field]: value };
+    setProfessionalQualifications(updated);
+  };
+
+  // Short Courses handlers
+  const addShortCourse = () => {
+    setShortCourses([
+      ...shortCourses,
+      { institutionName: '', course: '', certificateNo: '', startDate: '', endDate: '' }
+    ]);
+  };
+
+  const removeShortCourse = (index: number) => {
+    if (shortCourses.length > 1) {
+      setShortCourses(shortCourses.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateShortCourse = (index: number, field: string, value: any) => {
+    const updated = [...shortCourses];
+    updated[index] = { ...updated[index], [field]: value };
+    setShortCourses(updated);
+  };
+
+  // Document upload handler
+  const handleFileUpload = (documentType: string, file: File | null) => {
+    setUploadedDocuments(prev => ({
+      ...prev,
+      [documentType]: file
+    }));
+  };
+
   const renderStepContent = () => {
     switch (step) {
       case 1: // Personal Details
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <Label htmlFor="salutation">Salutation *</Label>
                 <Select onValueChange={(value) => form.setValue('salutation', value)}>
@@ -264,9 +369,6 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                   </p>
                 )}
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="otherName">Other Name</Label>
                 <Input
@@ -276,24 +378,14 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                   placeholder="Enter other name (optional)"
                 />
               </div>
-              
-              <div>
-                <Label htmlFor="nationalId">National ID *</Label>
-                <Input
-                  id="nationalId"
-                  data-testid="input-nationalId"
-                  {...form.register('nationalId')}
-                  placeholder="Enter national ID number"
-                />
-                {form.formState.errors.nationalId && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {form.formState.errors.nationalId.message as string}
-                  </p>
-                )}
-              </div>
             </div>
+<<<<<<< HEAD
 
             <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+=======
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">              
+              <div>
+>>>>>>> 275b0a479a7b515b74738db528b03ef6c0a03aa8
               <div>
                 <Label htmlFor="idPassportType">ID/Passport Type *</Label>
                 <Select onValueChange={(value) => form.setValue('idPassportType', value as any)}>
@@ -313,8 +405,25 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                 )}
               </div>
             </div>
+<<<<<<< HEAD
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+=======
+              <div>
+                <Label htmlFor="nationalId">National ID *</Label>
+                <Input
+                  id="nationalId"
+                  data-testid="input-nationalId"
+                  {...form.register('nationalId')}
+                  placeholder="Enter national ID number"
+                />
+                {form.formState.errors.nationalId && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {form.formState.errors.nationalId.message as string}
+                  </p>
+                )}
+              </div>
+>>>>>>> 275b0a479a7b515b74738db528b03ef6c0a03aa8
               <div>
                 <Label htmlFor="dateOfBirth">Date of Birth *</Label>
                 <Input
@@ -327,8 +436,7 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                     {form.formState.errors.dateOfBirth.message as string}
                   </p>
                 )}
-              </div>
-              
+              </div>              
               <div>
                 <Label htmlFor="gender">Gender *</Label>
                 <Select onValueChange={(value) => form.setValue('gender', value)}>
@@ -341,18 +449,21 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div>
-                <Label htmlFor="nationality">Nationality</Label>
-                <Input
-                  id="nationality"
-                  {...form.register('nationality')}
-                  defaultValue="Kenyan"
-                />
-              </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <Label htmlFor="nationality">Nationality</Label>                
+                <Select onValueChange={(value) => form.setValue('nationality', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select nationality" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Kenyan">Kenyan</SelectItem>
+                    <SelectItem value="Ugandan">Ugandan</SelectItem>
+                    <SelectItem value="Tanzanian">Tanzanian</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div>
                 <Label htmlFor="phoneNumber">Phone Number *</Label>
                 <Input
@@ -375,18 +486,24 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                   placeholder="e.g., 0711234567 (optional)"
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="ethnicity">Ethnicity</Label>
-                <Input
-                  id="ethnicity"
-                  {...form.register('ethnicity')}
-                  placeholder="e.g., Luhya"
-                />
-              </div>
-              
+                <Select onValueChange={(value) => form.setValue('ethnicity', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select ethnicity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {((config as any)?.ethnicity || []).map((eth: any) => (
+                      <SelectItem key={eth.id} value={eth.name}>
+                        {eth.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div> 
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">                           
               <div>
                 <Label htmlFor="religion">Religion</Label>
                 <Input
@@ -395,13 +512,22 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                   placeholder="e.g., Christianity"
                 />
               </div>
+              <div>
+                <Label htmlFor="kraPin">KRA PIN</Label>
+                <Input
+                  id="kraPin"
+                  {...form.register('kraPin')}
+                  placeholder="Enter KRA PIN (optional)"
+                />
+              </div>
             </div>
 
             <div className="space-y-4">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="isPwd"
-                  {...form.register('isPwd')}
+                  checked={form.watch('isPwd')}
+                  onCheckedChange={(checked) => form.setValue('isPwd', checked as boolean)}
                 />
                 <Label htmlFor="isPwd">I am a Person with Disability (PWD)</Label>
               </div>
@@ -420,8 +546,14 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="isEmployee"
+<<<<<<< HEAD
                   {...form.register('isEmployee')}
                   onCheckedChange={(checked) => {
+=======
+                  checked={form.watch('isEmployee')}
+                  onCheckedChange={(checked) => {
+                    form.setValue('isEmployee', checked as boolean);
+>>>>>>> 275b0a479a7b515b74738db528b03ef6c0a03aa8
                     if (checked && !isVerifiedEmployee) {
                       setShowEmployeeVerification(true);
                     }
@@ -455,14 +587,124 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                     <p><strong>Designation:</strong> {verifiedEmployeeData.designation}</p>
                   </div>
                 </div>
+<<<<<<< HEAD
               )}
 
+=======
+              )}              
+            </div>
+          </div>
+        );
+
+      case 1.5: // Employee Details
+        return (
+          <div className="space-y-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <p className="text-blue-800 text-sm">
+                <span className="font-medium">County Employee Verification Successful!</span>
+                <br />Please complete your employment details below. Some fields are pre-filled from verification.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+>>>>>>> 275b0a479a7b515b74738db528b03ef6c0a03aa8
               <div>
-                <Label htmlFor="kraPin">KRA PIN</Label>
+                <Label htmlFor="personalNumber">Personal Number *</Label>
                 <Input
-                  id="kraPin"
-                  {...form.register('kraPin')}
-                  placeholder="Enter KRA PIN (optional)"
+                  id="personalNumber"
+                  value={employeeData.personalNumber || verifiedEmployeeData?.personalNumber || ''}
+                  onChange={(e) => setEmployeeData({...employeeData, personalNumber: e.target.value})}
+                  disabled={!!verifiedEmployeeData?.personalNumber}
+                  placeholder="Enter personal number"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="designation">Designation *</Label>
+                <Input
+                  id="designation"
+                  value={employeeData.designation || verifiedEmployeeData?.designation || ''}
+                  onChange={(e) => setEmployeeData({...employeeData, designation: e.target.value})}
+                  disabled={!!verifiedEmployeeData?.designation}
+                  placeholder="Enter designation"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="dutyStation">Duty Station *</Label>
+                <Input
+                  id="dutyStation"
+                  value={employeeData.dutyStation}
+                  onChange={(e) => setEmployeeData({...employeeData, dutyStation: e.target.value})}
+                  placeholder="Enter duty station"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="jg">Job Group *</Label>
+                <Select onValueChange={(value) => setEmployeeData({...employeeData, jg: value})} value={employeeData.jg}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select job group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S'].map((group) => (
+                      <SelectItem key={group} value={group}>
+                        Job Group {group}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="actingPosition">Acting Position</Label>
+                <Input
+                  id="actingPosition"
+                  value={employeeData.actingPosition}
+                  onChange={(e) => setEmployeeData({...employeeData, actingPosition: e.target.value})}
+                  placeholder="Enter acting position (if applicable)"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="departmentId">Department *</Label>
+                <Select onValueChange={(value) => setEmployeeData({...employeeData, departmentId: value})} value={employeeData.departmentId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {((config as any)?.departments || []).map((dept: any) => (
+                      <SelectItem key={dept.id} value={dept.id.toString()}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="dofa">Date of First Appointment</Label>
+                <Input
+                  id="dofa"
+                  type="date"
+                  value={employeeData.dofa}
+                  onChange={(e) => setEmployeeData({...employeeData, dofa: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="doca">Date of Current Appointment</Label>
+                <Input
+                  id="doca"
+                  type="date"
+                  value={employeeData.doca}
+                  onChange={(e) => setEmployeeData({...employeeData, doca: e.target.value})}
                 />
               </div>
             </div>
@@ -642,14 +884,23 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label>Institution</Label>
-                      <Select onValueChange={(value) => updateEducationRecord(index, 'institutionId', parseInt(value))}>
+                      <Input
+                        value={record.institution}
+                        onChange={(e) => updateEducationRecord(index, 'institution', e.target.value)}
+                        placeholder="Name of institution"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Study Area</Label>
+                      <Select onValueChange={(value) => updateEducationRecord(index, 'studyArea', value)}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select institution" />
+                          <SelectValue placeholder="Select study area" />
                         </SelectTrigger>
                         <SelectContent>
-                          {institutions.map((institution) => (
-                            <SelectItem key={institution.id} value={institution.id.toString()}>
-                              {institution.name}
+                          {((config as any)?.studyArea || []).map((area: any) => (
+                            <SelectItem key={area.id} value={area.name}>
+                              {area.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -657,10 +908,26 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                     </div>
 
                     <div>
-                      <Label>Award Level</Label>
-                      <Select onValueChange={(value) => updateEducationRecord(index, 'awardId', parseInt(value))}>
+                      <Label>Specialization</Label>
+                      <Select onValueChange={(value) => updateEducationRecord(index, 'specializationId', parseInt(value))}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select award level" />
+                          <SelectValue placeholder="Select specialization" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {((config as any)?.specializations || []).map((spec: any) => (
+                            <SelectItem key={spec.id} value={spec.id.toString()}>
+                              {spec.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Certificate Level</Label>
+                      <Select onValueChange={(value) => updateEducationRecord(index, 'certificateLevelId', parseInt(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select certificate level" />
                         </SelectTrigger>
                         <SelectContent>
                           {awards.map((award) => (
@@ -670,6 +937,42 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    <div>
+                      <Label>Qualification</Label>
+                      <Input
+                        value={record.qualification}
+                        onChange={(e) => updateEducationRecord(index, 'qualification', e.target.value)}
+                        placeholder="e.g., Bachelor of Science"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Course (Optional)</Label>
+                      <Select onValueChange={(value) => updateEducationRecord(index, 'courseId', value ? parseInt(value) : undefined)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select course" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {((config as any)?.courses || []).map((course: any) => (
+                            <SelectItem key={course.id} value={course.id.toString()}>
+                              {course.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Year From</Label>
+                      <Input
+                        type="number"
+                        min="1950"
+                        max={new Date().getFullYear()}
+                        value={record.yearFrom}
+                        onChange={(e) => updateEducationRecord(index, 'yearFrom', parseInt(e.target.value))}
+                      />
                     </div>
 
                     <div>
@@ -683,12 +986,247 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                       />
                     </div>
 
-                    <div>
+                    <div className="md:col-span-2">
                       <Label>Grade/Score</Label>
                       <Input
                         value={record.grade}
                         onChange={(e) => updateEducationRecord(index, 'grade', e.target.value)}
                         placeholder="e.g., First Class, A, 3.8 GPA"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        );
+
+      case 4: // Short Courses
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium text-gray-900">Short Courses</h4>
+              <Button type="button" variant="outline" onClick={addShortCourse}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Short Course
+              </Button>
+            </div>
+
+            {shortCourses.map((course, index) => (
+              <Card key={index}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h5 className="font-medium">Short Course {index + 1}</h5>
+                    {shortCourses.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeShortCourse(index)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Institution Name</Label>
+                      <Input
+                        value={course.institutionName}
+                        onChange={(e) => updateShortCourse(index, 'institutionName', e.target.value)}
+                        placeholder="Name of institution"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Course</Label>
+                      <Input
+                        value={course.course}
+                        onChange={(e) => updateShortCourse(index, 'course', e.target.value)}
+                        placeholder="Course name"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Certificate Number</Label>
+                      <Input
+                        value={course.certificateNo}
+                        onChange={(e) => updateShortCourse(index, 'certificateNo', e.target.value)}
+                        placeholder="Certificate number (optional)"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Start Date</Label>
+                      <Input
+                        type="date"
+                        value={course.startDate}
+                        onChange={(e) => updateShortCourse(index, 'startDate', e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>End Date</Label>
+                      <Input
+                        type="date"
+                        value={course.endDate}
+                        onChange={(e) => updateShortCourse(index, 'endDate', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        );
+
+      case 5: // Professional Qualifications
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium text-gray-900">Professional Qualifications</h4>
+              <Button type="button" variant="outline" onClick={addProfessionalQualification}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Professional Qualification
+              </Button>
+            </div>
+
+            {professionalQualifications.map((qualification, index) => (
+              <Card key={index}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h5 className="font-medium">Professional Qualification {index + 1}</h5>
+                    {professionalQualifications.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeProfessionalQualification(index)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Institution</Label>
+                      <Input
+                        value={qualification.institution}
+                        onChange={(e) => updateProfessionalQualification(index, 'institution', e.target.value)}
+                        placeholder="Institution name"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Student Number</Label>
+                      <Input
+                        value={qualification.studentNo}
+                        onChange={(e) => updateProfessionalQualification(index, 'studentNo', e.target.value)}
+                        placeholder="Student/Registration number"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Area of Study</Label>
+                      <Select onValueChange={(value) => updateProfessionalQualification(index, 'areaOfStudyId', parseInt(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select area of study" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {((config as any)?.studyArea || []).map((area: any) => (
+                            <SelectItem key={area.id} value={area.id.toString()}>
+                              {area.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Specialisation</Label>
+                      <Select onValueChange={(value) => updateProfessionalQualification(index, 'specialisationId', parseInt(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select specialisation" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {((config as any)?.specializations || []).map((spec: any) => (
+                            <SelectItem key={spec.id} value={spec.id.toString()}>
+                              {spec.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Course</Label>
+                      <Input
+                        value={qualification.course}
+                        onChange={(e) => updateProfessionalQualification(index, 'course', e.target.value)}
+                        placeholder="Course name"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Award</Label>
+                      <Select onValueChange={(value) => updateProfessionalQualification(index, 'awardId', parseInt(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select award" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {awards.map((award) => (
+                            <SelectItem key={award.id} value={award.id.toString()}>
+                              {award.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Grade</Label>
+                      <Input
+                        value={qualification.gradeId}
+                        onChange={(e) => updateProfessionalQualification(index, 'gradeId', e.target.value)}
+                        placeholder="Grade obtained"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Examiner</Label>
+                      <Input
+                        value={qualification.examiner}
+                        onChange={(e) => updateProfessionalQualification(index, 'examiner', e.target.value)}
+                        placeholder="Examining body"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Certificate Number</Label>
+                      <Input
+                        value={qualification.certificateNo}
+                        onChange={(e) => updateProfessionalQualification(index, 'certificateNo', e.target.value)}
+                        placeholder="Certificate number"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Start Date</Label>
+                      <Input
+                        type="date"
+                        value={qualification.startDate}
+                        onChange={(e) => updateProfessionalQualification(index, 'startDate', e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>End Date</Label>
+                      <Input
+                        type="date"
+                        value={qualification.endDate}
+                        onChange={(e) => updateProfessionalQualification(index, 'endDate', e.target.value)}
                       />
                     </div>
                   </div>
@@ -906,7 +1444,7 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                       )}
                     </div>
 
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center relative">
                       <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                       <p className="text-sm text-gray-600 mb-2">
                         Click to upload or drag and drop
@@ -916,13 +1454,47 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                         type="file"
                         accept=".pdf"
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          if (file) {
+                            // Validate file size (5MB = 5 * 1024 * 1024 bytes)
+                            if (file.size > 5 * 1024 * 1024) {
+                              alert('File size must be less than 5MB');
+                              return;
+                            }
+                            // Validate file type
+                            if (file.type !== 'application/pdf') {
+                              alert('Only PDF files are allowed');
+                              return;
+                            }
+                          }
+                          handleFileUpload(doc.key, file);
+                        }}
                       />
                     </div>
 
                     <div className="mt-3">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <FileText className="w-4 h-4 mr-2" />
-                        <span>No file uploaded</span>
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center text-gray-600">
+                          <FileText className="w-4 h-4 mr-2" />
+                          <span>
+                            {uploadedDocuments[doc.key] 
+                              ? uploadedDocuments[doc.key]!.name 
+                              : 'No file uploaded'
+                            }
+                          </span>
+                        </div>
+                        {uploadedDocuments[doc.key] && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleFileUpload(doc.key, null)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>

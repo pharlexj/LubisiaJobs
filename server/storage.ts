@@ -9,7 +9,10 @@ import {
   departments,
   designations,
   awards,
+  institutions,
+  studyArea,
   specializations,
+  ethnicity,
   coursesOffered,
   notices,
   educationRecords,
@@ -19,6 +22,7 @@ import {
   otpVerification,
   employees,
   payroll,
+  JG,
   type User,
   type UpsertUser,
   type Applicant,
@@ -31,11 +35,15 @@ import {
   type Department,
   type Designation,
   type Award,
+  type Institution,
+  type StudyArea,
+  type Specialization,
   type Employee,
   type CourseOffered,
   type OtpVerification,
   type InsertEmployee,
-  type Payroll
+  type Payroll,
+  type Jg,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, like, sql } from "drizzle-orm";
@@ -64,7 +72,10 @@ export interface IStorage {
   // Location operations
   getCounties(): Promise<County[]>;
   getConstituenciesByCounty(countyId: number): Promise<Constituency[]>;
+  getCountyByCountyName(countyName: string): Promise<County | undefined>;
+  getConstituencyByName(name: string): Promise<Constituency | undefined>
   getWardsByConstituency(constituencyId: number): Promise<Ward[]>;
+  
   
   // System configuration operations
   getDepartments(): Promise<Department[]>;
@@ -81,7 +92,7 @@ export interface IStorage {
   verifyEmployee(personalNumber: string, idNumber: string): Promise<Payroll | undefined>;
   upsertEmployeeDetails(applicantId: number, employeeData: Partial<InsertEmployee>): Promise<Employee>;
 
-  
+  // L
   // OTP operations
   createOtp(phoneNumber: string, otp: string): Promise<OtpVerification>;
   comparePasswords(password: string): Promise<boolean>;
@@ -89,6 +100,13 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User>;
   verifyEmail(email: string): Promise<boolean>;
   cleanupExpiredOtps(): Promise<void>;
+  // Seed operations
+  seedJobGroup(jobGroup: Omit<Jg, 'id'>): Promise<Jg>;
+  seedCounties(county: Omit<County, 'id'>): Promise<County>;
+  seedSubCounties(subCounty: Omit<Constituency, 'id'>): Promise<Constituency>;
+  seedWard(ward: Omit<Ward, 'id'>): Promise<Ward>;
+  //Truncate tables
+  truncateAll(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -131,9 +149,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateApplicant(id: number, applicant: Partial<Applicant>): Promise<Applicant> {
+    // Handle date fields properly
+    const processedApplicant = { ...applicant };
+    
+    // Convert string dates to proper Date objects or null
+    if (processedApplicant.dateOfBirth) {
+      if (typeof processedApplicant.dateOfBirth === 'string') {
+        processedApplicant.dateOfBirth = processedApplicant.dateOfBirth ? new Date(processedApplicant.dateOfBirth) : null;
+      }
+    }
+    
+    // Handle employee date fields if they exist
+    if (processedApplicant.employee) {
+      const employee = processedApplicant.employee as any;
+      if (employee.dofa && typeof employee.dofa === 'string') {
+        employee.dofa = employee.dofa ? new Date(employee.dofa) : null;
+      }
+      if (employee.doca && typeof employee.doca === 'string') {
+        employee.doca = employee.doca ? new Date(employee.doca) : null;
+      }
+    }
+
     const [updatedApplicant] = await db
       .update(applicants)
-      .set({ ...applicant, updatedAt: new Date() })
+      .set({ ...processedApplicant, updatedAt: new Date() })
       .where(eq(applicants.id, id))
       .returning();
     return updatedApplicant;
@@ -158,17 +197,17 @@ export class DatabaseStorage implements IStorage {
     
     return await query.orderBy(desc(jobs.createdAt));
   }
-
+// Fetch Jobs
   async getJob(id: number): Promise<Job | undefined> {
     const [job] = await db.select().from(jobs).where(eq(jobs.id, id));
     return job;
   }
-
+// Create Jobs
   async createJob(job: Omit<Job, 'id' | 'createdAt' | 'updatedAt'>): Promise<Job> {
     const [newJob] = await db.insert(jobs).values(job).returning();
     return newJob;
   }
-
+// Update Jobs
   async updateJob(id: number, job: Partial<Job>): Promise<Job> {
     const [updatedJob] = await db
       .update(jobs)
@@ -208,6 +247,7 @@ export class DatabaseStorage implements IStorage {
     return newApplication;
   }
 
+  // Update Applications
   async updateApplication(id: number, application: Partial<Application>): Promise<Application> {
     const [updatedApplication] = await db
       .update(applications)
@@ -253,6 +293,22 @@ export class DatabaseStorage implements IStorage {
 
   async getCoursesOffered(): Promise<CourseOffered[]> {
     return db.select().from(coursesOffered).orderBy(coursesOffered.name);
+  }
+
+  async getInstitutions(): Promise<Institution[]> {
+    return db.select().from(institutions).orderBy(institutions.name);
+  }
+
+  async getStudyArea(): Promise<StudyArea[]> {
+    return db.select().from(studyArea).orderBy(studyArea.name);
+  }
+
+  async getSpecializations(): Promise<Specialization[]> {
+    return db.select().from(specializations).orderBy(specializations.name);
+  }
+
+  async getEthnicity(): Promise<any[]> {
+    return db.select().from(ethnicity).orderBy(ethnicity.name);
   }
 
   // Notice operations
@@ -408,6 +464,72 @@ export class DatabaseStorage implements IStorage {
       return newEmployee;
     }
   }
+  // Job Groups
+  async seedJobGroup(
+  jobGroup: Omit<Jg, 'id' | 'createdAt'>
+): Promise<Jg> {
+  const [newJobGroup] = await db
+    .insert(JG)
+    .values(jobGroup)
+    .returning();
+  return newJobGroup;
+}
+  // Counties
+  async seedCounties(
+  jobGroup: Omit<County, 'id' | 'createdAt'>
+): Promise<County> {
+  const [newCouties] = await db
+    .insert(counties)
+    .values(jobGroup)
+    .returning();
+  return newCouties;
+  }
+// Seed a single ward
+async seedWard(ward: Omit<Ward, 'id'>): Promise<Ward> {
+  const [newWard] = await db
+    .insert(wards)
+    .values(ward)
+    .returning();
+  return newWard;
+}
+
+  // Constituencies
+  async seedSubCounties(
+    subCounty: Omit<Constituency, 'id'>    
+  ): Promise<Constituency> {
+    const [newSub] = await db
+      .insert(constituencies)
+      .values(subCounty)
+      .returning();
+    return newSub;
+  }
+  async getCountyByCountyName(countyName: string): Promise<County>{
+    const [countyID] = await db
+      .select()
+      .from(counties)
+      .where(eq(counties.name, countyName));
+    return countyID
+  }
+async getConstituencyByName(name: string): Promise<Constituency | undefined> {
+  const [constituency] = await db
+    .select()
+    .from(constituencies)
+    .where(eq(constituencies.name, name))
+    .limit(1);
+
+  return constituency;
+}
+
+  // Truncate all tables
+  async truncateAll(): Promise<void> {
+  // Truncate child tables first to avoid FK constraint errors
+  await db.execute(sql`TRUNCATE TABLE wards RESTART IDENTITY CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE constituencies RESTART IDENTITY CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE counties RESTART IDENTITY CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE jg RESTART IDENTITY CASCADE`);
+}
+
+
 }
 
 export const storage = new DatabaseStorage();

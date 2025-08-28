@@ -373,18 +373,26 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
   // Get system configuration data
   app.get('/api/public/config', async (req, res) => {
     try {
-      const [departments, designations, awards, courses] = await Promise.all([
+      const [departments, designations, awards, courses, institutions, studyArea, specializations, ethnicity] = await Promise.all([
         storage.getDepartments(),
         storage.getDesignations(),
         storage.getAwards(),
-        storage.getCoursesOffered()
+        storage.getCoursesOffered(),
+        storage.getInstitutions(),
+        storage.getStudyArea(),
+        storage.getSpecializations(),
+        storage.getEthnicity()
       ]);
 
       res.json({
         departments,
         designations,
         awards,
-        courses
+        courses,
+        institutions,
+        studyArea,
+        specializations,
+        ethnicity
       });
     } catch (error) {
       console.error('Error fetching config:', error);

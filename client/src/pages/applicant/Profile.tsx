@@ -67,10 +67,54 @@ export default function ApplicantProfile() {
   });
 
   const handleSaveStep = (stepData: any) => {
-    updateProfileMutation.mutate({
+    const profileData = {
       ...profile?.applicantProfile,
       ...stepData,
+    };
+    
+    // Remove undefined fields to prevent database errors
+    Object.keys(profileData).forEach(key => {
+      if (profileData[key] === undefined) {
+        delete profileData[key];
+      }
     });
+    
+    updateProfileMutation.mutate(profileData);
+    
+    // After successful save on step 1 with employee verification, move to step 1.5
+    if (currentStep === 1 && stepData.isVerifiedEmployee) {
+      setTimeout(() => {
+        setCurrentStep(1.5);
+      }, 1000);
+    }
+  };
+
+  const isEmployeeVerified = profile?.applicantProfile?.isEmployee && (profile?.applicantProfile?.employee || profile?.applicantProfile?.isVerifiedEmployee);
+  
+  const getNextStep = (current: number) => {
+    if (current === 1 && isEmployeeVerified) {
+      return 1.5; // Go to employee details if verified
+    }
+    if (current === 1 && !isEmployeeVerified) {
+      return 2; // Skip employee details if not verified
+    }
+    if (current === 1.5) {
+      return 2; // From employee details to address
+    }
+    return current + 1;
+  };
+  
+  const getPrevStep = (current: number) => {
+    if (current === 2 && isEmployeeVerified) {
+      return 1.5; // Go back to employee details if verified
+    }
+    if (current === 2 && !isEmployeeVerified) {
+      return 1; // Go back to personal details if not verified
+    }
+    if (current === 1.5) {
+      return 1; // From employee details to personal
+    }
+    return current - 1;
   };
 
   const isEmployeeVerified = profile?.applicantProfile?.isEmployee && profile?.applicantProfile?.employee;
@@ -123,7 +167,7 @@ export default function ApplicantProfile() {
         variant: 'destructive',
       });
       setTimeout(() => {
-        // window.location.href = '/api/login';
+        window.location.href = '/';
       }, 500);
       return;
     }
