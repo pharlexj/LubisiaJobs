@@ -127,7 +127,7 @@ export default function Notices() {
 
         {/* Notices List */}
         <div className="space-y-6">
-          {notices.length === 0 ? (
+          {notices?.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
                 <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />

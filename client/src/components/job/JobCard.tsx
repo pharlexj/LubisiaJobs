@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { isUnauthorizedError } from '@/lib/authUtils';
+import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { 
   Calendar, 
   GraduationCap, 
@@ -27,6 +28,10 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showDetails, setShowDetails] = useState(false);
+  const { data: config } = usePublicConfig();
+
+  const jg = config?.jg || [];
+  const departments = config?.departments || [];
 
   const applyMutation = useMutation({
     mutationFn: async () => {
@@ -47,7 +52,7 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
           variant: 'destructive',
         });
         setTimeout(() => {
-          window.location.href = '/api/login';
+          window.location.href = '/';
         }, 500);
         return;
       }
@@ -97,11 +102,11 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
               <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">{job.title}</h3>
               <div className="flex items-center text-gray-600 text-sm mb-1">
                 <Building className="w-4 h-4 mr-2" />
-                <span>{job.department?.name || 'Department not specified'}</span>
+                <span>{departments.find(dept => dept.id === job.departmentId)?.name || 'Department not specified'}</span>
               </div>
               <div className="flex items-center text-primary font-medium text-sm">
                 <Badge variant="outline" className="border-primary text-primary">
-                  Job Group {job.designation?.jobGroup || 'N/A'}
+                  Job Group {jg.find(d => d.id === job.jg)?.name}
                 </Badge>
               </div>
             </div>
@@ -148,7 +153,7 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
                   View Details
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-3xl overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{job.title}</DialogTitle>
                 </DialogHeader>
@@ -156,11 +161,11 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-2">Department</h4>
-                      <p className="text-gray-600">{job.department?.name}</p>
+                      <p className="text-gray-600">{departments.find(dept => dept.id === job.departmentId)?.name}</p>
                     </div>
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-2">Job Group</h4>
-                      <p className="text-gray-600">{job.designation?.jobGroup}</p>
+                      <p className="text-gray-600">{jg.find(j => j.id === job.jg)?.name}</p>
                     </div>
                   </div>
                   
@@ -186,8 +191,8 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-2">Application Deadline</h4>
                       <p className="text-gray-600">
-                        {job.applicationDeadline 
-                          ? new Date(job.applicationDeadline).toLocaleDateString()
+                        {job.endDate 
+                          ? new Date(job.endDate).toLocaleDateString()
                           : 'Open until filled'}
                       </p>
                     </div>

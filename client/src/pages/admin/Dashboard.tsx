@@ -176,8 +176,8 @@ export default function AdminDashboard() {
                             <h4 className="font-medium text-gray-900">{job.title}</h4>
                             <p className="text-sm text-gray-600">{job.department?.name}</p>
                             <p className="text-xs text-gray-500">
-                              Deadline: {job.applicationDeadline 
-                                ? new Date(job.applicationDeadline).toLocaleDateString()
+                              Deadline: {job.endDate 
+                                ? new Date(job.endDate).toLocaleDateString()
                                 : 'Open'}
                             </p>
                           </div>

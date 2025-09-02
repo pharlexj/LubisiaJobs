@@ -104,8 +104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!password) {
       return res.status(400).json({ message: "Password is required" });
     }
-      const hashedPassword = await bcrypt.hash(password, 10);
-    
+      const hashedPassword = await bcrypt.hash(password, 10);    
       const newUser = await storage.upsertUser({
         ...req.body,
         password: hashedPassword,
@@ -145,7 +144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Logged out" });
     });
   });
-  app.get("/api/auth/me", (req, res) => {
+  app.get("/api/auth/me", (req:any, res) => {
   if (!req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
@@ -169,22 +168,23 @@ switch (req.user?.role) {
   res.json({ user: req.user, redirectUrl });
 });
 // Employee verification routes
-  app.post('/api/employee/verify', async (req, res) => {
+  app.post('/api/employee/verify', async (req:any, res) => {
     try {
       const { personalNumber, idNumber } = req.body;
-      
+      const userId = req.user.id;
       if (!personalNumber || !idNumber) {
         return res.status(400).json({ message: 'Personal number and ID number are required' });
       }
-
+      const applicantData = await storage.getApplicant(userId);
       // Check if employee exists with matching personal number and ID
       const employee = await storage.verifyEmployee(personalNumber, idNumber);
       
       if (!employee) {
         return res.status(404).json({ message: 'Employee not found or ID number does not match' });
       }
-
-      res.json({ 
+      
+      //  await storage.updateApplicant(applicantData.id, { isEmployee: true });
+      return res.json({ 
         message: 'Employee verified successfully',
         employee: {
           personalNumber: employee.personalNumber,
@@ -193,7 +193,7 @@ switch (req.user?.role) {
       });
     } catch (error) {
       console.error('Error verifying employee:', error);
-      res.status(500).json({ message: 'Failed to verify employee' });
+      return res.status(500).json({ message: 'Failed to verify employee' });
     }
   });
 
@@ -371,9 +371,9 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
   });
 
   // Get system configuration data
-  app.get('/api/public/config', async (req, res) => {
+  app.get('/api/public/config', async (req:any, res) => {
     try {
-      const [departments, designations, awards, courses, institutions, studyArea, specializations, ethnicity] = await Promise.all([
+      const [departments, designations, awards, courses, institutions, studyArea, specializations, ethnicity, jg, jobs,certificatelevel,applications,counties] = await Promise.all([
         storage.getDepartments(),
         storage.getDesignations(),
         storage.getAwards(),
@@ -381,9 +381,13 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
         storage.getInstitutions(),
         storage.getStudyArea(),
         storage.getSpecializations(),
-        storage.getEthnicity()
+        storage.getEthnicity(),
+        storage.getJobGroups(),
+        storage.getJobs(),
+        storage.getCertLevel(),
+        storage.getApplicant(req.user.id),
+        storage.getCounties(),
       ]);
-
       res.json({
         departments,
         designations,
@@ -392,7 +396,12 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
         institutions,
         studyArea,
         specializations,
-        ethnicity
+        ethnicity,
+        jg,
+        jobs,
+        certificatelevel,
+        applications,
+        counties
       });
     } catch (error) {
       console.error('Error fetching config:', error);
@@ -430,7 +439,7 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
   });
 
   // Update applicant profile
-  app.put('/api/applicant/profile', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/applicant/profile', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
@@ -441,8 +450,7 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
       const profile = await storage.getApplicant(userId);
       if (!profile) {
         return res.status(404).json({ message: 'Profile not found' });
-      }
-
+      }      
       const updatedProfile = await storage.updateApplicant(profile.id, req.body);
       res.json(updatedProfile);
     } catch (error) {
@@ -577,6 +585,7 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
       if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
       }
+console.log(req.body);
 
       const jobData = {
         ...req.body,

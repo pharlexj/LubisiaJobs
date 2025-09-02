@@ -41,12 +41,13 @@ export default function EmployeeVerificationDialog({
 
   const verifyMutation = useMutation({
     mutationFn: async (data: z.infer<typeof verificationSchema>) => {
-      return await apiRequest('POST', '/api/employee/verify', {
+      const res = await apiRequest('POST', '/api/employee/verify', {
         personalNumber: data.personalNumber,
         idNumber: applicantIdNumber,
       });
+      return res.json();
     },
-    onSuccess: (response) => {
+    onSuccess: (response) => {      
       setVerifiedEmployee(response.employee);
       setVerificationStep('verified');
       toast({

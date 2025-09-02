@@ -9,29 +9,23 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Filter, MapPin, Briefcase } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { usePublicConfig } from "@/hooks/usePublicConfig";
 
 export default function Jobs() {
   const { isAuthenticated } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedJobGroup, setSelectedJobGroup] = useState<string>('all');
-
-  const { data: jobs = [], isLoading } = useQuery({
-    queryKey: ['/api/public/jobs'],
-  });
-
-  const { data: config } = useQuery({
-    queryKey: ['/api/public/config'],
-  });
-
+  const { data: config, isLoading } = usePublicConfig();  
   const departments = config?.departments || [];
-  const jobGroups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S'];
-
-  const filteredJobs = jobs.filter(job => {
+  const jg = config?.jg || [];
+  const jobs = config?.jobs || [];  
+  const counties = config?.counties || [];
+  const filteredJobs = jobs.filter(job => { 
     const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          job.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDepartment = selectedDepartment === 'all' || job.departmentId?.toString() === selectedDepartment;
-    const matchesJobGroup = selectedJobGroup === 'all' || job.designation?.jobGroup === selectedJobGroup;
+    const matchesJobGroup = selectedJobGroup === 'all' || job.jg?.toString() === selectedJobGroup;
     
     return matchesSearch && matchesDepartment && matchesJobGroup;
   });
@@ -89,14 +83,14 @@ export default function Jobs() {
           </Card>
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-3xl font-bold text-primary mb-2">15</div>
+              <div className="text-3xl font-bold text-primary mb-2">{jg.length}</div>
               <div className="text-gray-600">Job Groups</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-3xl font-bold text-secondary mb-2">5</div>
-              <div className="text-gray-600">Constituencies</div>
+              <div className="text-3xl font-bold text-secondary mb-2">{counties.length}</div>
+              <div className="text-gray-600">Counties</div>
             </CardContent>
           </Card>
         </div>
@@ -131,21 +125,19 @@ export default function Jobs() {
                     ))}
                   </SelectContent>
                 </Select>
-
                 <Select value={selectedJobGroup} onValueChange={setSelectedJobGroup}>
                   <SelectTrigger className="w-full sm:w-32">
                     <SelectValue placeholder="Job Group" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Groups</SelectItem>
-                    {jobGroups.map((group) => (
-                      <SelectItem key={group} value={group}>
-                        Group {group}
+                    {jg.map((group) => (
+                      <SelectItem key={group.id} value={group.id.toString()}>
+                        Group {group.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-
                 <Button variant="outline">
                   <Filter className="w-4 h-4 mr-2" />
                   More Filters

@@ -100,8 +100,6 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
   const [referees, setReferees] = useState([
     { name: '', position: '', organization: '', email: '', phoneNumber: '', relationship: '' }
   ]);
-<<<<<<< HEAD
-=======
   const [professionalQualifications, setProfessionalQualifications] = useState([
     { institution: '', studentNo: '', areaOfStudyId: 0, specialisationId: 0, course: '', awardId: 0, gradeId: '', examiner: '', certificateNo: '', startDate: '', endDate: '' }
   ]);
@@ -116,7 +114,6 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
     kra_pin: null,
     good_conduct: null,
   });
->>>>>>> 275b0a479a7b515b74738db528b03ef6c0a03aa8
   const [employeeData, setEmployeeData] = useState({
     personalNumber: '',
     designation: '',
@@ -133,6 +130,8 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
   const institutions = config?.institutions || [];
   const awards = config?.awards || [];
   const courses = config?.courses || [];
+  const jg = config?.jg || [];
+  const eth = config?.ethnicity || [];
    // Employee verification state
   const [showEmployeeVerification, setShowEmployeeVerification] = useState(false);
   const [isVerifiedEmployee, setIsVerifiedEmployee] = useState(false);
@@ -162,6 +161,7 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
   // Update form when profile changes
   useEffect(() => {
     if (profile) {
+      
       form.reset(profile);
       if (profile.education?.length) {
         setEducationRecords(profile.education);
@@ -175,29 +175,23 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
       if (profile.referees?.length) {
         setReferees(profile.referees);
       }
-      if (profile.employee) {
+      if (profile.isEmployee) {
         setEmployeeData(profile.employee);
         setIsVerifiedEmployee(true);
       }
+
     }
   }, [profile, form]);
-
   const handleSubmit = (data: any) => {
     const stepData = {
       ...data,
-<<<<<<< HEAD
-      educationRecords: step === 3 ? educationRecords : undefined,
-      employee: step === 1.5 ? employeeData : undefined,
-=======
       education: step === 3 ? educationRecords : undefined,
       employee: step === 1.5 ? employeeData : undefined,
       professionalQualifications: step === 5 ? professionalQualifications : undefined,
       shortCourses: step === 4 ? shortCourses : undefined,
->>>>>>> 275b0a479a7b515b74738db528b03ef6c0a03aa8
       employmentHistory: step === 6 ? employmentHistory : undefined,
       referees: step === 7 ? referees : undefined,
       documents: step === 8 ? uploadedDocuments : undefined,
-      // Include verification status for step 1 to ensure proper navigation
       isVerifiedEmployee: step === 1 ? isVerifiedEmployee : undefined,
     };
     
@@ -379,13 +373,8 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                 />
               </div>
             </div>
-<<<<<<< HEAD
-
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-=======
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">              
               <div>
->>>>>>> 275b0a479a7b515b74738db528b03ef6c0a03aa8
               <div>
                 <Label htmlFor="idPassportType">ID/Passport Type *</Label>
                 <Select onValueChange={(value) => form.setValue('idPassportType', value as any)}>
@@ -405,10 +394,6 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                 )}
               </div>
             </div>
-<<<<<<< HEAD
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-=======
               <div>
                 <Label htmlFor="nationalId">National ID *</Label>
                 <Input
@@ -423,7 +408,6 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                   </p>
                 )}
               </div>
->>>>>>> 275b0a479a7b515b74738db528b03ef6c0a03aa8
               <div>
                 <Label htmlFor="dateOfBirth">Date of Birth *</Label>
                 <Input
@@ -493,7 +477,7 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                     <SelectValue placeholder="Select ethnicity" />
                   </SelectTrigger>
                   <SelectContent>
-                    {((config as any)?.ethnicity || []).map((eth: any) => (
+                    {(eth).map((eth: any) => (
                       <SelectItem key={eth.id} value={eth.name}>
                         {eth.name}
                       </SelectItem>
@@ -546,14 +530,9 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="isEmployee"
-<<<<<<< HEAD
-                  {...form.register('isEmployee')}
-                  onCheckedChange={(checked) => {
-=======
                   checked={form.watch('isEmployee')}
                   onCheckedChange={(checked) => {
                     form.setValue('isEmployee', checked as boolean);
->>>>>>> 275b0a479a7b515b74738db528b03ef6c0a03aa8
                     if (checked && !isVerifiedEmployee) {
                       setShowEmployeeVerification(true);
                     }
@@ -587,10 +566,6 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                     <p><strong>Designation:</strong> {verifiedEmployeeData.designation}</p>
                   </div>
                 </div>
-<<<<<<< HEAD
-              )}
-
-=======
               )}              
             </div>
           </div>
@@ -607,7 +582,6 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
->>>>>>> 275b0a479a7b515b74738db528b03ef6c0a03aa8
               <div>
                 <Label htmlFor="personalNumber">Personal Number *</Label>
                 <Input
@@ -649,123 +623,9 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
                     <SelectValue placeholder="Select job group" />
                   </SelectTrigger>
                   <SelectContent>
-                    {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S'].map((group) => (
-                      <SelectItem key={group} value={group}>
-                        Job Group {group}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="actingPosition">Acting Position</Label>
-                <Input
-                  id="actingPosition"
-                  value={employeeData.actingPosition}
-                  onChange={(e) => setEmployeeData({...employeeData, actingPosition: e.target.value})}
-                  placeholder="Enter acting position (if applicable)"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="departmentId">Department *</Label>
-                <Select onValueChange={(value) => setEmployeeData({...employeeData, departmentId: value})} value={employeeData.departmentId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {((config as any)?.departments || []).map((dept: any) => (
-                      <SelectItem key={dept.id} value={dept.id.toString()}>
-                        {dept.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dofa">Date of First Appointment</Label>
-                <Input
-                  id="dofa"
-                  type="date"
-                  value={employeeData.dofa}
-                  onChange={(e) => setEmployeeData({...employeeData, dofa: e.target.value})}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="doca">Date of Current Appointment</Label>
-                <Input
-                  id="doca"
-                  type="date"
-                  value={employeeData.doca}
-                  onChange={(e) => setEmployeeData({...employeeData, doca: e.target.value})}
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 1.5: // Employee Details
-        return (
-          <div className="space-y-6">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <p className="text-blue-800 text-sm">
-                <span className="font-medium">County Employee Verification Successful!</span>
-                <br />Please complete your employment details below. Some fields are pre-filled from verification.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="personalNumber">Personal Number *</Label>
-                <Input
-                  id="personalNumber"
-                  value={employeeData.personalNumber || verifiedEmployeeData?.personalNumber || ''}
-                  onChange={(e) => setEmployeeData({...employeeData, personalNumber: e.target.value})}
-                  disabled={!!verifiedEmployeeData?.personalNumber}
-                  placeholder="Enter personal number"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="designation">Designation *</Label>
-                <Input
-                  id="designation"
-                  value={employeeData.designation || verifiedEmployeeData?.designation || ''}
-                  onChange={(e) => setEmployeeData({...employeeData, designation: e.target.value})}
-                  disabled={!!verifiedEmployeeData?.designation}
-                  placeholder="Enter designation"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dutyStation">Duty Station *</Label>
-                <Input
-                  id="dutyStation"
-                  value={employeeData.dutyStation}
-                  onChange={(e) => setEmployeeData({...employeeData, dutyStation: e.target.value})}
-                  placeholder="Enter duty station"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="jg">Job Group *</Label>
-                <Select onValueChange={(value) => setEmployeeData({...employeeData, jg: value})} value={employeeData.jg}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select job group" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S'].map((group) => (
-                      <SelectItem key={group} value={group}>
-                        Job Group {group}
+                    {(jg).map((jg: any) => (
+                      <SelectItem key={jg.id} value={jg.name}>
+                        {`Job Group ${jg.name}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1512,7 +1372,6 @@ export default function ProfileForm({ step, profile, onSave, isLoading }: Profil
         );
     }
   };
-
   const handleEmployeeVerificationSuccess = (employeeData: any) => {
     setIsVerifiedEmployee(true);
     setVerifiedEmployeeData(employeeData);

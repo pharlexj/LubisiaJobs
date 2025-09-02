@@ -23,6 +23,7 @@ import {
   employees,
   payroll,
   JG,
+  certificateLevel,
   type User,
   type UpsertUser,
   type Applicant,
@@ -44,6 +45,7 @@ import {
   type InsertEmployee,
   type Payroll,
   type Jg,
+  type CertificateLevel,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, like, sql } from "drizzle-orm";
@@ -63,7 +65,9 @@ export interface IStorage {
   getJob(id: number): Promise<Job | undefined>;
   createJob(job: Omit<Job, 'id' | 'createdAt' | 'updatedAt'>): Promise<Job>;
   updateJob(id: number, job: Partial<Job>): Promise<Job>;
-  
+  getStudyAreaByName(name: string): Promise<StudyArea | undefined>
+  getCertLevel(): Promise<CertificateLevel[]>
+
   // Application operations
   getApplications(filters?: { applicantId?: number; jobId?: number; status?: string }): Promise<Application[]>;
   createApplication(application: Omit<Application, 'id' | 'createdAt' | 'updatedAt'>): Promise<Application>;
@@ -99,12 +103,17 @@ export interface IStorage {
   verifyOtp(phoneNumber: string, otp: string): Promise<boolean>;
   getUserByEmail(email: string): Promise<User>;
   verifyEmail(email: string): Promise<boolean>;
-  cleanupExpiredOtps(): Promise<void>;
+  cleanupExpiredOtps(): Promise<void>;  
   // Seed operations
   seedJobGroup(jobGroup: Omit<Jg, 'id'>): Promise<Jg>;
   seedCounties(county: Omit<County, 'id'>): Promise<County>;
   seedSubCounties(subCounty: Omit<Constituency, 'id'>): Promise<Constituency>;
   seedWard(ward: Omit<Ward, 'id'>): Promise<Ward>;
+  seedAward(award: Omit<Award, 'id'>): Promise<Award>;
+  seedInstitutions(institute: Omit<Institution, 'id'>): Promise<Institution>;
+  seedDesignation(designation: Omit<Designation, 'id'>): Promise<Designation>;
+  seedDepartment(department: Omit<Department, 'id'>): Promise<Department>;
+
   //Truncate tables
   truncateAll(): Promise<void>;
 }
@@ -133,6 +142,7 @@ export class DatabaseStorage implements IStorage {
 
   // Applicant operations
   async getApplicant(userId: string): Promise<Applicant | undefined> {
+
     const [applicant] = await db
       .select()
       .from(applicants)
@@ -150,32 +160,16 @@ export class DatabaseStorage implements IStorage {
 
   async updateApplicant(id: number, applicant: Partial<Applicant>): Promise<Applicant> {
     // Handle date fields properly
-    const processedApplicant = { ...applicant };
-    
-    // Convert string dates to proper Date objects or null
-    if (processedApplicant.dateOfBirth) {
-      if (typeof processedApplicant.dateOfBirth === 'string') {
-        processedApplicant.dateOfBirth = processedApplicant.dateOfBirth ? new Date(processedApplicant.dateOfBirth) : null;
-      }
-    }
-    
-    // Handle employee date fields if they exist
-    if (processedApplicant.employee) {
-      const employee = processedApplicant.employee as any;
-      if (employee.dofa && typeof employee.dofa === 'string') {
-        employee.dofa = employee.dofa ? new Date(employee.dofa) : null;
-      }
-      if (employee.doca && typeof employee.doca === 'string') {
-        employee.doca = employee.doca ? new Date(employee.doca) : null;
-      }
-    }
-
+    const processedApplicant = { ...applicant };        
     const [updatedApplicant] = await db
       .update(applicants)
       .set({ ...processedApplicant, updatedAt: new Date() })
       .where(eq(applicants.id, id))
       .returning();
+    console.log(`On storage file `,updatedApplicant);
+    
     return updatedApplicant;
+    
   }
 
   // Job operations
@@ -261,7 +255,6 @@ export class DatabaseStorage implements IStorage {
   async getCounties(): Promise<County[]> {
     return db.select().from(counties).orderBy(counties.name);
   }
-
   async getConstituenciesByCounty(countyId: number): Promise<Constituency[]> {
     return db
       .select()
@@ -310,16 +303,25 @@ export class DatabaseStorage implements IStorage {
   async getEthnicity(): Promise<any[]> {
     return db.select().from(ethnicity).orderBy(ethnicity.name);
   }
-
+  async getJobGroups(): Promise<any[]> {    
+    return db.select().from(JG).orderBy(JG.name);
+  }
+  async getCertLevel(): Promise<CertificateLevel[]> {    
+    return db.select().from(certificateLevel).orderBy(certificateLevel.name);
+  }
   // Notice operations
   async getNotices(isPublished?: boolean): Promise<Notice[]> {
-    let query = db.select().from(notices);
-    
     if (isPublished !== undefined) {
-      query = query.where(eq(notices.isPublished, isPublished));
+      return await db
+        .select()
+        .from(notices)
+        .where(eq(notices.isPublished, isPublished))
+        .orderBy(desc(notices.createdAt));
     }
-    
-    return await query.orderBy(desc(notices.createdAt));
+    return await db
+      .select()
+      .from(notices)
+      .orderBy(desc(notices.createdAt));
   }
 
   async createNotice(notice: Omit<Notice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notice> {
@@ -409,8 +411,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Increment attempts
-    await db
-      .update(otpVerification)
+    await db.update(otpVerification)
       .set({ 
         attempts: (otpRecord.attempts || 0) + 1,
         verified: true 
@@ -465,24 +466,20 @@ export class DatabaseStorage implements IStorage {
     }
   }
   // Job Groups
-  async seedJobGroup(
-  jobGroup: Omit<Jg, 'id' | 'createdAt'>
-): Promise<Jg> {
+  async seedJobGroup(jobGroup: Omit<Jg, 'id' | 'createdAt'>): Promise<Jg> {
   const [newJobGroup] = await db
     .insert(JG)
     .values(jobGroup)
     .returning();
   return newJobGroup;
 }
-  // Counties
-  async seedCounties(
-  jobGroup: Omit<County, 'id' | 'createdAt'>
-): Promise<County> {
-  const [newCouties] = await db
+  //Seed Counties
+  async seedCounties(county: Omit<County, 'id' | 'createdAt'>): Promise<County> {
+  const [newCounties] = await db
     .insert(counties)
-    .values(jobGroup)
+    .values(county)
     .returning();
-  return newCouties;
+  return newCounties;
   }
 // Seed a single ward
 async seedWard(ward: Omit<Ward, 'id'>): Promise<Ward> {
@@ -492,8 +489,39 @@ async seedWard(ward: Omit<Ward, 'id'>): Promise<Ward> {
     .returning();
   return newWard;
 }
-
-  // Constituencies
+// Seed a single Award
+async seedAward(award: Omit<Award, 'id'>): Promise<Award> {
+  const [newAward] = await db
+    .insert(awards)
+    .values(award)
+    .returning();
+  return newAward;
+}
+// Seed a single Cert level
+async seedCertLevel(cert: Omit<CertificateLevel, 'id'>): Promise<CertificateLevel> {
+  const [newCertLevel] = await db
+    .insert(certificateLevel)
+    .values(cert)
+    .returning();
+  return newCertLevel;
+}
+// Seed a single Specialize
+async seedSpecialize(specialize: Omit<Specialization, 'id'>): Promise<Specialization> {
+  const [newSpecial] = await db
+    .insert(specializations)
+    .values(specialize)
+    .returning();
+  return newSpecial;
+}
+// Seed a single Study Area
+async seedStudy(studyA: Omit<StudyArea, 'id'>): Promise<StudyArea> {
+  const [newStudyArea] = await db
+    .insert(studyArea)
+    .values(studyA)
+    .returning();
+  return newStudyArea;
+}
+  // Seed Constituencies
   async seedSubCounties(
     subCounty: Omit<Constituency, 'id'>    
   ): Promise<Constituency> {
@@ -503,6 +531,30 @@ async seedWard(ward: Omit<Ward, 'id'>): Promise<Ward> {
       .returning();
     return newSub;
   }
+
+  async seedInstitutions(institute: Omit<Institution, 'id'>): Promise<Institution> {
+    const [newInstitution] = await db
+      .insert(institutions)
+      .values(institute)
+      .returning();
+    return newInstitution;
+  }
+  async seedDesignation(designation: Omit<Designation, 'id'>): Promise<Designation> {
+    const [newDesignation] = await db
+      .insert(designations)
+      .values(designation)
+      .returning();
+    return newDesignation;
+  }
+// Seed a single Department
+async seedDepartment(department: Omit<Department, 'id'>): Promise<Department> {
+  const [newDepartment] = await db
+    .insert(departments)
+    .values(department)
+    .returning();
+return newDepartment;
+}
+  // Dependencies on dropdowns
   async getCountyByCountyName(countyName: string): Promise<County>{
     const [countyID] = await db
       .select()
@@ -519,7 +571,15 @@ async getConstituencyByName(name: string): Promise<Constituency | undefined> {
 
   return constituency;
 }
+async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
+  const [studyareas] = await db
+    .select()
+    .from(studyArea)
+    .where(eq(studyArea.name, name))
+    .limit(1);
 
+  return studyareas;
+}
   // Truncate all tables
   async truncateAll(): Promise<void> {
   // Truncate child tables first to avoid FK constraint errors
@@ -527,6 +587,12 @@ async getConstituencyByName(name: string): Promise<Constituency | undefined> {
   await db.execute(sql`TRUNCATE TABLE constituencies RESTART IDENTITY CASCADE`);
   await db.execute(sql`TRUNCATE TABLE counties RESTART IDENTITY CASCADE`);
   await db.execute(sql`TRUNCATE TABLE jg RESTART IDENTITY CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE awards RESTART IDENTITY CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE certificate_level RESTART IDENTITY CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE specializations RESTART IDENTITY CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE study_area RESTART IDENTITY CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE departments RESTART IDENTITY CASCADE`);
+
 }
 
 

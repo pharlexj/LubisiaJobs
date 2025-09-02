@@ -43,6 +43,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   nationalId: varchar("national_id", { length: 11 }),
+  idPassportNumber: varchar("id_passport_number", { length: 11 }),
   idPassportType: varchar("id_passport_type", { length: 20 }),
   phoneNumber: varchar('phone_number'),
   password: varchar("password"),
@@ -99,6 +100,7 @@ export const awards = pgTable("awards", {
 export const specializations = pgTable("specializations", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
+  studyArea:integer('study_area'),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -145,6 +147,7 @@ export const applicants = pgTable("applicants", {
   phoneVerifiedAt: timestamp("phone_verified_at"),
   altPhoneNumber: varchar("alt_phone_number", { length: 20 }),
   nationalId: varchar("national_id", { length: 50 }),
+  idPassportNumber: varchar("id_passport_number", { length: 50 }),
   idPassportType: varchar("id_passport_type", { length: 20 }), // 'national_id', 'passport', 'alien_id'
   dateOfBirth: date("date_of_birth"),
   gender: varchar("gender", { length: 10 }),
@@ -173,8 +176,8 @@ export const jobs = pgTable("jobs", {
   description: text("description"),
   departmentId: integer("department_id").notNull().references(() => departments.id),
   designationId: integer("designation_id"),
-  requirements: text("requirements"), 
-  isActive: boolean("is_active").default(true),
+  requirements: jsonb("requirements"), // Store qualification requirements
+  isActive: boolean("is_active").notNull().default(true),
   jg: integer("jg_id").notNull().references(()=>JG.id),
   catetogy: varchar("category"),
   experience: varchar("experience"),
@@ -182,12 +185,10 @@ export const jobs = pgTable("jobs", {
   venue: varchar("venue"),
   requiredCourses: varchar("required_courses"),
   certificateLevel: integer("cert_level_id").notNull().references(()=>certificateLevel.id),
-  awardId: integer("award_id").notNull().references(()=>awards.id),
   isReleased: integer("is_released"),
   advertType: varchar("advert_type"),
   status: varchar("status"),
   startDate: date("start_date"),
-  applicationDeadline: date("application_deadline"),
   endDate: date("end_date"),
   createdBy: varchar("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
@@ -197,7 +198,7 @@ export const jobs = pgTable("jobs", {
 export const certificateLevel = pgTable("certificate_level", {
   id: serial('id').primaryKey(),
   name: varchar("name"),
-  createdAt: timestamp("created_at")
+  createdAt: timestamp("created_at").defaultNow(),
 });
 // Applications
 export const applications = pgTable("applications", {
@@ -214,7 +215,7 @@ export const applications = pgTable("applications", {
 });
 
 // Education records
-export const education = pgTable("education", {
+export const education = pgTable("education_records", {
   id: serial("id").primaryKey(),
   applicantId: integer("applicant_id").notNull().references(() => applicants.id),
   courseId: integer("course_id").references(() => coursesOffered.id),
@@ -459,10 +460,6 @@ export const jobsRelations = relations(jobs, ({ one, many }) => ({
     fields: [jobs.departmentId],
     references: [departments.id],
   }),
-  designation: one(designations, {
-    fields: [jobs.designationId],
-    references: [designations.id],
-  }),
   createdBy: one(users, {
     fields: [jobs.createdBy],
     references: [users.id],
@@ -562,3 +559,5 @@ export type PanelScores = typeof panelScores.$inferSelect;
 export type ProfessionalQualification = typeof professionalQualifications.$inferSelect;
 export type Employee = typeof employees.$inferSelect;
 export type InsertEmployee = typeof employees.$inferInsert;
+export type Institution = typeof institutions.$inferSelect;
+export type CertificateLevel = typeof certificateLevel.$inferSelect;

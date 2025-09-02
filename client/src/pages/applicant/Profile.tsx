@@ -17,7 +17,12 @@ export default function ApplicantProfile() {
   const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(1);
 
-  const { data: profile, isLoading } = useQuery({
+  type ProfileResponse = {
+    applicantProfile?: any;
+    [key: string]: any;
+  };
+
+  const { data: profile, isLoading } = useQuery<ProfileResponse>({
     queryKey: ['/api/auth/user'],
     enabled: !!user,
   });
@@ -36,7 +41,9 @@ export default function ApplicantProfile() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: any) => {
-      const method = profile?.applicantProfile ? 'PUT' : 'POST';
+      const method = profile?.applicantProfile ? 'PATCH' : 'POST';
+      console.log(`At profile itself ${method} :`, data);
+      
       return await apiRequest(method, '/api/applicant/profile', data);
     },
     onSuccess: () => {
@@ -54,7 +61,7 @@ export default function ApplicantProfile() {
           variant: 'destructive',
         });
         setTimeout(() => {
-          // window.location.href = '/api/login';
+          window.location.href = '/';
         }, 500);
         return;
       }
@@ -88,37 +95,8 @@ export default function ApplicantProfile() {
       }, 1000);
     }
   };
-
-  const isEmployeeVerified = profile?.applicantProfile?.isEmployee && (profile?.applicantProfile?.employee || profile?.applicantProfile?.isVerifiedEmployee);
   
-  const getNextStep = (current: number) => {
-    if (current === 1 && isEmployeeVerified) {
-      return 1.5; // Go to employee details if verified
-    }
-    if (current === 1 && !isEmployeeVerified) {
-      return 2; // Skip employee details if not verified
-    }
-    if (current === 1.5) {
-      return 2; // From employee details to address
-    }
-    return current + 1;
-  };
-  
-  const getPrevStep = (current: number) => {
-    if (current === 2 && isEmployeeVerified) {
-      return 1.5; // Go back to employee details if verified
-    }
-    if (current === 2 && !isEmployeeVerified) {
-      return 1; // Go back to personal details if not verified
-    }
-    if (current === 1.5) {
-      return 1; // From employee details to personal
-    }
-    return current - 1;
-  };
-
-  const isEmployeeVerified = profile?.applicantProfile?.isEmployee && profile?.applicantProfile?.employee;
-  
+  const isEmployeeVerified = profile?.applicantProfile?.isEmployee;
   const getNextStep = (current: number) => {
     if (current === 1 && isEmployeeVerified) {
       return 1.5; // Go to employee details if verified
