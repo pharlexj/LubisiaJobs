@@ -3,11 +3,12 @@
   "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
   "compilerOptions": {
 		"incremental": true,
+		"target": "es2017",
 		"tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
 		"noEmit": true,
 		"module": "ESNext",
 		"strict": true,
-		"lib": ["esnext", "dom", "dom.iterable"],
+		"lib": ["esnext", "dom", "dom.iterable","es2017"],
 		"jsx": "react-jsx",
 		"esModuleInterop": true,
 		"skipLibCheck": true,

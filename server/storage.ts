@@ -23,6 +23,8 @@ import {
   employees,
   payroll,
   JG,
+  shortCourse,
+  professionalQualifications,
   certificateLevel,
   type User,
   type UpsertUser,
@@ -46,9 +48,11 @@ import {
   type Payroll,
   type Jg,
   type CertificateLevel,
+  type ProfessionalQualification,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, like, sql } from "drizzle-orm";
+import { eq, desc, and, like, sql,lt, PromiseOf } from "drizzle-orm";
+import { any, number } from "zod";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -58,8 +62,8 @@ export interface IStorage {
   // Applicant operations
   getApplicant(userId: string): Promise<Applicant | undefined>;
   createApplicant(applicant: Omit<Applicant, 'id' | 'createdAt' | 'updatedAt'>): Promise<Applicant>;
-  updateApplicant(id: number, applicant: Partial<Applicant>): Promise<Applicant>;
-  
+  updateApplicant(id: number, applicant: Partial<Applicant>,step:number): Promise<Applicant>;
+  getApplicantById(id: number): Promise<any | undefined>;
   // Job operations
   getJobs(filters?: { isActive?: boolean; departmentId?: number }): Promise<Job[]>;
   getJob(id: number): Promise<Job | undefined>;
@@ -113,18 +117,15 @@ export interface IStorage {
   seedInstitutions(institute: Omit<Institution, 'id'>): Promise<Institution>;
   seedDesignation(designation: Omit<Designation, 'id'>): Promise<Designation>;
   seedDepartment(department: Omit<Department, 'id'>): Promise<Department>;
-
   //Truncate tables
   truncateAll(): Promise<void>;
 }
-
 export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
-
   async upsertUser(userData: UpsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
@@ -139,16 +140,235 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return user;
   }
-
   // Applicant operations
-  async getApplicant(userId: string): Promise<Applicant | undefined> {
+async getApplicant(userId: string): Promise<any> {
+  // First fetch applicant + employee
+  const [applicant] = await db
+    .select()
+    .from(applicants)
+    .leftJoin(employees, eq(applicants.id, employees.applicantId))
+    .where(eq(applicants.userId, userId));
 
-    const [applicant] = await db
+  if (!applicant) return undefined;
+
+  const applicantId = applicant.applicants.id;
+
+  // Fetch related records (arrays)
+  const [
+    educationRecordsArr,
+    shortCourseRecords,
+    qualificationRecords,
+    employmentRecords,
+    refereeRecords,
+    documentRecords,
+  ] = await Promise.all([
+    db.select().from(educationRecords).where(eq(educationRecords.applicantId, applicantId)),
+    db.select().from(shortCourse).where(eq(shortCourse.applicantId, applicantId)),
+    db
       .select()
-      .from(applicants)
-      .where(eq(applicants.userId, userId));
-    return applicant;
+      .from(professionalQualifications)
+      .where(eq(professionalQualifications.applicantId, applicantId)),
+    db
+      .select()
+      .from(employmentHistory)
+      .where(eq(employmentHistory.applicantId, applicantId)),
+    db.select().from(referees).where(eq(referees.applicantId, applicantId)),
+    db.select().from(documents).where(eq(documents.applicantId, applicantId)),
+  ]);
+  // Build the full applicant object
+  const fullApplicant = {
+    ...applicant.applicants,
+    employee: applicant.employees || null,
+    education: educationRecordsArr,
+    shortCourses: shortCourseRecords,
+    professionalQualifications: qualificationRecords,
+    employmentHistory: employmentRecords,
+    referees: refereeRecords,
+    documents: documentRecords,
+  };
+// ✅ Now compute completion
+  const completedSteps = this.computeCompletedSteps(fullApplicant);
+  const totalSteps = 8;
+  const profileCompletionPercentage = Math.round(
+    (completedSteps.length / totalSteps) * 100
+  );
+  // Return nested structure
+  return {
+    ...fullApplicant,
+    completedSteps,
+    profileCompletionPercentage,
+  };
+}
+async getApplicantById(id: number): Promise<any | undefined> {
+  // Base applicant + employee
+  const [applicant] = await db
+    .select()
+    .from(applicants)
+    .leftJoin(employees, eq(applicants.id, employees.applicantId))
+    .where(eq(applicants.id, id));
+
+  if (!applicant) return undefined;
+  const applicantId = applicant.applicants.id;
+
+  // Fetch related arrays in parallel
+  const [
+    educationRecordsArr,
+    shortCourseRecords,
+    qualificationRecords,
+    employmentRecords,
+    refereeRecords,
+    documentRecords,
+  ] = await Promise.all([
+    db.select().from(educationRecords).where(eq(educationRecords.applicantId, applicantId)),
+    db.select().from(shortCourse).where(eq(shortCourse.applicantId, applicantId)),
+    db
+      .select()
+      .from(professionalQualifications)
+      .where(eq(professionalQualifications.applicantId, applicantId)),
+    db.select().from(employmentHistory).where(eq(employmentHistory.applicantId, applicantId)),
+    db.select().from(referees).where(eq(referees.applicantId, applicantId)),
+    db.select().from(documents).where(eq(documents.applicantId, applicantId)),
+  ]);
+
+  // Build the full applicant object
+  const fullApplicant = {
+    ...applicant.applicants,
+    employee: applicant.employees || null,
+    education: educationRecordsArr,
+    shortCourses: shortCourseRecords,
+    professionalQualifications: qualificationRecords,
+    employmentHistory: employmentRecords,
+    referees: refereeRecords,
+    documents: documentRecords,
+  };
+
+  // ✅ Now compute completion
+  const completedSteps = this.computeCompletedSteps(fullApplicant);
+  const totalSteps = 8;
+  const profileCompletionPercentage = Math.round(
+    (completedSteps.length / totalSteps) * 100
+  );
+
+  return {
+    ...fullApplicant,
+    completedSteps,
+    profileCompletionPercentage,
+  };
+}
+
+  async updateProgress(step: number, applicantId: number) {
+  // Only fetch this applicant’s current progress
+  const [current] = await db
+    .select({ progress: applicants.profileCompletionPercentage })
+    .from(applicants)
+    .where(eq(applicants.id, applicantId))
+    .limit(1);
+
+  // Update only if the new step is ahead of current
+  if (!current || step > (current.progress ?? 0)) {
+    await db
+      .update(applicants)
+      .set({ profileCompletionPercentage: step })
+      .where(eq(applicants.id, applicantId));
+    console.log(`✅ Progress updated to step ${step} for applicant ${applicantId}`);
+  } else {
+    console.log(`ℹ️ Step ${step} ignored (already at ${current.progress})`);
   }
+}
+
+async updateApplicant(applicantId: number, data: any, step:number) {
+  // ✅ Update base applicant row
+  await db
+    .update(applicants)
+    .set({
+      firstName: data.firstName,
+      surname: data.surname,
+      otherName: data.otherName,
+      salutation: data.salutation,
+      idPassportType: data.idPassportType,
+      nationalId: data.nationalId,
+      idPassportNumber: data.idPassportNumber,
+      dateOfBirth: data.dateOfBirth,
+      gender: data.gender,
+      nationality: data.nationality,
+      phoneNumber: data.phoneNumber,
+      altPhoneNumber: data.altPhoneNumber,
+      kraPin: data.kraPin,
+      ethnicity: data.ethnicity,
+      religion: data.religion,
+      isEmployee: data.isEmployee ?? false,
+      isPwd: data.isPwd ?? false,
+      pwdNumber: data.pwdNumber,
+      countyId: data.countyId,
+      constituencyId: data.constituencyId,
+      wardId: data.wardId,
+      address: data.address,
+      updatedAt: new Date(),
+    })
+    .where(eq(applicants.id, applicantId));
+
+  // ✅ Upsert employee (if exists in payload)
+  if (data.employee) {
+    const existingEmployee = await db
+      .select()
+      .from(employees)
+      .where(eq(employees.applicantId, applicantId));
+
+    if (existingEmployee.length > 0) {
+      await db
+        .update(employees)
+        .set({
+          personalNumber: data.employee.personalNumber,
+          designation: data.employee.designation,
+          dutyStation: data.employee.dutyStation,
+          jg: data.employee.jg,
+          departmentId: data.employee.departmentId,
+          actingPosition: data.employee.actingPosition,
+          dofa: data.employee.dofa,
+          doca: data.employee.doca,
+        })
+        .where(eq(employees.applicantId, applicantId));
+    } else {
+      await db.insert(employees).values({
+        ...data.employee,
+        applicantId,
+      });
+      this.updateProgress(2, applicantId);
+    }
+  }
+
+// ✅ Array-based sections
+  const replaceArray = async (table: any, rows: any[], stepNumber: number) => {
+    await db.delete(table).where(eq(table.applicantId, applicantId));
+    if (rows?.length > 0) {
+      await db.insert(table).values(rows.map(r => ({ ...r, applicantId })));
+    }
+    await this.updateProgress(stepNumber, applicantId);
+  };
+
+  if (step === 3 && data.education) {
+    await replaceArray(educationRecords, data.education, 3);
+  }
+  if (step === 4 && data.shortCourses) {
+    await replaceArray(shortCourse, data.shortCourses, 4);
+  }
+  if (step === 5 && data.professionalQualifications) {
+    await replaceArray(professionalQualifications, data.professionalQualifications, 5);
+  }
+  if (step === 6 && data.employmentHistory) {
+    await replaceArray(employmentHistory, data.employmentHistory, 6);
+  }
+  if (step === 7 && data.referees) {
+    await replaceArray(referees, data.referees, 7);
+  }
+  if (step === 8 && data.documents) {
+    await replaceArray(documents, data.documents, 8);
+  }
+  
+  // ✅ Return updated applicant profile
+  return await this.getApplicantById(applicantId); // reuse your nested fetcher
+}  
+// 🔑 New: get by numeric ID instead of userId
 
   async createApplicant(applicant: Omit<Applicant, 'id' | 'createdAt' | 'updatedAt'>): Promise<Applicant> {
     const [newApplicant] = await db
@@ -156,41 +376,31 @@ export class DatabaseStorage implements IStorage {
       .values(applicant)
       .returning();
     return newApplicant;
+  } 
+async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
+  await db.delete(employmentHistory).where(eq(employmentHistory.applicantId, applicantId));
+  if (jobs.length > 0) {
+    await db.insert(employmentHistory).values(jobs.map(j => ({ ...j, applicantId })));
   }
-
-  async updateApplicant(id: number, applicant: Partial<Applicant>): Promise<Applicant> {
-    // Handle date fields properly
-    const processedApplicant = { ...applicant };        
-    const [updatedApplicant] = await db
-      .update(applicants)
-      .set({ ...processedApplicant, updatedAt: new Date() })
-      .where(eq(applicants.id, id))
-      .returning();
-    console.log(`On storage file `,updatedApplicant);
-    
-    return updatedApplicant;
-    
-  }
-
+}
   // Job operations
   async getJobs(filters?: { isActive?: boolean; departmentId?: number }): Promise<Job[]> {
-    const conditions = [];
-    
-    if (filters?.isActive !== undefined) {
-      conditions.push(eq(jobs.isActive, filters.isActive));
-    }
-    
-    if (filters?.departmentId) {
-      conditions.push(eq(jobs.departmentId, filters.departmentId));
-    }
-    
-    let query = db.select().from(jobs);
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    return await query.orderBy(desc(jobs.createdAt));
+  const conditions = [];
+
+  if (filters?.isActive !== undefined) {
+    conditions.push(eq(jobs.isActive, filters.isActive));
   }
+
+  if (filters?.departmentId) {
+    conditions.push(eq(jobs.departmentId, filters.departmentId));
+  }
+
+  return await db
+    .select()
+    .from(jobs)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(jobs.createdAt));
+}
 // Fetch Jobs
   async getJob(id: number): Promise<Job | undefined> {
     const [job] = await db.select().from(jobs).where(eq(jobs.id, id));
@@ -212,27 +422,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Application operations
-  async getApplications(filters?: { applicantId?: number; jobId?: number; status?: string }): Promise<Application[]> {
-    let query = db.select().from(applications);
-    
-    const conditions = [];
-    if (filters?.applicantId) {
-      conditions.push(eq(applications.applicantId, filters.applicantId));
-    }
-    if (filters?.jobId) {
-      conditions.push(eq(applications.jobId, filters.jobId));
-    }
-    if (filters?.status) {
-      conditions.push(eq(applications.status, filters.status as any));
-    }
-    
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    return await query.orderBy(desc(applications.createdAt));
+  async getApplications(
+  filters?: { applicantId?: number; jobId?: number; status?: string }
+): Promise<Application[]> {
+  const conditions = [];
+
+  if (filters?.applicantId) {
+    conditions.push(eq(applications.applicantId, filters.applicantId));
+  }
+  if (filters?.jobId) {
+    conditions.push(eq(applications.jobId, filters.jobId));
+  }
+  if (filters?.status) {
+    conditions.push(eq(applications.status, filters.status as any));
   }
 
+  return await db
+    .select()
+    .from(applications)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(applications.createdAt));
+}
   async createApplication(application: Omit<Application, 'id' | 'createdAt' | 'updatedAt'>): Promise<Application> {
     const [newApplication] = await db
       .insert(applications)
@@ -240,7 +450,6 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return newApplication;
   }
-
   // Update Applications
   async updateApplication(id: number, application: Partial<Application>): Promise<Application> {
     const [updatedApplication] = await db
@@ -368,6 +577,126 @@ export class DatabaseStorage implements IStorage {
     
     return true;
   }
+  async progressCompletion(step: number):Promise<boolean> {
+  const[res] = await db.select({res: applicants.profileCompletionPercentage}).from(applicants).where(lt(applicants.profileCompletionPercentage, step)).limit(1); //<=
+  console.log(`"Progress data for ${step} is `, res?.res);
+  
+    if (!res) {
+    return false;
+  }
+    return true;
+  }
+   /**
+   * Compute applicant progress dynamically
+   */
+  async getProgress(applicantId: number) {
+    const applicant = await this.getApplicantById(applicantId);
+    if (!applicant) return { percentage: 0, completedSteps: 0, steps: [] };
+
+    const steps = [
+      {
+        id: 1,
+        name: "Personal Info",
+        required: true,
+        completed: !!(
+          applicant.firstName &&
+          applicant.surname &&
+          applicant.phoneNumber
+        ),
+      },
+      {
+        id: 1.5,
+        name: "Employee Details",
+        required: false,
+        completed: !!applicant.isEmployee,
+      },
+      {
+        id: 2,
+        name: "Address",
+        required: true,
+        completed: !!applicant.countyId,
+      },
+      {
+        id: 3,
+        name: "Education",
+        required: true,
+        completed: applicant.education?.length > 0,
+      },
+      {
+        id: 4,
+        name: "Short Courses",
+        required: false,
+        completed: applicant.shortCourses?.length > 0,
+      },
+      {
+        id: 5,
+        name: "Professional Qualifications",
+        required: false,
+        completed: applicant.professionalQualifications?.length > 0,
+      },
+      {
+        id: 6,
+        name: "Employment History",
+        required: false,
+        completed: applicant.employmentHistory?.length > 0,
+      },
+      {
+        id: 7,
+        name: "Referees",
+        required: false,
+        completed: applicant.referees?.length > 0,
+      },
+      {
+        id: 8,
+        name: "Documents",
+        required: true,
+        completed: applicant.documents?.length > 0,
+      },
+    ];
+
+    const completedSteps = steps.filter((s) => s.completed).length;
+    const percentage = Math.round((completedSteps / steps.length) * 100);
+
+    return {
+      percentage,
+      completedSteps,
+      steps,
+    };
+  }
+  private computeCompletedSteps(applicant: any) {
+  const steps: number[] = [];
+
+  if (applicant.firstName && applicant.surname && applicant.phoneNumber) {
+    steps.push(1); // Personal Details
+  }
+  if (applicant.isEmployee && applicant.employee) {
+    steps.push(1.5); // Employee Details
+  }
+  if (applicant.address) {
+    steps.push(2); // Address
+  }
+  if (applicant.education?.length > 0) {
+    steps.push(3); // Education
+  }
+  if (applicant.shortCourses?.length > 0) {
+    steps.push(4); // Short Courses
+  }
+  if (applicant.professionalQualifications?.length > 0) {
+    steps.push(5); // Professional Qualifications
+  }
+  if (applicant.employmentHistory?.length > 0) {
+    steps.push(6); // Employment History
+  }
+  if (applicant.referees?.length > 0) {
+    steps.push(7); // Referees
+  }
+  if (applicant.documents?.length > 0) {
+    steps.push(8); // Documents
+  }
+
+  return steps;
+}
+
   async comparePasswords(password: string): Promise<boolean> {
     const [passwordRes] = await db
       .select()
@@ -441,6 +770,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertEmployeeDetails(applicantId: number, employeeData: Partial<InsertEmployee>): Promise<Employee> {
+    const dataEmployee: any = { ...employeeData }
+    // Fix date-only fields
+    console.log("AT EMPLOYEE END", dataEmployee);
+    
+  if (dataEmployee.dofa) {
+    dataEmployee.dofa = new Date(dataEmployee.dofa);
+  }
+  if (dataEmployee.doca) {
+    dataEmployee.doca = new Date(dataEmployee.doca);
+  }
+
+  // Never let the client override createdAt
+  if ("createdAt" in dataEmployee) {
+    delete dataEmployee.createdAt;
+  }
+  if ("updatedAt" in dataEmployee) {
+    delete dataEmployee.updatedAt;
+  }
+
+  // Always set updatedAt on the server
+  dataEmployee.updatedAt = new Date();
+    // dataEmployee.doca = this.handleDates(dataEmployee.doca);
+    // dataEmployee.dofa = this.handleDates(dataEmployee.dofa);
+    
     const existingEmployee = await db
       .select()
       .from(employees)
@@ -450,7 +803,7 @@ export class DatabaseStorage implements IStorage {
     if (existingEmployee) {
       const [updatedEmployee] = await db
         .update(employees)
-        .set({ ...employeeData, updatedAt: new Date() })
+        .set({ ...dataEmployee, updatedAt: new Date() })
         .where(eq(employees.id, existingEmployee.id))
         .returning();
       return updatedEmployee;
@@ -459,7 +812,7 @@ export class DatabaseStorage implements IStorage {
         .insert(employees)
         .values({
           applicantId,
-          ...employeeData,
+          ...dataEmployee,
         } as InsertEmployee)
         .returning();
       return newEmployee;
@@ -555,13 +908,13 @@ async seedDepartment(department: Omit<Department, 'id'>): Promise<Department> {
 return newDepartment;
 }
   // Dependencies on dropdowns
-  async getCountyByCountyName(countyName: string): Promise<County>{
+async getCountyByCountyName(countyName: string): Promise<County>{
     const [countyID] = await db
       .select()
       .from(counties)
       .where(eq(counties.name, countyName));
     return countyID
-  }
+}
 async getConstituencyByName(name: string): Promise<Constituency | undefined> {
   const [constituency] = await db
     .select()
@@ -594,8 +947,5 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
   await db.execute(sql`TRUNCATE TABLE departments RESTART IDENTITY CASCADE`);
 
 }
-
-
 }
-
 export const storage = new DatabaseStorage();

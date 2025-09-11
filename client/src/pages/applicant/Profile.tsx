@@ -1,156 +1,147 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/hooks/useAuth';
-import Navigation from '@/components/layout/Navigation';
-import Sidebar from '@/components/layout/Sidebar';
-import ProgressIndicator from '@/components/applicant/ProgressIndicator';
-import ProfileForm from '@/components/applicant/ProfileForm';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
-import { isUnauthorizedError } from '@/lib/authUtils';
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import Navigation from "@/components/layout/Navigation";
+import Sidebar from "@/components/layout/Sidebar";
+import ProgressIndicator from "@/components/applicant/ProgressIndicator";
+import ProfileForm from "@/components/applicant/ProfileForm";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { isUnauthorizedError } from "@/lib/authUtils";
 
-export default function ApplicantProfile() {
+// ------------------ Step type ------------------ //
+type Step = 1 | 1.5 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+
+export default function Profile() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState<Step>(1);
 
   type ProfileResponse = {
-    applicantProfile?: any;
+    applicantProfile?: {
+      id: number;
+      isEmployee?: boolean;
+      profileCompletionPercentage?: number;
+      completedSteps?: number[];
+      [key: string]: any;
+    };
     [key: string]: any;
   };
 
+  // ✅ Fetch profile from backend
   const { data: profile, isLoading } = useQuery<ProfileResponse>({
-    queryKey: ['/api/auth/user'],
+    queryKey: ["/api/auth/user"],
     enabled: !!user,
   });
-
+  // ✅ Steps definition (with completed flag driven by DB)
   const steps = [
-    { id: 1, name: 'Personal Details', required: true },
-    { id: 1.5, name: 'Employee Details', required: true, conditional: true }, // Only show if verified employee
-    { id: 2, name: 'Address Information', required: true },
-    { id: 3, name: 'Educational Background', required: true },
-    { id: 4, name: 'Short Courses', required: false },
-    { id: 5, name: 'Professional Qualifications', required: false },
-    { id: 6, name: 'Employment History', required: true },
-    { id: 7, name: 'Referees', required: true },
-    { id: 8, name: 'Document Uploads', required: true },
+    { id: 1, name: "Personal Details", required: true, completed: profile?.applicantProfile?.completedSteps?.includes(1) ?? false },
+    { id: 1.5, name: "Employee Details", required: true, conditional: true, completed: profile?.applicantProfile?.completedSteps?.includes(1.5) ?? false },
+    { id: 2, name: "Address Information", required: true, completed: profile?.applicantProfile?.completedSteps?.includes(2) ?? false },
+    { id: 3, name: "Educational Background", required: true, completed: profile?.applicantProfile?.completedSteps?.includes(3) ?? false },
+    { id: 4, name: "Short Courses", required: false, completed: profile?.applicantProfile?.completedSteps?.includes(4) ?? false },
+    { id: 5, name: "Professional Qualifications", required: false, completed: profile?.applicantProfile?.completedSteps?.includes(5) ?? false },
+    { id: 6, name: "Employment History", required: true, completed: profile?.applicantProfile?.completedSteps?.includes(6) ?? false },
+    { id: 7, name: "Referees", required: true, completed: profile?.applicantProfile?.completedSteps?.includes(7) ?? false },
+    { id: 8, name: "Document Uploads", required: true, completed: profile?.applicantProfile?.completedSteps?.includes(8) ?? false },
   ];
 
+  // ✅ Mutation for saving
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const method = profile?.applicantProfile ? 'PATCH' : 'POST';
-      console.log(`At profile itself ${method} :`, data);
-      
-      return await apiRequest(method, '/api/applicant/profile', data);
+    mutationFn: async (payload: any) => {
+      console.log(`Updating Profile:`, payload);
+      const { method, applicantId, step, data } = payload;
+      if (method === "POST") {
+        return await apiRequest("POST", "/api/applicant/profile", {
+          data,
+          applicantId,
+        });
+      }
+      if (method === "PATCH") {
+        return await apiRequest("PATCH", "/api/applicant/profile", {
+          applicantId,
+          step,
+          data,
+        });
+      }
+      throw new Error("Invalid method for profile mutation");
     },
     onSuccess: () => {
       toast({
-        title: 'Profile Updated',
-        description: 'Your profile has been saved successfully.',
+        title: "Profile Updated",
+        description: "Your profile has been saved successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       if (isUnauthorizedError(error)) {
         toast({
-          title: 'Unauthorized',
-          description: 'You are logged out. Logging in again...',
-          variant: 'destructive',
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
         });
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 500);
+        setTimeout(() => (window.location.href = "/"), 500);
         return;
       }
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to update profile',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to update profile",
+        variant: "destructive",
       });
     },
   });
 
-  const handleSaveStep = (stepData: any) => {
-    const profileData = {
-      ...profile?.applicantProfile,
-      ...stepData,
-    };
-    
-    // Remove undefined fields to prevent database errors
-    Object.keys(profileData).forEach(key => {
-      if (profileData[key] === undefined) {
-        delete profileData[key];
-      }
-    });
-    
-    updateProfileMutation.mutate(profileData);
-    
-    // After successful save on step 1 with employee verification, move to step 1.5
-    if (currentStep === 1 && stepData.isVerifiedEmployee) {
-      setTimeout(() => {
-        setCurrentStep(1.5);
-      }, 1000);
+  // ✅ Save handler
+  const handleSaveStep = (payload: any) => {
+    updateProfileMutation.mutate(payload);
+
+    // Auto-move to employee details if needed
+    if (currentStep === 1 && payload.data.isEmployee) {
+      setTimeout(() => setCurrentStep(1.5), 800);
     }
   };
-  
+  // ✅ Step navigation
   const isEmployeeVerified = profile?.applicantProfile?.isEmployee;
-  const getNextStep = (current: number) => {
-    if (current === 1 && isEmployeeVerified) {
-      return 1.5; // Go to employee details if verified
-    }
-    if (current === 1 && !isEmployeeVerified) {
-      return 2; // Skip employee details if not verified
-    }
-    if (current === 1.5) {
-      return 2; // From employee details to address
-    }
-    return current + 1;
+  const getNextStep = (current: Step): Step => {
+    if (current === 1 && isEmployeeVerified) return 1.5;
+    if (current === 1 && !isEmployeeVerified) return 2;
+    if (current === 1.5) return 2;
+    return (current + 1) as Step;
   };
-  
-  const getPrevStep = (current: number) => {
-    if (current === 2 && isEmployeeVerified) {
-      return 1.5; // Go back to employee details if verified
-    }
-    if (current === 2 && !isEmployeeVerified) {
-      return 1; // Go back to personal details if not verified
-    }
-    if (current === 1.5) {
-      return 1; // From employee details to personal
-    }
-    return current - 1;
+  const getPrevStep = (current: Step): Step => {
+    if (current === 2 && isEmployeeVerified) return 1.5;
+    if (current === 2 && !isEmployeeVerified) return 1;
+    if (current === 1.5) return 1;
+    return (current - 1) as Step;
   };
 
   const handleNextStep = () => {
     const next = getNextStep(currentStep);
-    if (next <= 8) {
-      setCurrentStep(next);
-    }
+    if (next <= 8) setCurrentStep(next);
   };
-
   const handlePrevStep = () => {
     const prev = getPrevStep(currentStep);
-    if (prev >= 1) {
-      setCurrentStep(prev);
-    }
+    if (prev >= 1) setCurrentStep(prev);
   };
 
+  // ✅ Auth check
   useEffect(() => {
     if (!isLoading && !user) {
       toast({
-        title: 'Unauthorized',
-        description: 'You are logged out. Logging in again...',
-        variant: 'destructive',
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
       });
       setTimeout(() => {
-        window.location.href = '/';
+        window.location.href = "/";
       }, 500);
-      return;
     }
   }, [isLoading, user, toast]);
 
+  // ✅ Loading state
   if (isLoading) {
     return (
       <div className="min-h-screen bg-neutral-50">
@@ -169,15 +160,20 @@ export default function ApplicantProfile() {
     );
   }
 
-  if (!user || user.role !== 'applicant') {
+  // ✅ Access control
+  if (!user || user.role !== "applicant") {
     return (
       <div className="min-h-screen bg-neutral-50">
         <Navigation />
         <div className="flex items-center justify-center min-h-screen">
           <Card>
             <CardContent className="p-8 text-center">
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
-              <p className="text-gray-600">You don't have permission to access this page.</p>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                Access Denied
+              </h2>
+              <p className="text-gray-600">
+                You don't have permission to access this page.
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -185,21 +181,23 @@ export default function ApplicantProfile() {
     );
   }
 
+  // ✅ Main render
   return (
     <div className="min-h-screen bg-neutral-50">
       <Navigation />
-      
       <div className="flex">
         <Sidebar userRole="applicant" />
-        
         <main className="flex-1 p-6">
           <div className="max-w-4xl mx-auto">
             {/* Header */}
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Complete Your Profile</h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Complete Your Profile
+              </h1>
               <p className="text-gray-600">
-                Fill in all the required information to complete your application profile.
-                You can save your progress and continue later.
+                Fill in all the required information to complete your
+                application profile. You can save your progress and continue
+                later.
               </p>
             </div>
 
@@ -209,10 +207,12 @@ export default function ApplicantProfile() {
                 <CardTitle>Profile Completion Progress</CardTitle>
               </CardHeader>
               <CardContent>
-                <ProgressIndicator 
+                <ProgressIndicator
                   steps={steps}
                   currentStep={currentStep}
-                  completedSteps={profile?.applicantProfile?.profileCompletionPercentage || 0}
+                  completedSteps={
+                    profile?.applicantProfile?.completedSteps?.length || 0
+                  }
                 />
               </CardContent>
             </Card>
@@ -221,7 +221,8 @@ export default function ApplicantProfile() {
             <Card>
               <CardHeader>
                 <CardTitle>
-                  Step {currentStep}: {steps.find(s => s.id === currentStep)?.name}
+                  Step {currentStep}:{" "}
+                  {steps.find((s) => s.id === currentStep)?.name}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -241,27 +242,16 @@ export default function ApplicantProfile() {
                   >
                     Previous
                   </Button>
-
                   <div className="flex space-x-4">
-                    <Button
-                      variant="outline"
-                      onClick={() => handleSaveStep({})}
-                      disabled={updateProfileMutation.isPending}
-                    >
-                      Save Progress
-                    </Button>
-                    
                     {currentStep < 8 ? (
-                      <Button onClick={handleNextStep}>
-                        Next Step
-                      </Button>
+                      <Button onClick={handleNextStep}>Next Step</Button>
                     ) : (
                       <Button
                         onClick={() => {
-                          handleSaveStep({});
                           toast({
-                            title: 'Profile Complete!',
-                            description: 'Your profile has been completed successfully. You can now apply for jobs.',
+                            title: "Profile Complete!",
+                            description:
+                              "Your profile has been completed successfully. You can now apply for jobs.",
                           });
                         }}
                         disabled={updateProfileMutation.isPending}
@@ -271,17 +261,6 @@ export default function ApplicantProfile() {
                     )}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Help Text */}
-            <Card className="mt-6">
-              <CardContent className="p-4">
-                <p className="text-sm text-gray-600">
-                  <strong>Need Help?</strong> Your progress is automatically saved as you complete each step.
-                  You can return to any previous step to make changes. All required fields must be completed
-                  before you can submit job applications.
-                </p>
               </CardContent>
             </Card>
           </div>

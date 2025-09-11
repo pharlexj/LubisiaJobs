@@ -144,7 +144,7 @@ export const applicants = pgTable("applicants", {
   otherName: varchar("other_name", { length: 100 }),
   phoneNumber: varchar("phone_number", { length: 20 }),
   phoneVerified: boolean("phone_verified").default(false),
-  phoneVerifiedAt: timestamp("phone_verified_at"),
+  phoneVerifiedAt: date("phone_verified_at"),
   altPhoneNumber: varchar("alt_phone_number", { length: 20 }),
   nationalId: varchar("national_id", { length: 50 }),
   idPassportNumber: varchar("id_passport_number", { length: 50 }),
@@ -263,9 +263,8 @@ export const employees = pgTable("employees", {
   applicantId: integer("applicant_id").references(() => applicants.id),
   personalNumber: varchar("personal_number", { length: 50 }).notNull().unique(),
   designation: varchar("designation", { length: 150 }).notNull(),
-  idNumber: varchar("id_number", { length: 50 }).notNull(),
   dutyStation: varchar("duty_station", { length: 200 }),
-  jg: varchar("jg", { length: 10 }), // Job Group
+  jg: varchar("jg", { length: 4 }), // Job Group
   actingPosition: varchar("acting_position", { length: 150 }),
   departmentId: integer("department_id").references(() => departments.id),
   dofa: date("dofa"), // Date of First Appointment
@@ -494,6 +493,7 @@ export const insertApplicantSchema = createInsertSchema(applicants).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  phoneVerifiedAt:true,
 });
 
 export const insertJobSchema = createInsertSchema(jobs).omit({
@@ -561,3 +561,4 @@ export type Employee = typeof employees.$inferSelect;
 export type InsertEmployee = typeof employees.$inferInsert;
 export type Institution = typeof institutions.$inferSelect;
 export type CertificateLevel = typeof certificateLevel.$inferSelect;
+export type ShortCourse = typeof shortCourse.$inferSelect;

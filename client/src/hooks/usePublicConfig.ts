@@ -1,6 +1,15 @@
 // client/src/hooks/usePublicConfig.ts
 import { useQuery } from '@tanstack/react-query';
+type StudyAreas = {
+  id: number | string;
+  name: string;
 
+}
+type Specialization = {
+  id: number | string;
+  name: string;
+  studyArea: number | string;
+}
 type Institution = {
   id: number | string;
   name: string;
@@ -53,10 +62,16 @@ type County = {
   id: number | string;
   name: string;
 }
+type Courses = {
+  id: number,
+  name: string,
+  specializationId: number,
+  awardId: number,
+}
 type PublicConfig = {
   institutions: Institution[];
   awards: Awards[];
-  courses: string[];
+  courses: Courses[];
   jg: Jg[];
   ethnicity: any[];
   certificatelevel: CertificateLevel[];
@@ -65,6 +80,10 @@ type PublicConfig = {
   designations: Designation[];
   applications: Applications[];
   counties: County[];
+  studyArea: StudyAreas[];
+  specializations: Specialization[];
+  professionalQualification: any[];
+  
 };
 
 export const usePublicConfig = () => {

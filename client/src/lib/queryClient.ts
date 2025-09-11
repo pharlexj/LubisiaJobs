@@ -19,7 +19,7 @@ export async function apiRequests(
     credentials: "include",
   });
   await throwIfResNotOk(res);
-  return res;
+  return res.json();
 }
 export async function apiRequest(
   method: string,
@@ -42,9 +42,20 @@ export async function apiRequest(
     body,
     credentials: "include",
   });
+  if (!res.ok) {
+    let errorMessage = "Request failed";
+    try {
+      const body = await res.json();
+      errorMessage = body.error || body.message || res.statusText;
+    } catch {
+      // fallback if response isn't JSON
+      errorMessage = res.statusText;
+    }
+    throw new Error(errorMessage);
+  }
 
   await throwIfResNotOk(res);
-  return res;
+  return res.json();
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

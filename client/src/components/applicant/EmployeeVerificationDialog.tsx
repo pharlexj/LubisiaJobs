@@ -45,10 +45,10 @@ export default function EmployeeVerificationDialog({
         personalNumber: data.personalNumber,
         idNumber: applicantIdNumber,
       });
-      return res.json();
+      return res;
     },
-    onSuccess: (response) => {      
-      setVerifiedEmployee(response.employee);
+    onSuccess: (response:any) => {      
+      setVerifiedEmployee(response?.employee);
       setVerificationStep('verified');
       toast({
         title: 'Verification Successful',
@@ -56,6 +56,8 @@ export default function EmployeeVerificationDialog({
       });
     },
     onError: (error: any) => {
+      console.log(error);
+      
       setVerificationStep('error');
       toast({
         title: 'Verification Failed',

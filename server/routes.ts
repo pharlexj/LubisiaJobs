@@ -3,15 +3,15 @@ import { createServer, type Server } from "http";
 import express from "express";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { z } from "zod";
 import multer from "multer";
 import path from "path";
 import bcrypt from "bcrypt";
-import { insertJobSchema, insertApplicationSchema, insertNoticeSchema, users } from "@shared/schema";
 import passport from "passport";
 import { sendOtpHandler, verifyOtpHandler } from "../client/src/lib/africastalking-sms";
+  import { ApplicantService } from "./applicantService";
 
 // OTP utility functions
+const applicantService = new ApplicantService(storage);
 function generateOtp(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -22,7 +22,6 @@ function sendSms(phoneNumber: string, message: string): Promise<boolean> {
   // In development, just log the OTP
   return Promise.resolve(true);
 }
-
 // File upload configuration
 const upload = multer({
   dest: 'uploads/',
@@ -130,8 +129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // --- Login ---
-  app.post(
-    "/api/auth/login",
+  app.post("/api/auth/login",
     passport.authenticate("local"),
     (req, res) => {
       res.json({ user: req.user });
@@ -182,8 +180,7 @@ switch (req.user?.role) {
       if (!employee) {
         return res.status(404).json({ message: 'Employee not found or ID number does not match' });
       }
-      
-      //  await storage.updateApplicant(applicantData.id, { isEmployee: true });
+      await storage.updateApplicant(applicantData.id, { isEmployee: true }, 1.5);
       return res.json({ 
         message: 'Employee verified successfully',
         employee: {
@@ -201,15 +198,16 @@ switch (req.user?.role) {
     try {
       const userId = req.user.id;
       const employeeData = req.body;
+      const applicantId = await applicantService.resolveApplicantId(userId);
 
       // Get applicant profile first
-      const applicant = await storage.getApplicant(userId);
+      const applicant = await storage.getApplicantById(applicantId);
       if (!applicant) {
         return res.status(404).json({ message: 'Applicant profile not found' });
       }
 
       // Create or update employee record
-      const employee = await storage.upsertEmployeeDetails(applicant.id, employeeData);
+      const employee = await storage.upsertEmployeeDetails(applicantId, employeeData);      
       
       res.json({ 
         message: 'Employee details saved successfully',
@@ -413,52 +411,47 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
   app.post('/api/applicant/profile', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
+      const {applicantId, data } = req.body;
+      const user = await storage.getUser(userId); 
       if (!user || user.role !== 'applicant') {
         return res.status(403).json({ message: 'Access denied' });
       }
-
+      
       // Check if profile already exists
       const existingProfile = await storage.getApplicant(userId);
       if (existingProfile) {
-        return res.status(400).json({ message: 'Profile already exists' });
+           const updateProfile = await applicantService.updateBasicInfo(applicantId, data);
+        return res.json(updateProfile);
       }
-
-      const profileData = {
+      const profileData = {        
         ...req.body,
         userId,
-      };
 
+      };
       const profile = await storage.createApplicant(profileData);
       res.json(profile);
     } catch (error) {
       console.error('Error creating profile:', error);
-      res.status(500).json({ message: 'Failed to create profile' });
+      res.status(500).json({ message: 'Failed to create profile' }); 
     }
   });
-
-  // Update applicant profile
-  app.patch('/api/applicant/profile', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user || user.role !== 'applicant') {
-        return res.status(403).json({ message: 'Access denied' });
-      }
-      const profile = await storage.getApplicant(userId);
-      if (!profile) {
-        return res.status(404).json({ message: 'Profile not found' });
-      }      
-      const updatedProfile = await storage.updateApplicant(profile.id, req.body);
-      res.json(updatedProfile);
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      res.status(500).json({ message: 'Failed to update profile' });
-    }
-  });
+  // Update all other components of the stepwises
   
+  app.patch("/api/applicant/profile", isAuthenticated, async (req, res) => {
+    try {
+    
+    const { applicantId, step, data } = req.body;
+    if (!applicantId) {
+      return res.status(400).json({ error: "Applicant ID missing" });
+    }
+
+    const updatedProfile = await storage.updateApplicant(applicantId, data, step);
+    res.json(updatedProfile);
+  } catch (err) {
+    console.error("Failed to update applicant:", err);
+    res.status(500).json({ error: "Failed to update applicant profile" });
+  }
+});  
   // Mark phone as verified after OTP verification
   app.post('/api/applicant/verify-phone', isAuthenticated, async (req: any, res) => {
     try {
@@ -479,9 +472,8 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
       // Update phone verification status
       const updatedProfile = await storage.updateApplicant(profile.id, {
         phoneVerified: true,
-        phoneVerifiedAt: new Date(),
         phoneNumber,
-      });
+      }, 1);
       
       res.json(updatedProfile);
     } catch (error) {
@@ -556,9 +548,7 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
       res.status(500).json({ message: 'Failed to apply for job' });
     }
   });
-
-  // Protected admin routes
-  
+  // Protected admin routes  
   // Get all applications (admin)
   app.get('/api/admin/applications', isAuthenticated, async (req: any, res) => {
     try {
@@ -566,10 +556,8 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
       if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
       }
-
       const jobId = req.query.jobId ? parseInt(req.query.jobId as string) : undefined;
-      const status = req.query.status as string | undefined;
-      
+      const status = req.query.status as string | undefined;      
       const applications = await storage.getApplications({ jobId, status });
       res.json(applications);
     } catch (error) {
@@ -617,6 +605,14 @@ console.log(req.body);
       res.status(500).json({ message: 'Failed to update job' });
     }
   });
+  //
+  // route.ts
+
+app.get("/api/applicant/:id/progress", async (req, res) => {
+  const applicantId = Number(req.params.id);
+  const progress = await storage.getProgress(applicantId);
+  res.json(progress);
+});
 
   // Create notice (admin)
   app.post('/api/admin/notices', isAuthenticated, async (req: any, res) => {
