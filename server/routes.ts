@@ -428,7 +428,7 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
       });
     } catch (error) {
       console.error('Error fetching config:', error);
-      res.status(500).json({ message: 'Failed to fetch configuration', error: error.message });
+      res.status(500).json({ message: 'Failed to fetch configuration', error: (error as Error).message });
     }
   });
   // Protected applicant routes  

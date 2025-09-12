@@ -83,7 +83,7 @@ type PublicConfig = {
   studyArea: StudyAreas[];
   specializations: Specialization[];
   professionalQualification: any[];
-  
+  jobGroups: Jg[];
 };
 
 export const usePublicConfig = () => {

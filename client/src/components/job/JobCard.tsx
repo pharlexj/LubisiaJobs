@@ -30,7 +30,7 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
   const [showDetails, setShowDetails] = useState(false);
   const { data: config } = usePublicConfig();
 
-  const jg = config?.jg || [];
+  const jobGroups = config?.jobGroups || [];
   const departments = config?.departments || [];
 
   const applyMutation = useMutation({
@@ -106,7 +106,7 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
               </div>
               <div className="flex items-center text-primary font-medium text-sm">
                 <Badge variant="outline" className="border-primary text-primary">
-                  Job Group {jg.find(d => d.id === job.jg)?.name}
+                  Job Group {jobGroups.find((d: any) => d.id === job.jg)?.name}
                 </Badge>
               </div>
             </div>
@@ -165,7 +165,7 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
                     </div>
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-2">Job Group</h4>
-                      <p className="text-gray-600">{jg.find(j => j.id === job.jg)?.name}</p>
+                      <p className="text-gray-600">{jobGroups.find((j: any) => j.id === job.jg)?.name}</p>
                     </div>
                   </div>
                   

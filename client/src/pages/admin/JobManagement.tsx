@@ -91,7 +91,7 @@ const { data: config, isLoading } = useQuery<{
     designations: Designation[];
     courses: CourseOffered[];
     certificatelevel: CertificateLevel[];
-    jg: Jg[];
+    jobGroups: Jg[];
     jobs: Job[];
     studyArea: StudyArea[];
   }>({
@@ -107,7 +107,7 @@ const { data: config, isLoading } = useQuery<{
   const designations = config?.designations || [];
   const courses = config?.courses || [];
   const certificateLevels = config?.certificatelevel || [];
-  const jg = config?.jg || [];
+  const jobGroups = config?.jobGroups || [];
   const jobs = config?.jobs || [];
   const studyArea = config?.studyArea || [];
 
@@ -353,7 +353,7 @@ const { data: config, isLoading } = useQuery<{
                             <SelectValue placeholder="Select Job Group" />
                           </SelectTrigger>
                           <SelectContent>
-                            {jg.map((group) => (
+                            {jobGroups.map((group) => (
                               <SelectItem key={group.id} value={group.id.toString()}>
                                 Job Group {group.name}
                               </SelectItem>
@@ -681,7 +681,7 @@ const { data: config, isLoading } = useQuery<{
                               <div className="font-medium text-gray-900">{job.title}</div>
                               <div className="text-sm text-gray-600">
                                 Job Group {
-                                  jg.find(d => d.id === job.jg)?.name
+                                  jobGroups.find(d => d.id === job.jg)?.name
                                 }
                               </div>
                             </td>

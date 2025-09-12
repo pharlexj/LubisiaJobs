@@ -18,7 +18,7 @@ export default function Jobs() {
   const [selectedJobGroup, setSelectedJobGroup] = useState<string>('all');
   const { data: config, isLoading } = usePublicConfig();  
   const departments = config?.departments || [];
-  const jg = config?.jg || [];
+  const jobGroups = config?.jobGroups || [];
   const jobs = config?.jobs || [];  
   const counties = config?.counties || [];
   const filteredJobs = jobs.filter(job => { 
@@ -83,7 +83,7 @@ export default function Jobs() {
           </Card>
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-3xl font-bold text-primary mb-2">{jg.length}</div>
+              <div className="text-3xl font-bold text-primary mb-2">{jobGroups.length}</div>
               <div className="text-gray-600">Job Groups</div>
             </CardContent>
           </Card>
@@ -131,7 +131,7 @@ export default function Jobs() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Groups</SelectItem>
-                    {jg.map((group) => (
+                    {jobGroups.map((group: any) => (
                       <SelectItem key={group.id} value={group.id.toString()}>
                         Group {group.name}
                       </SelectItem>
