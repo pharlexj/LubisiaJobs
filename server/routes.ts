@@ -58,6 +58,28 @@ const profilePhotoUpload = multer({
   }
 });
 
+// CSV conversion utility function
+function convertToCSV(data: any[], reportType: string): string {
+  if (!data || data.length === 0) {
+    return 'No data available';
+  }
+
+  const keys = Object.keys(data[0]);
+  const csvHeader = keys.join(',');
+  const csvRows = data.map(row => {
+    return keys.map(key => {
+      const value = row[key];
+      // Handle values that might contain commas, quotes, or newlines
+      if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    }).join(',');
+  });
+  
+  return [csvHeader, ...csvRows].join('\n');
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
   app.use('/uploads', express.static('uploads'));
@@ -851,6 +873,85 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     } catch (error) {
       console.error('Error creating role assignment:', error);
       res.status(500).json({ message: 'Failed to create role assignment' });
+    }
+  });
+
+  // Report routes (admin)
+  app.get('/api/admin/reports', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { type, startDate, endDate } = req.query;
+      let reportData;
+
+      switch (type) {
+        case 'applications':
+          reportData = await storage.getApplicationsReport(startDate as string, endDate as string);
+          break;
+        case 'jobs':
+          reportData = await storage.getJobsReport(startDate as string, endDate as string);
+          break;
+        case 'users':
+          reportData = await storage.getUsersReport(startDate as string, endDate as string);
+          break;
+        case 'performance':
+          reportData = await storage.getPerformanceReport(startDate as string, endDate as string);
+          break;
+        default:
+          return res.status(400).json({ message: 'Invalid report type' });
+      }
+
+      res.json(reportData);
+    } catch (error) {
+      console.error('Error generating report:', error);
+      res.status(500).json({ message: 'Failed to generate report' });
+    }
+  });
+
+  // Download report (admin)
+  app.get('/api/admin/reports/download', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { type, format, startDate, endDate } = req.query;
+      let reportData;
+
+      switch (type) {
+        case 'applications':
+          reportData = await storage.getApplicationsReport(startDate as string, endDate as string);
+          break;
+        case 'jobs':
+          reportData = await storage.getJobsReport(startDate as string, endDate as string);
+          break;
+        case 'users':
+          reportData = await storage.getUsersReport(startDate as string, endDate as string);
+          break;
+        case 'performance':
+          reportData = await storage.getPerformanceReport(startDate as string, endDate as string);
+          break;
+        default:
+          return res.status(400).json({ message: 'Invalid report type' });
+      }
+
+      if (format === 'csv') {
+        // Convert to CSV
+        const csvData = convertToCSV(reportData.data, type as string);
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${type}_report_${Date.now()}.csv"`);
+        res.send(csvData);
+      } else {
+        // Return JSON for now (can be extended to PDF)
+        res.json(reportData);
+      }
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      res.status(500).json({ message: 'Failed to download report' });
     }
   });
 

@@ -77,8 +77,8 @@ export default function AdminReports() {
                   <div>
                     <label className="text-sm font-medium mb-2 block">Date Range</label>
                     <div className="grid grid-cols-2 gap-2">
-                      <Input type="date" placeholder="From date" />
-                      <Input type="date" placeholder="To date" />
+                      <Input type="date" />
+                      <Input type="date" />
                     </div>
                   </div>
                   <div className="flex items-end">

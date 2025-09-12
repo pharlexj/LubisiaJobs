@@ -120,6 +120,12 @@ export interface IStorage {
   seedDepartment(department: Omit<Department, 'id'>): Promise<Department>;
   //Truncate tables
   truncateAll(): Promise<void>;
+  
+  // Report operations
+  getApplicationsReport(startDate?: string, endDate?: string): Promise<any>;
+  getJobsReport(startDate?: string, endDate?: string): Promise<any>;
+  getUsersReport(startDate?: string, endDate?: string): Promise<any>;
+  getPerformanceReport(startDate?: string, endDate?: string): Promise<any>;
 }
 export class DatabaseStorage implements IStorage {
   // User operations
@@ -940,6 +946,193 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
 
   return studyareas;
 }
+
+  // Report operations
+  async getApplicationsReport(startDate?: string, endDate?: string): Promise<any> {
+    let dateFilter = sql`1=1`;
+    if (startDate && endDate) {
+      dateFilter = sql`${applications.createdAt} >= ${startDate} AND ${applications.createdAt} <= ${endDate}`;
+    } else if (startDate) {
+      dateFilter = sql`${applications.createdAt} >= ${startDate}`;
+    } else if (endDate) {
+      dateFilter = sql`${applications.createdAt} <= ${endDate}`;
+    }
+
+    const applicationsData = await db
+      .select({
+        id: applications.id,
+        jobId: applications.jobId,
+        jobTitle: jobs.title,
+        applicantId: applications.applicantId,
+        applicantName: sql<string>`CONCAT(${applicants.firstName}, ' ', ${applicants.surname})`,
+        status: applications.status,
+        submittedOn: applications.submittedOn,
+        department: departments.name,
+        createdAt: applications.createdAt,
+      })
+      .from(applications)
+      .innerJoin(jobs, eq(applications.jobId, jobs.id))
+      .innerJoin(applicants, eq(applications.applicantId, applicants.id))
+      .innerJoin(departments, eq(jobs.departmentId, departments.id))
+      .where(dateFilter)
+      .orderBy(desc(applications.createdAt));
+
+    const summary = await db
+      .select({
+        total: sql<number>`COUNT(*)`,
+        submitted: sql<number>`COUNT(CASE WHEN ${applications.status} = 'submitted' THEN 1 END)`,
+        shortlisted: sql<number>`COUNT(CASE WHEN ${applications.status} = 'shortlisted' THEN 1 END)`,
+        interviewed: sql<number>`COUNT(CASE WHEN ${applications.status} = 'interviewed' THEN 1 END)`,
+        rejected: sql<number>`COUNT(CASE WHEN ${applications.status} = 'rejected' THEN 1 END)`,
+        hired: sql<number>`COUNT(CASE WHEN ${applications.status} = 'hired' THEN 1 END)`,
+      })
+      .from(applications)
+      .where(dateFilter);
+
+    return {
+      data: applicationsData,
+      summary: summary[0],
+      dateRange: { startDate, endDate }
+    };
+  }
+
+  async getJobsReport(startDate?: string, endDate?: string): Promise<any> {
+    let dateFilter = sql`1=1`;
+    if (startDate && endDate) {
+      dateFilter = sql`${jobs.createdAt} >= ${startDate} AND ${jobs.createdAt} <= ${endDate}`;
+    } else if (startDate) {
+      dateFilter = sql`${jobs.createdAt} >= ${startDate}`;
+    } else if (endDate) {
+      dateFilter = sql`${jobs.createdAt} <= ${endDate}`;
+    }
+
+    const jobsData = await db
+      .select({
+        id: jobs.id,
+        title: jobs.title,
+        department: departments.name,
+        isActive: jobs.isActive,
+        posts: jobs.posts,
+        startDate: jobs.startDate,
+        endDate: jobs.endDate,
+        createdAt: jobs.createdAt,
+        totalApplications: sql<number>`COUNT(${applications.id})`,
+      })
+      .from(jobs)
+      .innerJoin(departments, eq(jobs.departmentId, departments.id))
+      .leftJoin(applications, eq(jobs.id, applications.jobId))
+      .where(dateFilter)
+      .groupBy(jobs.id, departments.name)
+      .orderBy(desc(jobs.createdAt));
+
+    const summary = await db
+      .select({
+        total: sql<number>`COUNT(*)`,
+        active: sql<number>`COUNT(CASE WHEN ${jobs.isActive} = true THEN 1 END)`,
+        inactive: sql<number>`COUNT(CASE WHEN ${jobs.isActive} = false THEN 1 END)`,
+        totalPosts: sql<number>`COALESCE(SUM(${jobs.posts}), 0)`,
+      })
+      .from(jobs)
+      .where(dateFilter);
+
+    return {
+      data: jobsData,
+      summary: summary[0],
+      dateRange: { startDate, endDate }
+    };
+  }
+
+  async getUsersReport(startDate?: string, endDate?: string): Promise<any> {
+    let dateFilter = sql`1=1`;
+    if (startDate && endDate) {
+      dateFilter = sql`${users.createdAt} >= ${startDate} AND ${users.createdAt} <= ${endDate}`;
+    } else if (startDate) {
+      dateFilter = sql`${users.createdAt} >= ${startDate}`;
+    } else if (endDate) {
+      dateFilter = sql`${users.createdAt} <= ${endDate}`;
+    }
+
+    const usersData = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        role: users.role,
+        createdAt: users.createdAt,
+        profileCompleted: applicants.profileCompletionPercentage,
+        county: counties.name,
+      })
+      .from(users)
+      .leftJoin(applicants, eq(users.id, applicants.userId))
+      .leftJoin(counties, eq(applicants.countyId, counties.id))
+      .where(dateFilter)
+      .orderBy(desc(users.createdAt));
+
+    const summary = await db
+      .select({
+        total: sql<number>`COUNT(*)`,
+        applicants: sql<number>`COUNT(CASE WHEN ${users.role} = 'applicant' THEN 1 END)`,
+        admins: sql<number>`COUNT(CASE WHEN ${users.role} = 'admin' THEN 1 END)`,
+        board: sql<number>`COUNT(CASE WHEN ${users.role} = 'board' THEN 1 END)`,
+      })
+      .from(users)
+      .where(dateFilter);
+
+    return {
+      data: usersData,
+      summary: summary[0],
+      dateRange: { startDate, endDate }
+    };
+  }
+
+  async getPerformanceReport(startDate?: string, endDate?: string): Promise<any> {
+    let dateFilter = sql`1=1`;
+    if (startDate && endDate) {
+      dateFilter = sql`${applications.createdAt} >= ${startDate} AND ${applications.createdAt} <= ${endDate}`;
+    } else if (startDate) {
+      dateFilter = sql`${applications.createdAt} >= ${startDate}`;
+    } else if (endDate) {
+      dateFilter = sql`${applications.createdAt} <= ${endDate}`;
+    }
+
+    // Department-wise performance
+    const departmentStats = await db
+      .select({
+        department: departments.name,
+        totalJobs: sql<number>`COUNT(DISTINCT ${jobs.id})`,
+        totalApplications: sql<number>`COUNT(${applications.id})`,
+        hired: sql<number>`COUNT(CASE WHEN ${applications.status} = 'hired' THEN 1 END)`,
+        avgApplicationsPerJob: sql<number>`ROUND(COUNT(${applications.id})::numeric / NULLIF(COUNT(DISTINCT ${jobs.id}), 0), 2)`,
+        hireRate: sql<number>`ROUND((COUNT(CASE WHEN ${applications.status} = 'hired' THEN 1 END)::numeric / NULLIF(COUNT(${applications.id}), 0)) * 100, 2)`,
+      })
+      .from(departments)
+      .leftJoin(jobs, eq(departments.id, jobs.departmentId))
+      .leftJoin(applications, eq(jobs.id, applications.jobId))
+      .where(dateFilter)
+      .groupBy(departments.id, departments.name)
+      .orderBy(departments.name);
+
+    // Overall metrics
+    const overallMetrics = await db
+      .select({
+        totalApplications: sql<number>`COUNT(*)`,
+        totalJobs: sql<number>`COUNT(DISTINCT ${applications.jobId})`,
+        totalHired: sql<number>`COUNT(CASE WHEN ${applications.status} = 'hired' THEN 1 END)`,
+        avgProcessingDays: sql<number>`ROUND(AVG(EXTRACT(epoch FROM (${applications.updatedAt} - ${applications.createdAt})) / 86400), 1)`,
+        hireRate: sql<number>`ROUND((COUNT(CASE WHEN ${applications.status} = 'hired' THEN 1 END)::numeric / COUNT(*)) * 100, 2)`,
+      })
+      .from(applications)
+      .innerJoin(jobs, eq(applications.jobId, jobs.id))
+      .where(dateFilter);
+
+    return {
+      departmentStats,
+      overallMetrics: overallMetrics[0],
+      dateRange: { startDate, endDate }
+    };
+  }
+
   // Truncate all tables
   async truncateAll(): Promise<void> {
   // Truncate child tables first to avoid FK constraint errors
