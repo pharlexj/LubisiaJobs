@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { useLocation } from 'wouter';
 import Navigation from '@/components/layout/Navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +20,8 @@ import {
 
 export default function AdminDashboard() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  
   const { data: jobs = [] } = useQuery({
     queryKey: ['/api/public/jobs'],
   });
@@ -47,6 +50,31 @@ export default function AdminDashboard() {
     { month: 'May', applications: 44, hires: 11 },
     { month: 'Jun', applications: 58, hires: 16 },
   ];
+
+  // Navigation handlers for Quick Actions
+  const handlePostNewJob = () => {
+    setLocation('/admin/jobs');
+  };
+
+  const handleReviewApplications = () => {
+    setLocation('/admin/applications');
+  };
+
+  const handleScheduleInterviews = () => {
+    setLocation('/board/interviews');
+  };
+
+  const handleGenerateReports = () => {
+    setLocation('/admin/reports');
+  };
+
+  const handleViewAllJobs = () => {
+    setLocation('/admin/jobs');
+  };
+
+  const handleViewAllApplications = () => {
+    setLocation('/admin/applications');
+  };
   return (
     <div className="min-h-screen bg-neutral-50">
       <Navigation />
@@ -136,19 +164,34 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <Button className="h-24 flex flex-col items-center justify-center">
+                  <Button 
+                    className="h-24 flex flex-col items-center justify-center"
+                    onClick={handlePostNewJob}
+                  >
                     <Briefcase className="w-6 h-6 mb-2" />
                     Post New Job
                   </Button>
-                  <Button variant="outline" className="h-24 flex flex-col items-center justify-center">
+                  <Button 
+                    variant="outline" 
+                    className="h-24 flex flex-col items-center justify-center"
+                    onClick={handleReviewApplications}
+                  >
                     <FileText className="w-6 h-6 mb-2" />
                     Review Applications
                   </Button>
-                  <Button variant="outline" className="h-24 flex flex-col items-center justify-center">
+                  <Button 
+                    variant="outline" 
+                    className="h-24 flex flex-col items-center justify-center"
+                    onClick={handleScheduleInterviews}
+                  >
                     <Calendar className="w-6 h-6 mb-2" />
                     Schedule Interviews
                   </Button>
-                  <Button variant="outline" className="h-24 flex flex-col items-center justify-center">
+                  <Button 
+                    variant="outline" 
+                    className="h-24 flex flex-col items-center justify-center"
+                    onClick={handleGenerateReports}
+                  >
                     <TrendingUp className="w-6 h-6 mb-2" />
                     Generate Reports
                   </Button>
@@ -162,7 +205,9 @@ export default function AdminDashboard() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Recent Job Postings</CardTitle>
-                    <Button variant="outline" size="sm">View All</Button>
+                    <Button variant="outline" size="sm" onClick={handleViewAllJobs}>
+                      View All
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -201,7 +246,9 @@ export default function AdminDashboard() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Recent Applications</CardTitle>
-                    <Button variant="outline" size="sm">View All</Button>
+                    <Button variant="outline" size="sm" onClick={handleViewAllApplications}>
+                      View All
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>

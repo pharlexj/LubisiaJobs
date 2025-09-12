@@ -23,6 +23,9 @@ import ApplicantApplications from "@/pages/applicant/Applications";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import AdminJobManagement from "@/pages/admin/JobManagement";
 import AdminApplications from "@/pages/admin/Applications";
+import AdminReports from "@/pages/admin/Reports";
+import AdminNotifications from "@/pages/admin/Notifications";
+import AdminSettings from "@/pages/admin/Settings";
 
 // Board pages
 import BoardDashboard from "@/pages/board/Dashboard";
@@ -49,6 +52,9 @@ function Router() {
       <ProtectedRoute path="/admin" component={AdminDashboard} allowedRoles={["admin"]} />
       <ProtectedRoute path="/admin/jobs" component={AdminJobManagement} allowedRoles={["admin"]} />
       <ProtectedRoute path="/admin/applications" component={AdminApplications} allowedRoles={["admin"]} />
+      <ProtectedRoute path="/admin/reports" component={AdminReports} allowedRoles={["admin"]} />
+      <ProtectedRoute path="/admin/notifications" component={AdminNotifications} allowedRoles={["admin"]} />
+      <ProtectedRoute path="/admin/settings" component={AdminSettings} allowedRoles={["admin"]} />
 
       {/* Board routes */}
       <ProtectedRoute path="/board" component={BoardDashboard} allowedRoles={["board"]} />
