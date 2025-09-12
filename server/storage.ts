@@ -1,3 +1,4 @@
+
 import {
   users,
   applicants,
@@ -66,7 +67,7 @@ export interface IStorage {
   getApplicantById(id: number): Promise<any | undefined>;
   // Job operations
   getJobs(filters?: { isActive?: boolean; departmentId?: number }): Promise<Job[]>;
-  getJob(id: number): Promise<Job | undefined>;
+  getJob(id?: number): Promise<any | undefined>;
   createJob(job: Omit<Job, 'id' | 'createdAt' | 'updatedAt'>): Promise<Job>;
   updateJob(id: number, job: Partial<Job>): Promise<Job>;
   getStudyAreaByName(name: string): Promise<StudyArea | undefined>
@@ -296,8 +297,8 @@ async updateApplicant(applicantId: number, data: any, step:number) {
       kraPin: data.kraPin,
       ethnicity: data.ethnicity,
       religion: data.religion,
-      isEmployee: data.isEmployee ?? false,
-      isPwd: data.isPwd ?? false,
+       ...(data.isEmployee !== undefined ? { isEmployee: data.isEmployee } : {}),
+      ...(data.isPwd !== undefined ? { isPwd: data.isPwd } : {}),
       pwdNumber: data.pwdNumber,
       countyId: data.countyId,
       constituencyId: data.constituencyId,
@@ -402,8 +403,12 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
     .orderBy(desc(jobs.createdAt));
 }
 // Fetch Jobs
-  async getJob(id: number): Promise<Job | undefined> {
-    const [job] = await db.select().from(jobs).where(eq(jobs.id, id));
+  async getJob(id: number): Promise<any | undefined> {
+    const [job] = await db
+      .select()
+      .from(jobs)
+      .leftJoin(JG, eq(jobs.jg,JG.id))
+      .where(eq(jobs.id, id));
     return job;
   }
 // Create Jobs
@@ -437,11 +442,14 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
     conditions.push(eq(applications.status, filters.status as any));
   }
 
-  return await db
+  const application = await db
     .select()
     .from(applications)
     .where(conditions.length > 0 ? and(...conditions) : undefined)
+    // .leftJoin(jobs,eq(applications.jobId, jobs.id))
     .orderBy(desc(applications.createdAt));
+
+    return application;
 }
   async createApplication(application: Omit<Application, 'id' | 'createdAt' | 'updatedAt'>): Promise<Application> {
     const [newApplication] = await db
@@ -459,7 +467,6 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
       .returning();
     return updatedApplication;
   }
-
   // Location operations
   async getCounties(): Promise<County[]> {
     return db.select().from(counties).orderBy(counties.name);

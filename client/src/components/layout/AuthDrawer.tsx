@@ -15,31 +15,66 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Eye, EyeOff, Phone, Shield, Upload, User } from 'lucide-react';
 import { useLocation } from "wouter";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { Progress } from "@/components/ui/progress"; // ✅ import Progress bar
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  rememberMe: z.boolean().default(false),
+email: z.string().email('Invalid email address'),
+password: z.string().min(6, 'Password must be at least 6 characters'),
+rememberMe: z.boolean().default(false),
 });
 
-const signupSchema = z.object({
-  firstName: z.string().min(2, 'First name must be at least 2 characters'),
-  lastName: z.string().min(2, 'lastName must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  phoneNumber: z.string().min(10, 'Phone number must be at least 10 digits'),
-  idPassportType: z.enum(['national_id', 'passport', 'alien_id'], {
-  required_error: 'Please select ID/Passport type',
-  }),
-  idPassportNumber: z.string().min(5, 'ID/Passport number is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string(),
-  profilePhoto: z.instanceof(File, "Please select a profile photo"),
-  agreeToTerms: z.boolean().refine(val => val === true, 'You must agree to the terms and conditions'),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
+
+// ------------------ Signup Schema ------------------ //
+const signupSchema = z
+.object({
+firstName: z.string().min(2, "First name must be at least 2 characters"),
+lastName: z.string().min(2, "Last name must be at least 2 characters"),
+email: z.string().email("Invalid email address"),
+phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
+idPassportType: z
+.enum(["national_id", "passport", "alien_id"], {
+required_error: "Please select ID/Passport type",
+})
+.optional(),
+idPassportNumber: z.string().min(5, "ID/Passport number is required"),
+password: z
+.string()
+.min(8, "Password must be at least 8 characters")
+.regex(
+/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/,
+"Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+),
+confirmPassword: z.string(),
+// 🔄 Fix: allow File, null, or undefined
+profilePhoto: z.custom<File | null>((val) => val === null || val instanceof File).optional(),
+agreeToTerms: z
+.boolean()
+.refine((val) => val === true, "You must agree to the terms and conditions"),
+})
+.refine((data) => data.password === data.confirmPassword, {
+message: "Passwords don't match",
+path: ["confirmPassword"],
 });
 
+function getPasswordStrength(password: string) {
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[a-z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[\W_]/.test(password)) score++;
+
+  if (score <= 2) return { label: "Weak", value: 33, color: "bg-red-500" };
+  if (score === 3 || score === 4)
+    return { label: "Medium", value: 66, color: "bg-yellow-500" };
+  return { label: "Strong", value: 100, color: "bg-green-600" };
+}
 const otpSchema = z.object({
   phoneNumber: z.string().min(10, 'Phone number must be at least 10 digits'),
   otp: z.string().length(6, 'OTP must be 6 digits'),
@@ -50,6 +85,7 @@ interface AuthDrawerProps {
   mode: 'login' | 'signup';
   onModeChange: (mode: 'login' | 'signup') => void;
 }
+
 
 export default function AuthDrawer({ open, onOpenChange, mode, onModeChange }: AuthDrawerProps) {
   const [showPassword, setShowPassword] = useState(false);
@@ -71,14 +107,17 @@ export default function AuthDrawer({ open, onOpenChange, mode, onModeChange }: A
   });
   // 🟢 Types
 type SignupData = z.infer<typeof signupSchema>;
-type OtpData = z.infer<typeof otpSchema>;
+
+  type OtpData = z.infer<typeof otpSchema>;
  // --- Helper: refresh session ---
   const refreshSession = async () => {
     const res = await apiRequest("GET", "/api/auth/me");
-    const data = await res.json();
+    const data = await res;
     queryClient.setQueryData(["/api/auth/me"], data);
     return data;
   };
+  const [loading, setLoading] = useState(false);
+  const [passwordValue, setPasswordValue] = useState("");
   const signupForm = useForm({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -106,7 +145,7 @@ type OtpData = z.infer<typeof otpSchema>;
   const loginMutation = useMutation({
     mutationFn: async (data: z.infer<typeof loginSchema>) => {
       const res = await apiRequest('POST', '/api/auth/login', data);
-      return res.json();
+      return res;
     },
     onSuccess: async () => {
         const { user, redirectUrl } = await refreshSession();
@@ -138,7 +177,7 @@ type OtpData = z.infer<typeof otpSchema>;
         credentials: "include",
       });
       if (!res.ok) throw new Error(await res.text());
-      return res.json();
+      return res;
     },
     onSuccess: (res) => {
       const { user } = res;
@@ -230,7 +269,7 @@ const handleSendOtp = () => {
     formData.append("email", data.email);
     formData.append("password", data.password);
     formData.append("phoneNumber", data.phoneNumber);
-    formData.append("idPassportType", data.idPassportType);
+    formData.append("idPassportType", data?.idPassportType ?? "");
     formData.append("idPassportNumber", data.idPassportNumber);
 
     if (profilePhoto) {
@@ -240,7 +279,6 @@ const handleSendOtp = () => {
     signupMutation.mutate(formData);
   };
 
-  const handleOtpVerificationz = (data: z.infer<typeof otpSchema>) => verifyOtpMutation.mutate(data);
 const handleOtpVerification = (data: z.infer<typeof otpSchema>) => {
   if (!pendingPhoneNumber) {
     toast({
@@ -260,40 +298,43 @@ const handleOtpVerification = (data: z.infer<typeof otpSchema>) => {
   const handleLogin = (data: z.infer<typeof loginSchema>) => loginMutation.mutate(data);
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Validate file type
-      const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-      if (!validTypes.includes(file.type)) {
-        toast({
-          title: 'Invalid File Type',
-          description: 'Please select a JPEG or PNG image file.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: 'File Too Large',
-          description: 'Please select an image under 5MB.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      setProfilePhoto(file);
-      signupForm.setValue('profilePhoto', file);
-
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPhotoPreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+  const file = event.target.files?.[0] ?? null;
+  if (file) {
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: 'Invalid File Type',
+        description: 'Please select a JPEG or PNG image file.',
+        variant: 'destructive',
+      });
+      return;
     }
-  };
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'File Too Large',
+        description: 'Please select an image under 5MB.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setProfilePhoto(file);
+    signupForm.setValue('profilePhoto', file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setPhotoPreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    // Explicitly set null when no file
+    signupForm.setValue('profilePhoto', undefined);
+  }
+};
 
   const removePhoto = () => {
     setProfilePhoto(null);
@@ -302,7 +343,7 @@ const handleOtpVerification = (data: z.infer<typeof otpSchema>) => {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  };
+  };  
   
   const getIdPassportLabel = (type: string) => {
     switch (type) {
@@ -316,7 +357,7 @@ const handleOtpVerification = (data: z.infer<typeof otpSchema>) => {
   const handlePhoneLogin = () => {
     window.location.href = '/';
   };
-
+const strength = getPasswordStrength(passwordValue);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full max-w-md flex flex-col h-full">
@@ -347,35 +388,46 @@ const handleOtpVerification = (data: z.infer<typeof otpSchema>) => {
                   )}
                 </div>
 
-                <div>
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
+                  {/* Password Field with Strength Meter */}
+                  <div>
+                    <Label htmlFor="password">Password</Label>
                     <Input
                       id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Enter your password"
-                      {...loginForm.register('password')}
+                      data-testid="input-password"
+                      type="password"
+                      placeholder="Create password"
+                      {...loginForm.register("password")}
+                      onChange={(e) => {
+                        loginForm.setValue("password", e.target.value);
+                        setPasswordValue(e.target.value);
+                      }}
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
+
+                    {/* Strength Meter */}
+                    {passwordValue && (
+                      <div className="mt-2">
+                        <Progress value={strength.value} className="h-2" />
+                        <p
+                          className={`text-xs mt-1 font-medium ${
+                            strength.label === "Weak"
+                              ? "text-red-600"
+                              : strength.label === "Medium"
+                              ? "text-yellow-600"
+                              : "text-green-600"
+                          }`}
+                        >
+                          {strength.label} password
+                        </p>
+                      </div>
+                    )}
+
+                    {loginForm.formState.errors.password && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {loginForm.formState.errors.password.message}
+                      </p>
+                    )}
                   </div>
-                  {loginForm.formState.errors.password && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {loginForm.formState.errors.password.message}
-                    </p>
-                  )}
-                </div>
+
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -541,15 +593,38 @@ const handleOtpVerification = (data: z.infer<typeof otpSchema>) => {
                     </div>
                   </div>
 
-                  <div>
+                    <div>
                     <Label htmlFor="password">Password</Label>
                     <Input
                       id="password"
                       data-testid="input-password"
                       type="password"
                       placeholder="Create password"
-                      {...signupForm.register('password')}
+                      {...signupForm.register("password")}
+                      onChange={(e) => {
+                        signupForm.setValue("password", e.target.value);
+                        setPasswordValue(e.target.value);
+                      }}
                     />
+
+                    {/* Strength Meter */}
+                    {passwordValue && (
+                      <div className="mt-2">
+                        <Progress value={strength.value} className="h-2" />
+                        <p
+                          className={`text-xs mt-1 font-medium ${
+                            strength.label === "Weak"
+                              ? "text-red-600"
+                              : strength.label === "Medium"
+                              ? "text-yellow-600"
+                              : "text-green-600"
+                          }`}
+                        >
+                          {strength.label} password
+                        </p>
+                      </div>
+                    )}
+
                     {signupForm.formState.errors.password && (
                       <p className="text-sm text-red-600 mt-1">
                         {signupForm.formState.errors.password.message}

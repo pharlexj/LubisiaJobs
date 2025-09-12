@@ -14,45 +14,120 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 // ------------------ Step type ------------------ //
 type Step = 1 | 1.5 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
+type ProfileResponse = {
+  applicantProfile?: {
+    id: number;
+    isEmployee?: boolean;
+    profileCompletionPercentage?: number;
+    completedSteps?: number[];
+    [key: string]: any;
+  };
+  [key: string]: any;
+};
+
 export default function Profile() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [currentStep, setCurrentStep] = useState<Step>(1);
-
-  type ProfileResponse = {
-    applicantProfile?: {
-      id: number;
-      isEmployee?: boolean;
-      profileCompletionPercentage?: number;
-      completedSteps?: number[];
-      [key: string]: any;
-    };
-    [key: string]: any;
-  };
 
   // ✅ Fetch profile from backend
   const { data: profile, isLoading } = useQuery<ProfileResponse>({
     queryKey: ["/api/auth/user"],
     enabled: !!user,
   });
+
+  const isEmployeeVerified = profile?.applicantProfile?.isEmployee;
+
+  // ✅ Decide initial step
+  const searchParams = new URLSearchParams(window.location.search);
+  const stepParam = searchParams.get("step");
+
+  let defaultStep: Step = 1;
+  if (stepParam) {
+    defaultStep = parseFloat(stepParam) as Step;
+  } else {
+    const completed = profile?.applicantProfile?.completedSteps || [];
+    const lastStep =
+      completed.length > 0 ? (completed[completed.length - 1] as Step) : 1;
+
+    if (lastStep === 1 && isEmployeeVerified) defaultStep = 1.5;
+    else if (lastStep === 1 && !isEmployeeVerified) defaultStep = 2;
+    else defaultStep = lastStep < 8 ? ((lastStep + 1) as Step) : 8;
+  }
+
+  const [currentStep, setCurrentStep] = useState<Step>(defaultStep);
+
   // ✅ Steps definition (with completed flag driven by DB)
   const steps = [
-    { id: 1, name: "Personal Details", required: true, completed: profile?.applicantProfile?.completedSteps?.includes(1) ?? false },
-    { id: 1.5, name: "Employee Details", required: true, conditional: true, completed: profile?.applicantProfile?.completedSteps?.includes(1.5) ?? false },
-    { id: 2, name: "Address Information", required: true, completed: profile?.applicantProfile?.completedSteps?.includes(2) ?? false },
-    { id: 3, name: "Educational Background", required: true, completed: profile?.applicantProfile?.completedSteps?.includes(3) ?? false },
-    { id: 4, name: "Short Courses", required: false, completed: profile?.applicantProfile?.completedSteps?.includes(4) ?? false },
-    { id: 5, name: "Professional Qualifications", required: false, completed: profile?.applicantProfile?.completedSteps?.includes(5) ?? false },
-    { id: 6, name: "Employment History", required: true, completed: profile?.applicantProfile?.completedSteps?.includes(6) ?? false },
-    { id: 7, name: "Referees", required: true, completed: profile?.applicantProfile?.completedSteps?.includes(7) ?? false },
-    { id: 8, name: "Document Uploads", required: true, completed: profile?.applicantProfile?.completedSteps?.includes(8) ?? false },
+    {
+      id: 1,
+      name: "Personal Details",
+      required: true,
+      completed:
+        profile?.applicantProfile?.completedSteps?.includes(1) ?? false,
+    },
+    {
+      id: 1.5,
+      name: "Employee Details",
+      required: true,
+      conditional: true,
+      completed:
+        profile?.applicantProfile?.completedSteps?.includes(1.5) ?? false,
+    },
+    {
+      id: 2,
+      name: "Address Information",
+      required: true,
+      completed:
+        profile?.applicantProfile?.completedSteps?.includes(2) ?? false,
+    },
+    {
+      id: 3,
+      name: "Educational Background",
+      required: true,
+      completed:
+        profile?.applicantProfile?.completedSteps?.includes(3) ?? false,
+    },
+    {
+      id: 4,
+      name: "Short Courses",
+      required: false,
+      completed:
+        profile?.applicantProfile?.completedSteps?.includes(4) ?? false,
+    },
+    {
+      id: 5,
+      name: "Professional Qualifications",
+      required: false,
+      completed:
+        profile?.applicantProfile?.completedSteps?.includes(5) ?? false,
+    },
+    {
+      id: 6,
+      name: "Employment History",
+      required: true,
+      completed:
+        profile?.applicantProfile?.completedSteps?.includes(6) ?? false,
+    },
+    {
+      id: 7,
+      name: "Referees",
+      required: true,
+      completed:
+        profile?.applicantProfile?.completedSteps?.includes(7) ?? false,
+    },
+    {
+      id: 8,
+      name: "Document Uploads",
+      required: true,
+      completed:
+        profile?.applicantProfile?.completedSteps?.includes(8) ?? false,
+    },
   ];
 
   // ✅ Mutation for saving
   const updateProfileMutation = useMutation({
     mutationFn: async (payload: any) => {
-      console.log(`Updating Profile:`, payload);
       const { method, applicantId, step, data } = payload;
       if (method === "POST") {
         return await apiRequest("POST", "/api/applicant/profile", {
@@ -103,8 +178,8 @@ export default function Profile() {
       setTimeout(() => setCurrentStep(1.5), 800);
     }
   };
+
   // ✅ Step navigation
-  const isEmployeeVerified = profile?.applicantProfile?.isEmployee;
   const getNextStep = (current: Step): Step => {
     if (current === 1 && isEmployeeVerified) return 1.5;
     if (current === 1 && !isEmployeeVerified) return 2;
