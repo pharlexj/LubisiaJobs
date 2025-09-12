@@ -245,9 +245,9 @@ export default function ApplicantDashboard() {
                             <div className="text-sm text-gray-600">
                             {(() => {
                             const jobMatch = jobs.find((j) => j.id === application.jobId);
-                            return jobMatch && jobMatch?.department
-                            ? jobMatch.department.name
-                            : "—";
+                            const departments = config?.departments || [];
+                            const department = departments.find((d: any) => d.id === jobMatch?.departmentId);
+                            return department ? department.name : "—";
                             })()}
                             </div>
                             </td>

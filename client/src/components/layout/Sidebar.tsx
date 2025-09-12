@@ -20,6 +20,7 @@ import {
   Award,
   LogOut
 } from 'lucide-react';
+import ProfileCompletion from '@/components/applicant/ProfileCompletion';
 
 interface SidebarProps {
   userRole: 'applicant' | 'admin' | 'board';
@@ -239,15 +240,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
         
         {/* Quick Stats for Applicants */}
         {userRole === 'applicant' && (
-          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-            <p className="text-xs font-medium text-gray-700 mb-2">Profile Completion</p>
-            <div className="flex items-center space-x-2">
-              <div className="flex-1 bg-gray-200 rounded-full h-2">
-                <div className="bg-primary h-2 rounded-full" style={{ width: '75%' }}></div>
-              </div>
-              <span className="text-xs text-gray-600">75%</span>
-            </div>
-          </div>
+          <ProfileCompletion />
         )}
 
         {/* System Status for Admins */}
