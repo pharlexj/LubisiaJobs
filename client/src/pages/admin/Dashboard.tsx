@@ -61,7 +61,7 @@ export default function AdminDashboard() {
   };
 
   const handleScheduleInterviews = () => {
-    setLocation('/board/interviews');
+    setLocation('/admin/applications?tab=interviews');
   };
 
   const handleGenerateReports = () => {
