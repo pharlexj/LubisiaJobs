@@ -18,6 +18,7 @@ import Jobs from "@/pages/Jobs";
 import ApplicantDashboard from "@/pages/applicant/Dashboard";
 import ApplicantProfile from "@/pages/applicant/Profile";
 import ApplicantApplications from "@/pages/applicant/Applications";
+import ApplicantDocuments from "@/pages/applicant/Documents";
 
 // Admin pages
 import AdminDashboard from "@/pages/admin/Dashboard";
@@ -47,6 +48,7 @@ function Router() {
       <ProtectedRoute path="/dashboard" component={ApplicantDashboard} allowedRoles={["applicant"]} />
       <ProtectedRoute path="/profile" component={ApplicantProfile} allowedRoles={["applicant"]} />
       <ProtectedRoute path="/applications" component={ApplicantApplications} allowedRoles={["applicant"]} />
+      <ProtectedRoute path="/documents" component={ApplicantDocuments} allowedRoles={["applicant"]} />
 
       {/* Admin routes */}
       <ProtectedRoute path="/admin" component={AdminDashboard} allowedRoles={["admin"]} />
