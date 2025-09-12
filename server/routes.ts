@@ -8,7 +8,7 @@ import path from "path";
 import bcrypt from "bcrypt";
 import passport from "passport";
 import { sendOtpHandler, verifyOtpHandler } from "../client/src/lib/africastalking-sms";
-  import { ApplicantService } from "./applicantService";
+import { ApplicantService } from "./applicantService";
 
 // OTP utility functions
 const applicantService = new ApplicantService(storage);
@@ -393,7 +393,7 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
   // Get system configuration data
   app.get('/api/public/config', async (req:any, res) => {
     try {
-      const [departments, designations, awards, courses, institutions, studyArea, specializations, ethnicity, jg, jobs,certificatelevel,applications,counties] = await Promise.all([
+      const [departments, designations, awards, courses, institutions, studyAreas, specializations, ethnicity, jobGroups, jobs, certificateLevels, counties, constituencies, wards] = await Promise.all([
         storage.getDepartments(),
         storage.getDesignations(),
         storage.getAwards(),
@@ -405,27 +405,30 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
         storage.getJobGroups(),
         storage.getJobs(),
         storage.getCertLevel(),
-        storage.getApplicant(req.user.id),
         storage.getCounties(),
+        storage.getConstituencies(),
+        storage.getWards(),
       ]);
+      
       res.json({
         departments,
         designations,
         awards,
         courses,
         institutions,
-        studyArea,
+        studyAreas,
         specializations,
         ethnicity,
-        jg,
+        jobGroups,
         jobs,
-        certificatelevel,
-        applications,
-        counties
+        certificateLevels,
+        counties,
+        constituencies,
+        wards
       });
     } catch (error) {
       console.error('Error fetching config:', error);
-      res.status(500).json({ message: 'Failed to fetch configuration' });
+      res.status(500).json({ message: 'Failed to fetch configuration', error: error.message });
     }
   });
   // Protected applicant routes  

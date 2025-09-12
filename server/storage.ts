@@ -80,6 +80,8 @@ export interface IStorage {
   
   // Location operations
   getCounties(): Promise<County[]>;
+  getConstituencies(): Promise<Constituency[]>;
+  getWards(): Promise<Ward[]>;
   getConstituenciesByCounty(countyId: number): Promise<Constituency[]>;
   getCountyByCountyName(countyName: string): Promise<County | undefined>;
   getConstituencyByName(name: string): Promise<Constituency | undefined>
@@ -477,6 +479,15 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
   async getCounties(): Promise<County[]> {
     return db.select().from(counties).orderBy(counties.name);
   }
+  
+  async getConstituencies(): Promise<Constituency[]> {
+    return db.select().from(constituencies).orderBy(constituencies.name);
+  }
+
+  async getWards(): Promise<Ward[]> {
+    return db.select().from(wards).orderBy(wards.name);
+  }
+  
   async getConstituenciesByCounty(countyId: number): Promise<Constituency[]> {
     return db
       .select()

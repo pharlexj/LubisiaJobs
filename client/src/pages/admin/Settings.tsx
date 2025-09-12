@@ -121,13 +121,14 @@ export default function AdminSettings() {
     enabled: !!user && user.role === 'admin',
   });
 
-  const counties = config?.counties || [];
-  const constituencies = config?.constituencies || [];
-  const wards = config?.wards || [];
-  const studyAreas = config?.studyArea || [];
-  const specializations = config?.specializations || [];
-  const jobGroups = config?.jg || [];
-  const awards = config?.awards || [];
+  const configData = config || {} as any;
+  const counties = configData.counties || [];
+  const constituencies = configData.constituencies || [];
+  const wards = configData.wards || [];
+  const studyAreas = configData.studyAreas || [];
+  const specializations = configData.specializations || [];
+  const jobGroups = configData.jobGroups || [];
+  const awards = configData.awards || [];
 
   // Forms
   const noticeForm = useForm<NoticeFormData>({ resolver: zodResolver(noticeSchema) });
