@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { isUnauthorizedError } from '@/lib/authUtils';
 import { usePublicConfig } from "@/hooks/usePublicConfig";
+import { useAuth } from '@/hooks/useAuth';
+import DOMPurify from 'dompurify';
 import { 
   Calendar, 
   GraduationCap, 
@@ -16,7 +18,8 @@ import {
   Clock, 
   Users,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react';
 
 interface JobCardProps {
@@ -29,6 +32,13 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
   const queryClient = useQueryClient();
   const [showDetails, setShowDetails] = useState(false);
   const { data: config } = usePublicConfig();
+  const { user } = useAuth();
+  
+  // Get applicant's education records to check eligibility
+  const { data: applicantProfile } = useQuery({
+    queryKey: ['/api/applicant/profile'],
+    enabled: isAuthenticated && user?.role === 'applicant'
+  }) as { data: { educationRecords?: any[] } | undefined };
 
   const jobGroups = config?.jobGroups || [];
   const departments = config?.departments || [];
@@ -78,6 +88,52 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
     return { text: date.toLocaleDateString(), color: 'text-gray-600' };
   };
 
+  // Check if applicant is eligible based on education requirements
+  const isEligible = () => {
+    if (!isAuthenticated) {
+      return false; // Must be authenticated
+    }
+    
+    // If no specific requirements, allow application for authenticated users
+    if (!job.requiredCourses && !job.certificateLevel) {
+      return true;
+    }
+    
+    // If requirements exist but no education records, not eligible
+    if (!applicantProfile?.educationRecords || applicantProfile.educationRecords.length === 0) {
+      return false;
+    }
+    
+    // Parse required courses from varchar field (could be comma/space separated)
+    const requiredCourseIds = new Set<number>();
+    if (job.requiredCourses) {
+      const courseStr = job.requiredCourses.toString().trim();
+      if (courseStr) {
+        courseStr.split(/[,\s]+/).forEach((id: string) => {
+          const parsed = parseInt(id.trim());
+          if (!isNaN(parsed)) requiredCourseIds.add(parsed);
+        });
+      }
+    }
+    
+    // Check if applicant has matching education qualifications
+    const hasMatchingEducation = applicantProfile.educationRecords.some((education: any) => {
+      // Check course match if required courses are specified
+      const courseMatch = requiredCourseIds.size === 0 || 
+        (education.courseId && requiredCourseIds.has(education.courseId));
+      
+      // For certificate level, we'll be more lenient since there may be schema mismatch
+      // TODO: This needs proper mapping between certificate_level and awards tables
+      const levelMatch = !job.certificateLevel || 
+        education.certificateLevelId === job.certificateLevel ||
+        education.awardId === job.certificateLevel; // Try both possible fields
+      
+      return courseMatch && levelMatch;
+    });
+    
+    return hasMatchingEducation;
+  };
+  
   const handleApply = () => {
     if (!isAuthenticated) {
       toast({
@@ -87,10 +143,42 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
       });
       return;
     }
+    
+    if (!isEligible()) {
+      toast({
+        title: 'Application Not Eligible',
+        description: 'You do not meet the required education qualifications for this position.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     applyMutation.mutate();
   };
+  
+  // Format and sanitize text with proper roman numerals and formatting
+  const formatJobText = (text: string | null | undefined) => {
+    if (!text) return '';
+    
+    // Replace roman numerals with proper formatting
+    let formatted = text
+      .replace(/\b(i{1,3}|iv|v|vi{0,3}|ix|x)\./gi, (match) => 
+        `${match.toUpperCase()}`
+      )
+      // Handle common formatting patterns
+      .replace(/\n/g, '<br>')
+      .replace(/\r\n/g, '<br>')
+      // Ensure proper spacing around periods
+      .replace(/\.(\S)/g, '. $1');
+    
+    // Sanitize HTML to prevent XSS attacks
+    return DOMPurify.sanitize(formatted, {
+      ALLOWED_TAGS: ['br', 'p', 'strong', 'em', 'u', 'ol', 'ul', 'li'],
+      ALLOWED_ATTR: []
+    });
+  };
 
-  const deadline = formatDeadline(job.applicationDeadline);
+  const deadline = formatDeadline(job.endDate);
   const isExpired = deadline?.color === 'text-red-600' && deadline?.text === 'Expired';
 
   return (
@@ -149,15 +237,15 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
           <div className="flex items-center justify-between">
             <Dialog open={showDetails} onOpenChange={setShowDetails}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" data-testid={`button-view-details-${job.id}`}>
                   View Details
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl overflow-y-auto mt-6 pr-2 pb-4">
-                <DialogHeader>
-                  <DialogTitle>{job.title}</DialogTitle>
+              <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+                <DialogHeader className="flex-shrink-0">
+                  <DialogTitle className="pr-6">{job.title}</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-2">Department</h4>
@@ -171,19 +259,19 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
                   
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">Job Description</h4>
-                    <p className="text-gray-600">
-                      {job.description || 'Detailed job description will be provided upon application.'}
-                    </p>
+                    <div className="text-gray-600" dangerouslySetInnerHTML={{
+                      __html: formatJobText(job.description) || 'Detailed job description will be provided upon application.'
+                    }} />
                   </div>
 
                   {job.requirements && (
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-2">Requirements</h4>
-                      <div className="text-gray-600">
-                        {typeof job.requirements === 'string' 
+                      <div className="text-gray-600" dangerouslySetInnerHTML={{
+                        __html: formatJobText(typeof job.requirements === 'string' 
                           ? job.requirements 
-                          : JSON.stringify(job.requirements, null, 2)}
-                      </div>
+                          : JSON.stringify(job.requirements, null, 2))
+                      }} />
                     </div>
                   )}
 
@@ -191,9 +279,7 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-2">Application Deadline</h4>
                       <p className="text-gray-600">
-                        {job.endDate 
-                          ? new Date(job.endDate).toLocaleDateString()
-                          : 'Open until filled'}
+                        {deadline?.text || 'Open until filled'}
                       </p>
                     </div>
                     <div>
@@ -204,15 +290,25 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t">
+                  <div className="pt-4 border-t flex-shrink-0">
+                    {!isEligible() && isAuthenticated ? (
+                      <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                        <p className="text-sm text-yellow-800">
+                          <AlertCircle className="w-4 h-4 inline mr-1" />
+                          You do not meet the required education qualifications for this position.
+                        </p>
+                      </div>
+                    ) : null}
                     <Button 
                       className="w-full" 
                       onClick={handleApply}
-                      disabled={applyMutation.isPending || !job.isActive || isExpired}
+                      disabled={applyMutation.isPending || !job.isActive || isExpired || (isAuthenticated && !isEligible())}
+                      data-testid="button-apply-modal"
                     >
                       {applyMutation.isPending ? 'Submitting...' : 
                        !job.isActive ? 'Position Closed' :
                        isExpired ? 'Application Deadline Passed' :
+                       (isAuthenticated && !isEligible()) ? 'Not Eligible' :
                        'Apply Now'}
                     </Button>
                   </div>
@@ -222,8 +318,9 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
 
             <Button 
               onClick={handleApply}
-              disabled={applyMutation.isPending || !job.isActive || isExpired}
+              disabled={applyMutation.isPending || !job.isActive || isExpired || (isAuthenticated && !isEligible())}
               className="ml-2"
+              data-testid={`button-apply-${job.id}`}
             >
               {applyMutation.isPending ? (
                 <>
@@ -239,6 +336,11 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
                 <>
                   <AlertCircle className="w-4 h-4 mr-2" />
                   Expired
+                </>
+              ) : (isAuthenticated && !isEligible()) ? (
+                <>
+                  <X className="w-4 h-4 mr-2" />
+                  Not Eligible
                 </>
               ) : (
                 <>

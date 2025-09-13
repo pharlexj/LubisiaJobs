@@ -387,6 +387,45 @@ export const notices = pgTable("notices", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Gallery items for photos and events
+export const galleryItems = pgTable("gallery_items", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 250 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 100 }).notNull(),
+  imageUrl: varchar("image_url", { length: 500 }),
+  eventDate: date("event_date"),
+  isPublished: boolean("is_published").default(true),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// System configuration for admin customizable content
+export const systemConfig = pgTable("system_config", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 100 }).notNull().unique(),
+  value: text("value"),
+  section: varchar("section", { length: 50 }).notNull(), // 'about', 'contact', 'general', etc.
+  dataType: varchar("data_type", { length: 20 }).default("text"), // 'text', 'html', 'json', 'number'
+  isPublic: boolean("is_public").default(false),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Board members for the about page leadership carousel
+export const boardMembers = pgTable("board_members", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 150 }).notNull(),
+  position: varchar("position", { length: 150 }).notNull(),
+  bio: text("bio"),
+  photoUrl: varchar("photo_url", { length: 500 }),
+  order: integer("display_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   applicant: one(applicants, {
@@ -395,6 +434,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   createdJobs: many(jobs),
   createdNotices: many(notices),
+  createdGalleryItems: many(galleryItems),
 }));
 
 export const applicantsRelations = relations(applicants, ({ one, many }) => ({
@@ -571,3 +611,16 @@ export type Institution = typeof institutions.$inferSelect;
 export type CertificateLevel = typeof certificateLevel.$inferSelect;
 export type ShortCourse = typeof shortCourse.$inferSelect;
 export type Faq = typeof faq.$inferSelect;
+export type GalleryItem = typeof galleryItems.$inferSelect;
+export type SystemConfig = typeof systemConfig.$inferSelect;
+export type BoardMember = typeof boardMembers.$inferSelect;
+
+// Insert schemas for forms
+export const insertGalleryItem = createInsertSchema(galleryItems).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertGalleryItem = z.infer<typeof insertGalleryItem>;
+
+export const insertSystemConfig = createInsertSchema(systemConfig).omit({ id: true, updatedAt: true });
+export type InsertSystemConfig = z.infer<typeof insertSystemConfig>;
+
+export const insertBoardMember = createInsertSchema(boardMembers).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertBoardMember = z.infer<typeof insertBoardMember>;
