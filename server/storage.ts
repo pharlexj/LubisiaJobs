@@ -28,6 +28,9 @@ import {
   professionalQualifications,
   certificateLevel,
   faq,
+  galleryItems,
+  systemConfig,
+  boardMembers,
   type User,
   type UpsertUser,
   type Applicant,
@@ -52,6 +55,12 @@ import {
   type CertificateLevel,
   type ProfessionalQualification,
   type Faq,
+  type GalleryItem,
+  type SystemConfig,
+  type BoardMember,
+  type InsertGalleryItem,
+  type InsertSystemConfig,
+  type InsertBoardMember,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, like, sql,lt, PromiseOf, or } from "drizzle-orm";
@@ -570,6 +579,78 @@ async getFaq() {
     .from(faq)
     // .groupBy(faq.category)
   .orderBy(desc(faq.category))
+  }
+
+  // Gallery operations
+  async getGalleryItems() {
+    return await db
+      .select()
+      .from(galleryItems)
+      .where(eq(galleryItems.isPublished, true))
+      .orderBy(desc(galleryItems.eventDate));
+  }
+
+  async createGalleryItem(item: InsertGalleryItem) {
+    const [galleryItem] = await db
+      .insert(galleryItems)
+      .values(item)
+      .returning();
+    return galleryItem;
+  }
+
+  // System configuration operations
+  async getSystemConfig(key?: string, section?: string) {
+    if (key) {
+      return await db
+        .select()
+        .from(systemConfig)
+        .where(eq(systemConfig.key, key))
+        .orderBy(systemConfig.key);
+    } else if (section) {
+      return await db
+        .select()
+        .from(systemConfig)
+        .where(eq(systemConfig.section, section))
+        .orderBy(systemConfig.key);
+    } else {
+      return await db
+        .select()
+        .from(systemConfig)
+        .orderBy(systemConfig.key);
+    }
+  }
+
+  async upsertSystemConfig(config: InsertSystemConfig) {
+    const [configItem] = await db
+      .insert(systemConfig)
+      .values(config)
+      .onConflictDoUpdate({
+        target: systemConfig.key,
+        set: {
+          value: config.value,
+          updatedBy: config.updatedBy,
+          updatedAt: sql`now()`
+        }
+      })
+      .returning();
+    return configItem;
+  }
+
+  // Board members operations
+  async getBoardMembers() {
+    return await db
+      .select()
+      .from(boardMembers)
+      .where(eq(boardMembers.isActive, true))
+      .orderBy(boardMembers.order, boardMembers.name);
+  }
+
+  async createBoardMember(member: InsertBoardMember) {
+    const [boardMember] = await db
+      .insert(boardMembers)
+      .values(member)
+      .returning();
+    return boardMember;
   }
   async createNotice(notice: Omit<Notice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notice> {
     const [newNotice] = await db.insert(notices).values(notice).returning();

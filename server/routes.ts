@@ -387,6 +387,47 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
     }
   });
 
+  // Get gallery items
+  app.get('/api/public/gallery', async (req, res) => {
+    try {
+      const gallery = await storage.getGalleryItems();
+      res.json(gallery);
+    } catch (error) {
+      console.error('Error fetching gallery:', error);
+      res.status(500).json({ message: 'Failed to fetch gallery' });
+    }
+  });
+
+  // Get system configuration
+  app.get('/api/public/system-config', async (req, res) => {
+    try {
+      const section = req.query.section as string;
+      const config = await storage.getSystemConfig(undefined, section);
+      
+      // Convert array to key-value object for easier frontend use
+      const configObj = config.reduce((acc: any, item) => {
+        acc[item.key] = item.value;
+        return acc;
+      }, {});
+      
+      res.json(configObj);
+    } catch (error) {
+      console.error('Error fetching system config:', error);
+      res.status(500).json({ message: 'Failed to fetch system config' });
+    }
+  });
+
+  // Get board members
+  app.get('/api/public/board-members', async (req, res) => {
+    try {
+      const boardMembers = await storage.getBoardMembers();
+      res.json(boardMembers);
+    } catch (error) {
+      console.error('Error fetching board members:', error);
+      res.status(500).json({ message: 'Failed to fetch board members' });
+    }
+  });
+
   // Get active jobs
   app.get('/api/public/jobs', async (req, res) => {
     try {
