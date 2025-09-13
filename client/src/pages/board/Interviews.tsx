@@ -122,7 +122,7 @@ export default function BoardInterviews() {
     });
   };
 
-  const groupedInterviews = applications.reduce((groups: any, app) => {
+  const groupedInterviews = (applications as any).reduce((groups: any, app:any) => {
     const jobTitle = app.job?.title || 'Unknown Position';
     if (!groups[jobTitle]) {
       groups[jobTitle] = [];
@@ -205,7 +205,7 @@ export default function BoardInterviews() {
                             <SelectValue placeholder="Select job position" />
                           </SelectTrigger>
                           <SelectContent>
-                            {jobs.map((job) => (
+                            {(jobs as any).map((job:any) => (
                               <SelectItem key={job.id} value={job.id.toString()}>
                                 {job.title}
                               </SelectItem>
@@ -437,7 +437,7 @@ export default function BoardInterviews() {
                 <CardTitle>Interview Candidates</CardTitle>
               </CardHeader>
               <CardContent>
-                {applications.length === 0 ? (
+                {(applications as any).length === 0 ? (
                   <div className="text-center py-8">
                     <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No Candidates Shortlisted</h3>
@@ -457,7 +457,7 @@ export default function BoardInterviews() {
                         </tr>
                       </thead>
                       <tbody>
-                        {applications.map((application) => (
+                        {(applications as any).map((application:any) => (
                           <tr key={application.id} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="py-3 px-4">
                               <div className="flex items-center space-x-3">
@@ -537,7 +537,7 @@ export default function BoardInterviews() {
             </Card>
 
             {/* Interview Results Summary */}
-            {applications.some(app => app.interviewScore) && (
+            {(applications as any).some((app:any) => app.interviewScore) && (
               <Card className="mt-8">
                 <CardHeader>
                   <CardTitle>Interview Results Summary</CardTitle>
@@ -547,23 +547,23 @@ export default function BoardInterviews() {
                     <div className="text-center">
                       <div className="text-2xl font-bold text-primary mb-1">
                         {Math.round(
-                          applications
-                            .filter(app => app.interviewScore)
-                            .reduce((sum, app) => sum + (app.interviewScore || 0), 0) / 
-                          applications.filter(app => app.interviewScore).length || 0
+                          (applications as any)
+                            .filter((app:any) => app.interviewScore)
+                            .reduce((sum:any, app:any) => sum + (app.interviewScore || 0), 0) / 
+                          (applications as any).filter((app:any) => app.interviewScore).length || 0
                         )}
                       </div>
                       <p className="text-sm text-gray-600">Average Score</p>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-secondary mb-1">
-                        {Math.max(...applications.map(app => app.interviewScore || 0))}
+                        {Math.max(...(applications as any).map((app:any) => app.interviewScore || 0))}
                       </div>
                       <p className="text-sm text-gray-600">Highest Score</p>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-gray-900 mb-1">
-                        {applications.filter(app => app.interviewScore).length}
+                        {(applications as any).filter((app:any) => app.interviewScore).length}
                       </div>
                       <p className="text-sm text-gray-600">Interviewed</p>
                     </div>

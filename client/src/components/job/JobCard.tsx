@@ -153,7 +153,7 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
                   View Details
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-3xl overflow-y-auto">
+              <DialogContent className="max-w-4xl overflow-y-auto mt-6 pr-2 pb-4">
                 <DialogHeader>
                   <DialogTitle>{job.title}</DialogTitle>
                 </DialogHeader>

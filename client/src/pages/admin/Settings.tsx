@@ -29,7 +29,10 @@ import {
   Settings as SettingsIcon,
   Building,
   GraduationCap,
-  Briefcase
+  Briefcase,
+  HomeIcon,
+  HouseIcon,
+  Building2
 } from 'lucide-react';
 
 // Form schemas
@@ -61,7 +64,7 @@ const studyAreaSchema = z.object({
 
 const specializationSchema = z.object({
   name: z.string().min(2, "Specialization name must be at least 2 characters"),
-  studyAreaId: z.string().min(1, "Please select a study area"),
+  studyArea: z.string().min(1, "Please select a study area"),
 });
 
 const jobGroupSchema = z.object({
@@ -71,11 +74,13 @@ const jobGroupSchema = z.object({
 
 const awardSchema = z.object({
   name: z.string().min(2, "Award name must be at least 2 characters"),
-  description: z.string().optional(),
 });
 
 const ethnicitySchema = z.object({
   name: z.string().min(2, "Ethnicity name must be at least 2 characters"),
+});
+const deptSchema = z.object({
+  name: z.string().min(2, "Department name must be at least 2 characters"),
 });
 
 const faqSchema = z.object({
@@ -101,6 +106,7 @@ type JobGroupFormData = z.infer<typeof jobGroupSchema>;
 type AwardFormData = z.infer<typeof awardSchema>;
 type EthnicityFormData = z.infer<typeof ethnicitySchema>;
 type FaqFormData = z.infer<typeof faqSchema>;
+type DeptFormData = z.infer<typeof deptSchema>;
 type RoleAssignmentFormData = z.infer<typeof roleAssignmentSchema>;
 
 export default function AdminSettings() {
@@ -129,7 +135,11 @@ export default function AdminSettings() {
   const specializations = configData.specializations || [];
   const jobGroups = configData.jobGroups || [];
   const awards = configData.awards || [];
-
+  const faqs = configData.faqs || [];
+  const notices = configData.notices || [];
+  const ethnicity = configData.ethnicity || [];
+  const departments = configData.departments || [];
+  const admins = configData.admins || [];
   // Forms
   const noticeForm = useForm<NoticeFormData>({ resolver: zodResolver(noticeSchema) });
   const countyForm = useForm<CountyFormData>({ resolver: zodResolver(countySchema) });
@@ -141,6 +151,7 @@ export default function AdminSettings() {
   const awardForm = useForm<AwardFormData>({ resolver: zodResolver(awardSchema) });
   const ethnicityForm = useForm<EthnicityFormData>({ resolver: zodResolver(ethnicitySchema) });
   const faqForm = useForm<FaqFormData>({ resolver: zodResolver(faqSchema) });
+  const deptForm = useForm<DeptFormData>({ resolver: zodResolver(deptSchema) });
   const roleAssignmentForm = useForm<RoleAssignmentFormData>({ resolver: zodResolver(roleAssignmentSchema) });
 
   // Generic mutation handler
@@ -166,6 +177,7 @@ export default function AdminSettings() {
       else if (variables.endpoint.includes('awards')) awardForm.reset();
       else if (variables.endpoint.includes('ethnicity')) ethnicityForm.reset();
       else if (variables.endpoint.includes('faqs')) faqForm.reset();
+      else if (variables.endpoint.includes('dept')) deptForm.reset();
     },
     onError: (error: any) => {
       toast({
@@ -175,7 +187,6 @@ export default function AdminSettings() {
       });
     },
   });
-
   // Tab configurations
   const tabs = [
     { 
@@ -185,8 +196,14 @@ export default function AdminSettings() {
       description: 'Manage system notices and announcements'
     },
     { 
+      id: 'dept', 
+      label: 'Departments', 
+      icon: Building,
+      description: 'Manage Departments'
+    },
+    { 
       id: 'geography', 
-      label: 'Geography', 
+      label: 'Location', 
       icon: MapPin,
       description: 'Manage counties, constituencies, and wards'
     },
@@ -198,7 +215,7 @@ export default function AdminSettings() {
     },
     { 
       id: 'job-management', 
-      label: 'Job System', 
+      label: 'Job Groups', 
       icon: Briefcase,
       description: 'Manage job groups and related data'
     },
@@ -210,13 +227,13 @@ export default function AdminSettings() {
     },
     { 
       id: 'users', 
-      label: 'User Management', 
+      label: 'Ethnicity', 
       icon: Users,
       description: 'Manage user roles and ethnicity data'
     },
     { 
       id: 'roles', 
-      label: 'Role Assignments', 
+      label: 'Role', 
       icon: SettingsIcon,
       description: 'Assign roles to users'
     },
@@ -257,12 +274,15 @@ export default function AdminSettings() {
   const handleCreateSpecialization = (data: SpecializationFormData) => {
     createMutation.mutate({ 
       endpoint: '/api/admin/specializations', 
-      data: { ...data, studyAreaId: parseInt(data.studyAreaId) }
+      data: { ...data, studyArea: parseInt(data.studyArea) }
     });
   };
 
   const handleCreateJobGroup = (data: JobGroupFormData) => {
     createMutation.mutate({ endpoint: '/api/admin/job-groups', data });
+  };
+  const handleCreateDept = (data: DeptFormData) => {
+    createMutation.mutate({ endpoint: '/api/admin/dept', data });
   };
 
   const handleCreateAward = (data: AwardFormData) => {
@@ -293,9 +313,8 @@ export default function AdminSettings() {
     : [];
 
   const filteredSpecializations = selectedStudyArea 
-    ? specializations.filter((s: any) => s.studyAreaId === parseInt(selectedStudyArea))
+    ? specializations.filter((s: any) => s.studyArea === parseInt(selectedStudyArea))
     : [];
-
   return (
     <div className="min-h-screen bg-neutral-50">
       <Navigation />
@@ -323,7 +342,69 @@ export default function AdminSettings() {
                   </TabsTrigger>
                 ))}
               </TabsList>
-
+                {/* Job Management Tab */}
+              <TabsContent value="dept">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Departments Management</CardTitle>
+                      <p className="text-sm text-gray-600 mt-1">Manage departments</p>
+                    </div>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Department
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add New Department</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={deptForm.handleSubmit(handleCreateDept)} className="space-y-4">
+                          <div>
+                            <Label htmlFor="dept-name">Department Name</Label>
+                            <Input 
+                              id="dept-name" 
+                              {...deptForm.register('name')} 
+                              placeholder="e.g., Health Services and Sanitation..."
+                            />
+                            {deptForm.formState.errors.name && (
+                              <p className="text-sm text-red-600 mt-1">
+                                {deptForm.formState.errors.name.message}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex justify-end space-x-2">
+                            <Button type="submit">Add Department</Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {departments.length === 0 ? (
+                        <div className="col-span-3 text-center py-8 text-gray-500">
+                          <HouseIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                          <p>No departments yet. Click "Add Department" to get started.</p>
+                        </div>
+                      ) : (
+                        departments.map((dept: any) => (
+                          <Card key={dept.id}>
+                            <CardContent className="p-4">
+                              <h4 className="font-semibold mb-2">{dept.name}</h4>
+                              {dept.description && (
+                                <p className="text-sm text-gray-600">{dept.description}</p>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
               {/* Notices Tab */}
               <TabsContent value="notices">
                 <Card>
@@ -410,15 +491,30 @@ export default function AdminSettings() {
                     </Dialog>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-center py-8 text-gray-500">
-                      <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                      <p>Click "Add Notice" to create your first notice</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {notices.length === 0 ? (
+                        <div className="col-span-3 text-center py-8 text-gray-500">
+                          <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                          <p>Click "Add Notice" to create your first notice</p>
+                        </div>
+                      ) : (
+                        notices.map((notice: any) => (
+                          <Card key={notice.id}>
+                            <CardContent className="p-4">
+                              <h4 className="font-semibold mb-2">{notice.title}</h4>
+                              {notice.content && (
+                                <p className="text-sm text-gray-600">{notice.content}</p>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
 
-              {/* Geography Tab */}
+              {/* Location Tab */}
               <TabsContent value="geography">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Counties */}
@@ -740,7 +836,7 @@ export default function AdminSettings() {
                                 value={selectedStudyArea}
                                 onValueChange={(value) => {
                                   setSelectedStudyArea(value);
-                                  specializationForm.setValue('studyAreaId', value);
+                                  specializationForm.setValue('studyArea', value);
                                 }}
                               >
                                 <SelectTrigger>
@@ -872,8 +968,8 @@ export default function AdminSettings() {
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                      <CardTitle>Awards Management</CardTitle>
-                      <p className="text-sm text-gray-600 mt-1">Manage awards and recognitions</p>
+                      <CardTitle>Certificates Awards Management</CardTitle>
+                      <p className="text-sm text-gray-600 mt-1">Manage certificate awards</p>
                     </div>
                     <Dialog>
                       <DialogTrigger asChild>
@@ -899,15 +995,6 @@ export default function AdminSettings() {
                                 {awardForm.formState.errors.name.message}
                               </p>
                             )}
-                          </div>
-                          <div>
-                            <Label htmlFor="award-description">Description (Optional)</Label>
-                            <Textarea 
-                              id="award-description" 
-                              {...awardForm.register('description')} 
-                              placeholder="Description of the award"
-                              rows={3}
-                            />
                           </div>
                           <div className="flex justify-end space-x-2">
                             <Button type="submit">Add Award</Button>
@@ -945,7 +1032,7 @@ export default function AdminSettings() {
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                      <CardTitle>User Management</CardTitle>
+                      <CardTitle>Ethnicity Management</CardTitle>
                       <p className="text-sm text-gray-600 mt-1">Manage ethnicity data and user roles</p>
                     </div>
                     <Dialog>
@@ -981,9 +1068,19 @@ export default function AdminSettings() {
                     </Dialog>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="grid grid-cols-4 gap-4">
+                      {ethnicity.length===0 ? (<div className="text-center py-8 text-gray-500">
                       <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
                       <p>Click "Add Ethnicity" to manage ethnicity data</p>
+                    </div>) : (ethnicity.map((e:any)=> (
+                      <Card>
+                        <CardContent>
+                          <div className='text-sm text-gray-600 text-center py-8'>
+                            <h4> { e.name}</h4>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )))}
                     </div>
                   </CardContent>
                 </Card>
@@ -1064,15 +1161,29 @@ export default function AdminSettings() {
                       </DialogContent>
                     </Dialog>
                   </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-8 text-gray-500">
-                      <HelpCircle className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                      <p>Click "Add FAQ" to create your first FAQ entry</p>
+                    <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {faqs.length === 0 ? (
+                        <div className="col-span-2 text-center py-8 text-gray-500">
+                          <HelpCircle className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                          <p>Click "Add FAQ" to create your first FAQ entry</p>
+                        </div>
+                      ) : (
+                        faqs.map((faq: any) => (
+                          <Card key={faq.id}>
+                            <CardContent className="p-4">
+                              <h4 className="font-semibold mb-2">{faq.question}</h4>
+                              {faq.answer && (
+                                <p className="text-sm text-gray-600">{faq.answer}</p>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
-
               {/* Role Assignments Tab */}
               <TabsContent value="roles">
                 <Card>
@@ -1101,8 +1212,9 @@ export default function AdminSettings() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="1">John Doe (john@example.com)</SelectItem>
-                                <SelectItem value="2">Jane Smith (jane@example.com)</SelectItem>
-                                <SelectItem value="3">Bob Johnson (bob@example.com)</SelectItem>
+                                {admins.map((a: any) => {( 
+                                    <SelectItem key={a.email} value={a.email}>{ a.name}</SelectItem>
+                                )})}
                               </SelectContent>
                             </Select>
                             {roleAssignmentForm.formState.errors.userId && (
@@ -1137,10 +1249,20 @@ export default function AdminSettings() {
                     </Dialog>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {admins.length===0 ?( <div className="text-center py-8 text-gray-500">
                       <SettingsIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
                       <p>Click "Assign Role" to manage user permissions</p>
+                      </div>) : admins.map((a:any) => {
+                        (
+                        <Card>
+                          <CardContent>
+                            <h4>{a.name }</h4>
+                          </CardContent>
+                    </Card>
+                      )})}
                     </div>
+                    
                   </CardContent>
                 </Card>
               </TabsContent>

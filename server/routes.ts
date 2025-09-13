@@ -377,6 +377,15 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
       res.status(500).json({ message: 'Failed to fetch notices' });
     }
   });
+  app.get('/api/public/faqs', async (req, res) => {
+    try {
+      const faq = await storage.getFaq();
+      res.json(faq);
+    } catch (error) {
+      console.error('Error fetching faq:', error);
+      res.status(500).json({ message: 'Failed to fetch faq' });
+    }
+  });
 
   // Get active jobs
   app.get('/api/public/jobs', async (req, res) => {
@@ -393,7 +402,13 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
   // Get system configuration data
   app.get('/api/public/config', async (req:any, res) => {
     try {
-      const [departments, designations, awards, courses, institutions, studyAreas, specializations, ethnicity, jobGroups, jobs, certificateLevels, counties, constituencies, wards] = await Promise.all([
+      const [departments,
+        designations,
+        awards, courses, institutions, studyAreas, specializations,        
+        ethnicity, jobGroups, jobs, certificateLevels, counties,
+        constituencies,
+        wards, notices,faqs,admins,
+      ] = await Promise.all([
         storage.getDepartments(),
         storage.getDesignations(),
         storage.getAwards(),
@@ -408,6 +423,9 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
         storage.getCounties(),
         storage.getConstituencies(),
         storage.getWards(),
+        storage.getNotices(),
+        storage.getFaq(),
+        storage.getUsers(),
       ]);
       
       res.json({
@@ -424,8 +442,11 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
         certificateLevels,
         counties,
         constituencies,
-        wards
-      });
+        wards,
+        notices,
+        faqs,
+        admins
+      });      
     } catch (error) {
       console.error('Error fetching config:', error);
       res.status(500).json({ message: 'Failed to fetch configuration', error: (error as Error).message });
@@ -598,8 +619,6 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
       if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
       }
-console.log(req.body);
-
       const jobData = {
         ...req.body,
         createdBy: user.id,
@@ -607,6 +626,7 @@ console.log(req.body);
       };
 
       const job = await storage.createJob(jobData);
+      
       res.json(job);
     } catch (error) {
       console.error('Error creating job:', error);
@@ -802,6 +822,20 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       res.status(500).json({ message: 'Failed to create job group' });
     }
   });
+  // Create Department (admin)
+  app.post('/api/admin/dept', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      const dept = await storage.seedDepartment(req.body);
+      res.json(dept);
+    } catch (error) {
+      console.error('Error creating department:', error);
+      res.status(500).json({ message: 'Failed to create department' });
+    }
+  });
 
   // Create award (admin)
   app.post('/api/admin/awards', isAuthenticated, async (req: any, res) => {
@@ -826,7 +860,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
       }
-
+       
       // For now, return success - ethnicity table may need to be created
       res.json({ 
         id: Date.now(), 
@@ -846,13 +880,11 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
       }
-
-      // For now, return success - FAQ table may need to be created
-      res.json({ 
-        id: Date.now(), 
+      const faqs = await storage.createFaqs({
         ...req.body, 
-        createdAt: new Date().toISOString()
+        createdAt: new Date()
       });
+      return res.json(faqs);
     } catch (error) {
       console.error('Error creating FAQ:', error);
       res.status(500).json({ message: 'Failed to create FAQ' });

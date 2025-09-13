@@ -27,6 +27,7 @@ import {
   shortCourse,
   professionalQualifications,
   certificateLevel,
+  faq,
   type User,
   type UpsertUser,
   type Applicant,
@@ -50,10 +51,10 @@ import {
   type Jg,
   type CertificateLevel,
   type ProfessionalQualification,
+  type Faq,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, like, sql,lt, PromiseOf } from "drizzle-orm";
-import { any, number } from "zod";
+import { eq, desc, and, like, sql,lt, PromiseOf, or } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -133,6 +134,13 @@ export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+  async getUsers(): Promise<any[]> {
+    const user = await db
+      .select({ name: sql<string>`CONCAT(${users.firstName}, ' ', ${users.lastName})`, email: users.email })
+      .from(users)
+      .where(or(eq(users.role, 'admin'), eq(users.role, "board")));
     return user;
   }
   async upsertUser(userData: UpsertUser): Promise<User> {
@@ -279,9 +287,9 @@ async getApplicantById(id: number): Promise<any | undefined> {
       .update(applicants)
       .set({ profileCompletionPercentage: step })
       .where(eq(applicants.id, applicantId));
-    console.log(`✅ Progress updated to step ${step} for applicant ${applicantId}`);
+    console.log(`Progress updated to step ${step} for applicant ${applicantId}`);
   } else {
-    console.log(`ℹ️ Step ${step} ignored (already at ${current.progress})`);
+    console.log(`Step ${step} ignored (already at ${current.progress})`);
   }
 }
 
@@ -555,13 +563,23 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
       .select()
       .from(notices)
       .orderBy(desc(notices.createdAt));
+  }  
+async getFaq() {
+  return await db
+    .select()
+    .from(faq)
+    // .groupBy(faq.category)
+  .orderBy(desc(faq.category))
   }
-
   async createNotice(notice: Omit<Notice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notice> {
     const [newNotice] = await db.insert(notices).values(notice).returning();
     return newNotice;
   }
 
+  async createFaqs( faqs: Omit<Faq,'id' | 'createdAt'>) {
+    const [newFaqs] = await db.insert(faq).values(faqs).returning();
+    return newFaqs;
+  }
   async updateNotice(id: number, notice: Partial<Notice>): Promise<Notice> {
     const [updatedNotice] = await db
       .update(notices)
@@ -677,7 +695,6 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
         completed: applicant.documents?.length > 0,
       },
     ];
-
     const completedSteps = steps.filter((s) => s.completed).length;
     const percentage = Math.round((completedSteps / steps.length) * 100);
 
@@ -795,9 +812,7 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
 
   async upsertEmployeeDetails(applicantId: number, employeeData: Partial<InsertEmployee>): Promise<Employee> {
     const dataEmployee: any = { ...employeeData }
-    // Fix date-only fields
-    console.log("AT EMPLOYEE END", dataEmployee);
-    
+    // Fix date-only fields    
   if (dataEmployee.dofa) {
     dataEmployee.dofa = new Date(dataEmployee.dofa);
   }

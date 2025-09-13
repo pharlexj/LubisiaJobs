@@ -30,18 +30,18 @@ export default function BoardDashboard() {
   });
 
   // Calculate statistics
-  const pendingReview = applications.filter(app => app.status === 'submitted').length;
-  const shortlisted = applications.filter(app => app.status === 'shortlisted').length;
-  const interviewed = applications.filter(app => app.status === 'interviewed').length;
-  const appointed = applications.filter(app => app.status === 'hired').length;
+  const pendingReview = (applications as any).filter((app:any) => app.status === 'submitted').length;
+  const shortlisted = (applications as any).filter((app: any) => app.status === 'shortlisted').length;
+  const interviewed = (applications as any).filter((app: any) => app.status === 'interviewed').length;
+  const appointed = (applications as any).filter((app: any) => app.status === 'hired').length;
 
   // Recent activity
-  const recentApplications = applications
-    .filter(app => app.status === 'submitted')
+  const recentApplications = (applications as any)
+    .filter((app:any) => app.status === 'submitted')
     .slice(0, 5);
 
-  const upcomingInterviews = applications
-    .filter(app => app.status === 'shortlisted' && app.interviewDate)
+  const upcomingInterviews = (applications as any)
+    .filter((app:any) => app.status === 'shortlisted' && app.interviewDate)
     .slice(0, 3);
 
   const getStatusColor = (status: string) => {
@@ -184,7 +184,7 @@ export default function BoardDashboard() {
                     <p className="text-gray-500 text-center py-4">No applications pending review</p>
                   ) : (
                     <div className="space-y-4">
-                      {recentApplications.map((application) => (
+                      {recentApplications.map((application:any) => (
                         <div key={application.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
                           <div className="flex items-center space-x-3">
                             <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
@@ -233,7 +233,7 @@ export default function BoardDashboard() {
                     <p className="text-gray-500 text-center py-4">No interviews scheduled</p>
                   ) : (
                     <div className="space-y-4">
-                      {upcomingInterviews.map((application) => (
+                      {upcomingInterviews.map((application:any) => (
                         <div key={application.id} className="p-3 border border-gray-200 rounded-lg">
                           <div className="flex items-center justify-between mb-2">
                             <h4 className="font-medium text-gray-900">

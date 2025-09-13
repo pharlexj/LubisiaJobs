@@ -341,6 +341,14 @@ export const employmentHistory = pgTable("employment_history", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const faq = pgTable("faq", {
+    id: serial("id").primaryKey(),
+    category: varchar("category",{length:150}),
+    question: varchar("question",{length:255}),
+    answer: text("answer"),
+    createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Referees
 export const referees = pgTable("referees", {
   id: serial("id").primaryKey(),
@@ -562,3 +570,4 @@ export type InsertEmployee = typeof employees.$inferInsert;
 export type Institution = typeof institutions.$inferSelect;
 export type CertificateLevel = typeof certificateLevel.$inferSelect;
 export type ShortCourse = typeof shortCourse.$inferSelect;
+export type Faq = typeof faq.$inferSelect;

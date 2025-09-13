@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from '@/hooks/use-toast';
 import { Search, MessageCircle, Phone, Mail } from 'lucide-react';
 
@@ -17,68 +18,30 @@ export default function FAQs() {
     { id: 'technical', label: 'Technical Support', count: 2 },
   ];
 
-  const faqs = [
-    {
-      category: 'application',
-      question: 'How do I apply for a job through the online portal?',
-      answer: 'To apply for a job, you need to: 1) Create an account and complete your profile, 2) Browse available job opportunities, 3) Click "Apply Now" on jobs that match your qualifications, 4) Submit your application before the deadline. You can track your application status through your dashboard.'
-    },
-    {
-      category: 'application',
-      question: 'What documents do I need to upload?',
-      answer: 'Required documents include: National ID copy, Academic certificates and transcripts, Professional certificates (if applicable), KRA PIN certificate, Good conduct certificate from DCI, and Passport-size photographs. All documents should be in PDF format and not exceed 5MB each.'
-    },
-    {
-      category: 'requirements',
-      question: 'What are the minimum qualifications for county jobs?',
-      answer: 'Minimum qualifications vary by position. Generally, entry-level positions require KCSE mean grade C+ and relevant certificates/diplomas. Senior positions require degree qualifications with relevant experience. Specific requirements are listed in each job advertisement.'
-    },
-    {
-      category: 'requirements',
-      question: 'Can I apply if I don\'t meet all the listed requirements?',
-      answer: 'We recommend applying only if you meet the minimum required qualifications. However, equivalent qualifications or extensive relevant experience may be considered. The system will validate your qualifications before allowing you to submit an application.'
-    },
-    {
-      category: 'selection',
-      question: 'How does the selection process work?',
-      answer: 'The selection process includes: 1) Application screening, 2) Shortlisting based on qualifications, 3) Written tests (if applicable), 4) Interviews by a panel, 5) Reference checks, 6) Final selection and appointment. You will be notified at each stage via SMS and email.'
-    },
-    {
-      category: 'selection',
-      question: 'How long does the recruitment process take?',
-      answer: 'The complete recruitment process typically takes 4-8 weeks from the application deadline. This includes shortlisting (1 week), interviews (2-3 weeks), and final selection (1-2 weeks). Timelines may vary depending on the position and number of applicants.'
-    },
-    {
-      category: 'account',
-      question: 'I forgot my password. How can I reset it?',
-      answer: 'Click on "Forgot Password" on the login page and enter your email address. You will receive a password reset link via email. Follow the instructions to create a new password. If you don\'t receive the email, check your spam folder or contact support.'
-    },
-    {
-      category: 'account',
-      question: 'Can I update my profile after submitting an application?',
-      answer: 'Yes, you can update your profile information at any time. However, changes made after submitting an application will not affect that specific application. Make sure your profile is complete and accurate before applying for positions.'
-    },
-    {
-      category: 'technical',
-      question: 'The website is not working properly. What should I do?',
-      answer: 'First, try refreshing the page and clearing your browser cache. Ensure you\'re using a supported browser (Chrome, Firefox, Safari, Edge). If problems persist, contact our technical support team with details about the issue, including error messages and browser information.'
-    },
-    {
-      category: 'application',
-      question: 'Can I apply for multiple positions simultaneously?',
-      answer: 'Yes, you can apply for multiple positions as long as you meet the qualifications for each. However, ensure you can commit to any position you apply for, as successful candidates are expected to honor their commitments.'
-    },
-    {
-      category: 'requirements',
-      question: 'Do I need work experience for entry-level positions?',
-      answer: 'Entry-level positions typically don\'t require prior work experience, but relevant internships, volunteer work, or part-time experience can be advantageous. Focus on demonstrating your skills, knowledge, and enthusiasm for public service.'
-    },
-    {
-      category: 'selection',
-      question: 'What should I expect during the interview?',
-      answer: 'Interviews typically include questions about your qualifications, experience, knowledge of the role, and commitment to public service. You may also face situational questions and competency-based assessments. Dress professionally and arrive early.'
+  const { data: faqs = [], isLoading } = useQuery({
+    queryKey : [`/api/public/faqs`],
+  });
+  if (isLoading) {
+      return (
+        <div className="min-h-screen bg-neutral-50">
+          <Navigation />
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="animate-pulse space-y-6">
+              {[...Array(5)].map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-6">
+                    <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+                    <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
     }
-  ];
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -112,13 +75,13 @@ export default function FAQs() {
 
         {/* Category Filter */}
         <div className="flex flex-wrap gap-2 mb-8">
-          {faqCategories.map((category) => (
+          {(faqs as any).map((category:any) => (
             <Badge
               key={category.id}
               variant={category.id === 'all' ? 'default' : 'outline'}
               className="cursor-pointer hover:bg-primary hover:text-white transition-colors px-4 py-2"
             >
-              {category.label} ({category.count})
+              {category.category} ({category.category.length})
             </Badge>
           ))}
         </div>
@@ -127,7 +90,7 @@ export default function FAQs() {
         <Card className="mb-12">
           <CardContent className="p-6">
             <Accordion type="single" collapsible className="space-y-4">
-              {faqs.map((faq, index) => (
+              {(faqs as any).map((faq:any, index:any) => (
                 <AccordionItem key={index} value={`item-${index}`}>
                   <AccordionTrigger className="text-left hover:text-primary">
                     <div className="flex items-start space-x-3">

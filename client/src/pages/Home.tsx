@@ -16,8 +16,8 @@ export default function Home() {
     queryKey: ['/api/public/notices'],
   });
 
-  const featuredJobs = jobs.slice(0, 3);
-  const recentNotices = notices.slice(0, 2);
+  const featuredJobs = (jobs as any).slice(0, 3);
+  const recentNotices = (notices as any).slice(0, 2);
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -61,7 +61,7 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredJobs.map((job) => (
+            {featuredJobs.map((job:any) => (
               <Card key={job.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
@@ -117,7 +117,7 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {recentNotices.map((notice) => (
+            {recentNotices.map((notice:any) => (
               <Card key={notice.id} className="hover:shadow-sm transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-3">

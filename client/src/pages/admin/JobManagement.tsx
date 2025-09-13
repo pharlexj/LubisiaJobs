@@ -18,7 +18,7 @@ import { isUnauthorizedError } from '@/lib/authUtils';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Job, Department, Designation, CourseOffered, Jg,CertificateLevel,StudyArea } from '@shared/schema';
+import type { Job, Department, Designation, CourseOffered, Jg,CertificateLevel,StudyArea as StudyAreas } from '@shared/schema';
 import { Plus, Edit, Eye,Trash2, Upload,Calendar, Users,Search, Filter} from 'lucide-react';
 
 const jobSchema = z
@@ -86,31 +86,26 @@ export default function AdminJobManagement() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<any>(null);
 
-const { data: config, isLoading } = useQuery<{
-    departments: Department[];
-    designations: Designation[];
-    courses: CourseOffered[];
-    certificatelevel: CertificateLevel[];
-    jobGroups: Jg[];
-    jobs: Job[];
-    studyArea: StudyArea[];
-  }>({
-    queryKey: ['/api/public/config'],
-  });
+
+  const { data: config, isLoading} = useQuery({
+      queryKey: ['/api/public/config'],
+      enabled: !!user && user.role === 'admin',
+    });
+  
+    const configData = config || {} as any;
 
   const { data: applications = [] } = useQuery<any[]>({
     queryKey: ['/api/admin/applications'],
     enabled: !!user && user.role === 'admin',
   });
 
-  const departments = config?.departments || [];
-  const designations = config?.designations || [];
-  const courses = config?.courses || [];
-  const certificateLevels = config?.certificatelevel || [];
-  const jobGroups = config?.jobGroups || [];
-  const jobs = config?.jobs || [];
-  const studyArea = config?.studyArea || [];
-
+  const departments = configData?.departments || [];
+  const designations = configData?.designations || [];
+  const courses = configData?.courses || [];
+  const certificateLevels = configData?.certificateLevels || [];
+  const jobGroups = configData?.jobGroups || [];
+  const jobs = configData?.jobs || [];
+  const studyArea = configData?.studyAreas || [];
 
   const form = useForm<JobFormData>({
     resolver: zodResolver(jobSchema),
@@ -204,7 +199,7 @@ const { data: config, isLoading } = useQuery<{
           variant: 'destructive',
         });
         setTimeout(() => {
-          window.location.href = '/api/login';
+          window.location.href = '/';
         }, 500);
         return;
       }
@@ -229,7 +224,7 @@ const { data: config, isLoading } = useQuery<{
     });
   };
 
-  const filteredJobs = jobs.filter(job => {
+  const filteredJobs = jobs.filter((job: any) => {
     const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          job.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDepartment = departmentFilter === 'all' || job.departmentId?.toString() === departmentFilter;
@@ -353,7 +348,7 @@ const { data: config, isLoading } = useQuery<{
                             <SelectValue placeholder="Select Job Group" />
                           </SelectTrigger>
                           <SelectContent>
-                            {jobGroups.map((group) => (
+                            {jobGroups.map((group:any) => (
                               <SelectItem key={group.id} value={group.id.toString()}>
                                 Job Group {group.name}
                               </SelectItem>
@@ -406,7 +401,7 @@ const { data: config, isLoading } = useQuery<{
                             <SelectValue placeholder="Select Department" />
                           </SelectTrigger>
                           <SelectContent>
-                            {departments.map((dept) => (
+                            {departments.map((dept:any) => (
                               <SelectItem key={dept.id} value={dept.id.toString()}>
                                 {dept.name}
                               </SelectItem>
@@ -445,9 +440,9 @@ const { data: config, isLoading } = useQuery<{
                             <SelectValue placeholder="Select Required Courses" />
                           </SelectTrigger>
                           <SelectContent>
-                            {studyArea.map((course) => (
-                              <SelectItem key={course.id} value={course.id.toString()}>
-                                {course.name}
+                            {studyArea.map((area:any) => (
+                              <SelectItem key={area.id} value={area.id.toString()}>
+                                {area.name}
                               </SelectItem>))}
                           </SelectContent>
                         </Select>
@@ -464,7 +459,7 @@ const { data: config, isLoading } = useQuery<{
                             <SelectValue placeholder="Select Certificate Level"/>                            
                           </SelectTrigger>
                           <SelectContent>
-                            {certificateLevels.map((certs) => (
+                            {certificateLevels.map((certs:any) => (
                               <SelectItem key={certs.id} value={certs.id.toString()}>
                                 {certs.name}
                               </SelectItem>
@@ -502,7 +497,7 @@ const { data: config, isLoading } = useQuery<{
                             <SelectValue placeholder="Select Designation" />
                           </SelectTrigger>
                           <SelectContent>
-                            {designations.map((designation) => (
+                            {designations.map((designation:any) => (
                               <SelectItem key={designation.id} value={designation.id.toString()}>
                                 {designation.name}
                               </SelectItem>
@@ -576,7 +571,7 @@ const { data: config, isLoading } = useQuery<{
               <Card>
                 <CardContent className="p-6 text-center">
                   <div className="text-3xl font-bold text-green-600 mb-2">
-                    {jobs.filter(job => job.isActive).length}
+                    {jobs.filter((job:any) => job.isActive).length}
                   </div>
                   <div className="text-gray-600">Active Jobs</div>
                 </CardContent>
@@ -620,7 +615,7 @@ const { data: config, isLoading } = useQuery<{
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Departments</SelectItem>
-                        {departments.map((dept) => (
+                        {departments.map((dept:any) => (
                           <SelectItem key={dept.id} value={dept.id.toString()}>
                             {dept.name}
                           </SelectItem>
@@ -675,18 +670,18 @@ const { data: config, isLoading } = useQuery<{
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredJobs.map((job) => (
+                        {filteredJobs.map((job:any) => (
                           <tr key={job.id} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="py-3 px-4">
                               <div className="font-medium text-gray-900">{job.title}</div>
                               <div className="text-sm text-gray-600">
                                 Job Group {
-                                  jobGroups.find(d => d.id === job.jg)?.name
+                                  jobGroups.find((d:any) => d.id === job.jg)?.name
                                 }
                               </div>
                             </td>
                             <td className="py-3 px-4 text-gray-600">
-                              {departments.find(dept => dept.id === job.departmentId)?.name}
+                              {departments.find((dept:any) => dept.id === job.departmentId)?.name}
                             </td>
                             <td className="py-3 px-4">
                               <Badge variant="outline">

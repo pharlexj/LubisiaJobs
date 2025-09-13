@@ -11,7 +11,7 @@ import { Calendar, Search, Filter, Download, Eye } from 'lucide-react';
 export default function Notices() {
   const { data: notices = [], isLoading } = useQuery({
     queryKey: ['/api/public/notices'],
-  });
+  });  
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [email, setEmail] = useState('');
@@ -127,7 +127,7 @@ export default function Notices() {
 
         {/* Notices List */}
         <div className="space-y-6">
-          {notices?.length === 0 ? (
+          {(notices as any)?.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
                 <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -138,7 +138,7 @@ export default function Notices() {
               </CardContent>
             </Card>
           ) : (
-            notices.map((notice) => (
+            (notices as any).map((notice: any) => (
               <Card key={notice.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between">
@@ -200,7 +200,7 @@ export default function Notices() {
         </div>
 
         {/* Load More Button */}
-        {notices.length > 0 && (
+        {(notices as any).length > 0 && (
           <div className="text-center mt-8">
             <Button 
               variant="outline" 

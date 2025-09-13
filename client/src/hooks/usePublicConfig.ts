@@ -84,6 +84,12 @@ type PublicConfig = {
   specializations: Specialization[];
   professionalQualification: any[];
   jobGroups: Jg[];
+  notices: any[];
+  faqs: any[];
+  wards: any[],
+  constituencie: any[],
+  admins: any[],
+  
 };
 
 export const usePublicConfig = () => {
