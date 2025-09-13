@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, AlertCircle, RefreshCw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
 import type { BoardMember } from '@shared/schema';
 
 export default function BoardLeadershipCarousel() {
-  const { data: boardMembers = [], isLoading } = useQuery({
+  const { data: boardMembers = [], isLoading, isError, refetch } = useQuery<BoardMember[]>({
     queryKey: ['/api/public/board-members'],
-  }) as { data: BoardMember[], isLoading: boolean };
+  });
   const [emblaRef, emblaApi] = useEmblaCarousel({ 
     loop: boardMembers.length > 1,
     align: 'start',
@@ -18,6 +19,20 @@ export default function BoardLeadershipCarousel() {
   const [canScrollPrev, setCanScrollPrev] = useState(false);
   const [canScrollNext, setCanScrollNext] = useState(false);
   
+  if (isError) {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Board Members</h3>
+        <p className="text-gray-600 mb-4">We're having trouble loading the board member information.</p>
+        <Button onClick={() => refetch()} variant="outline" className="flex items-center gap-2 mx-auto" data-testid="button-retry-board-members">
+          <RefreshCw className="w-4 h-4" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

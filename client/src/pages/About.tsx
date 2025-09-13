@@ -2,17 +2,24 @@ import Navigation from '@/components/layout/Navigation';
 import BoardLeadershipCarousel from '@/components/about/BoardLeadershipCarousel';
 import { Card, CardContent } from '@/components/ui/card';
 import { Building, Users, Target, Award, Shield, Heart } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function About() {
-  const { data: aboutConfig = {}, isLoading } = useQuery({
+  const queryClient = useQueryClient();
+  
+  const { data: aboutConfig = {}, isLoading: aboutLoading, isError: aboutError, refetch: refetchAbout } = useQuery<Record<string, any>>({
     queryKey: ['/api/public/system-config?section=about'],
   });
   
-  const { data: contactConfig = {} } = useQuery({
+  const { data: contactConfig = {}, isError: contactError, refetch: refetchContact } = useQuery<Record<string, any>>({
     queryKey: ['/api/public/system-config?section=contact'],
   });
+  
+  const isLoading = aboutLoading;
+  const isError = aboutError || contactError;
   
   // Default values for configuration
   const config = useMemo(() => ({
@@ -20,7 +27,12 @@ export default function About() {
     heroDescription: aboutConfig.heroDescription || 'Committed to building a professional, efficient, and responsive public service that serves the people of Trans Nzoia County with excellence.',
     mission: aboutConfig.mission || 'To provide strategic human resource management services that promote good governance, integrity, and service delivery in Trans Nzoia County.',
     vision: aboutConfig.vision || 'To be a leading public service board that attracts, develops, and retains competent human resources for effective service delivery.',
-    values: aboutConfig.values ? aboutConfig.values.split(',').map((v: string) => v.trim()) : ['Integrity', 'Professionalism', 'Transparency', 'Accountability', 'Innovation'],
+    values: (() => {
+      if (!aboutConfig.values) return ['Integrity', 'Professionalism', 'Transparency', 'Accountability', 'Innovation'];
+      if (Array.isArray(aboutConfig.values)) return aboutConfig.values;
+      if (typeof aboutConfig.values === 'string') return aboutConfig.values.split(',').map((v: string) => v.trim());
+      return ['Integrity', 'Professionalism', 'Transparency', 'Accountability', 'Innovation'];
+    })(),
     whoWeAre: aboutConfig.whoWeAre || 'The Trans Nzoia County Public Service Board was established under the County Governments Act 2012 to provide human resource management services to the County Government of Trans Nzoia.\n\nWe are responsible for recruitment, selection, promotion, discipline, and dismissal of county public officers in accordance with the Constitution of Kenya 2010 and other relevant legislation.\n\nOur board consists of experienced professionals committed to ensuring merit-based recruitment and maintaining high standards of public service in Trans Nzoia County.',
     officeLocation: contactConfig.officeLocation || 'Trans Nzoia County Headquarters\nP.O. Box 4210-30200\nKitale, Kenya',
     contactPhone: contactConfig.contactPhone || '+254 713 635 352',
@@ -29,6 +41,32 @@ export default function About() {
     officeHours: contactConfig.officeHours || 'Monday - Friday: 8:00 AM - 5:00 PM\nSaturday & Sunday: Closed'
   }), [aboutConfig, contactConfig]);
   
+  const handleRetry = () => {
+    refetchAbout();
+    refetchContact();
+  };
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-neutral-50">
+        <Navigation />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-16">
+            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Unable to Load Page</h2>
+            <p className="text-gray-600 mb-6">
+              We're having trouble loading the page content. Please try again.
+            </p>
+            <Button onClick={handleRetry} className="flex items-center gap-2" data-testid="button-retry-about">
+              <RefreshCw className="w-4 h-4" />
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-neutral-50">
