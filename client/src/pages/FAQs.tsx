@@ -1,26 +1,61 @@
+import { useState, useMemo } from 'react';
 import Navigation from '@/components/layout/Navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from '@/hooks/use-toast';
 import { Search, MessageCircle, Phone, Mail } from 'lucide-react';
+import DOMPurify from 'dompurify';
+import type { Faq } from '@shared/schema';
 
 export default function FAQs() {
   const { toast } = useToast();
-  const faqCategories = [
-    { id: 'all', label: 'All Questions', count: 24 },
-    { id: 'application', label: 'Application Process', count: 8 },
-    { id: 'requirements', label: 'Requirements', count: 6 },
-    { id: 'selection', label: 'Selection Process', count: 5 },
-    { id: 'account', label: 'Account Management', count: 3 },
-    { id: 'technical', label: 'Technical Support', count: 2 },
-  ];
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   const { data: faqs = [], isLoading } = useQuery({
-    queryKey : [`/api/public/faqs`],
-  });
+    queryKey: ['/api/public/faqs'],
+  }) as { data: Faq[], isLoading: boolean };
+  
+  // Get unique categories from actual FAQ data
+  const categories = useMemo(() => {
+    const uniqueCategories = [...new Set(faqs.map(faq => faq.category).filter(Boolean))];
+    return [
+      { id: 'all', label: 'All Questions', count: faqs.length },
+      ...uniqueCategories.map(category => ({
+        id: category!,
+        label: category!,
+        count: faqs.filter(faq => faq.category === category).length
+      }))
+    ];
+  }, [faqs]);
+  
+  // Sanitize and format FAQ answer
+  const formatAnswer = (answer: string | null | undefined) => {
+    if (!answer) return 'Answer not available.';
+    
+    // Sanitize HTML to prevent XSS attacks
+    return DOMPurify.sanitize(answer.replace(/\n/g, '<br>'), {
+      ALLOWED_TAGS: ['br', 'p', 'strong', 'em', 'u', 'ol', 'ul', 'li', 'a'],
+      ALLOWED_ATTR: ['href', 'target']
+    });
+  };
+  
+  // Filter FAQs based on search term and selected category
+  const filteredFaqs = useMemo(() => {
+    return faqs.filter(faq => {
+      const matchesSearch = !searchTerm || 
+        faq.question?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        faq.answer?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesCategory = selectedCategory === 'all' || faq.category === selectedCategory;
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [faqs, searchTerm, selectedCategory]);
   if (isLoading) {
       return (
         <div className="min-h-screen bg-neutral-50">
@@ -64,10 +99,13 @@ export default function FAQs() {
           <CardContent className="p-6">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
+              <Input
                 type="text"
                 placeholder="Search for answers..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                data-testid="input-faq-search"
               />
             </div>
           </CardContent>
@@ -75,13 +113,15 @@ export default function FAQs() {
 
         {/* Category Filter */}
         <div className="flex flex-wrap gap-2 mb-8">
-          {(faqs as any).map((category:any) => (
+          {categories.map((category) => (
             <Badge
               key={category.id}
-              variant={category.id === 'all' ? 'default' : 'outline'}
+              variant={selectedCategory === category.id ? 'default' : 'outline'}
               className="cursor-pointer hover:bg-primary hover:text-white transition-colors px-4 py-2"
+              onClick={() => setSelectedCategory(category.id)}
+              data-testid={`badge-category-${category.id}`}
             >
-              {category.category} ({category.category.length})
+              {category.label} ({category.count})
             </Badge>
           ))}
         </div>
@@ -89,26 +129,53 @@ export default function FAQs() {
         {/* FAQ Accordion */}
         <Card className="mb-12">
           <CardContent className="p-6">
-            <Accordion type="single" collapsible className="space-y-4">
-              {(faqs as any).map((faq:any, index:any) => (
-                <AccordionItem key={index} value={`item-${index}`}>
-                  <AccordionTrigger className="text-left hover:text-primary">
-                    <div className="flex items-start space-x-3">
-                      <Badge 
-                        variant="outline" 
-                        className="mt-1 text-xs"
-                      >
-                        {faq.category}
-                      </Badge>
-                      <span>{faq.question}</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="text-gray-600 pt-4">
-                    {faq.answer}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+            {filteredFaqs.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-600 mb-4">
+                  {searchTerm || selectedCategory !== 'all' ? 'No FAQs found matching your criteria.' : 'No FAQs available.'}
+                </p>
+                {(searchTerm || selectedCategory !== 'all') && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => { setSearchTerm(''); setSelectedCategory('all'); }}
+                    data-testid="button-clear-filters"
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <Accordion type="single" collapsible className="space-y-4">
+                {filteredFaqs.map((faq, index) => {
+                  const itemId = faq.id ?? index;
+                  return (
+                    <AccordionItem key={itemId} value={`item-${itemId}`}>
+                      <AccordionTrigger className="text-left hover:text-primary" data-testid={`accordion-trigger-${itemId}`}>
+                        <div className="flex items-start space-x-3">
+                          {faq.category && (
+                            <Badge 
+                              variant="outline" 
+                              className="mt-1 text-xs flex-shrink-0"
+                            >
+                              {faq.category}
+                            </Badge>
+                          )}
+                          <span className="text-left">{faq.question}</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="text-gray-600 pt-4" data-testid={`accordion-content-${itemId}`}>
+                        <div 
+                          className="prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{
+                            __html: formatAnswer(faq.answer)
+                          }}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+            )}
           </CardContent>
         </Card>
 
@@ -140,6 +207,7 @@ export default function FAQs() {
                     navigator.clipboard.writeText('+254 713 635 352');
                     toast({ title: 'Phone Number Copied', description: 'Phone number copied to clipboard' });
                   }}
+                  data-testid="button-copy-phone"
                 >
                    +254 713 635 352
                 </Button>
@@ -158,6 +226,7 @@ export default function FAQs() {
                     navigator.clipboard.writeText('support@cpsbtransnzoia.co.ke');
                     toast({ title: 'Email Copied', description: 'Email address copied to clipboard' });
                   }}
+                  data-testid="button-copy-email"
                 >
                   support@cpsbtransnzoia.co.ke
                 </Button>
@@ -172,6 +241,7 @@ export default function FAQs() {
                 <Button 
                   size="sm"
                   onClick={() => toast({ title: 'Live Chat', description: 'Live chat feature coming soon!' })}
+                  data-testid="button-live-chat"
                 >
                   Start Chat
                 </Button>
