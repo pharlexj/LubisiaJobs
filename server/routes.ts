@@ -428,6 +428,219 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
     }
   });
 
+  // Admin system configuration routes
+  app.post('/api/admin/system-config', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const config = await storage.upsertSystemConfig(req.body);
+      res.json(config);
+    } catch (error) {
+      console.error('Error creating system config:', error);
+      res.status(500).json({ message: 'Failed to create system config' });
+    }
+  });
+
+  // Admin gallery management routes
+  app.post('/api/admin/gallery', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const galleryItem = await storage.createGalleryItem(req.body);
+      res.json(galleryItem);
+    } catch (error) {
+      console.error('Error creating gallery item:', error);
+      res.status(500).json({ message: 'Failed to create gallery item' });
+    }
+  });
+
+  // Get user permissions and navigation based on role
+  app.get('/api/auth/permissions', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      let permissions: string[] = [];
+      let navigation: any[] = [];
+
+      switch (user.role) {
+        case 'admin':
+          permissions = [
+            'admin.dashboard.view',
+            'admin.jobs.manage',
+            'admin.applications.view',
+            'admin.applications.update', 
+            'admin.reports.view',
+            'admin.notifications.send',
+            'admin.settings.manage',
+            'admin.users.manage'
+          ];
+          navigation = [
+            { 
+              href: '/admin', 
+              icon: 'LayoutDashboard', 
+              label: 'Dashboard', 
+              description: 'Admin overview' 
+            },
+            { 
+              href: '/admin/jobs', 
+              icon: 'Briefcase', 
+              label: 'Job Management', 
+              description: 'Create & manage jobs' 
+            },
+            { 
+              href: '/admin/applications', 
+              icon: 'Users', 
+              label: 'Applications', 
+              description: 'Review applications' 
+            },
+            { 
+              href: '/admin/reports', 
+              icon: 'BarChart3', 
+              label: 'Reports', 
+              description: 'Generate reports' 
+            },
+            { 
+              href: '/admin/notifications', 
+              icon: 'Bell', 
+              label: 'Notifications', 
+              description: 'Send notifications' 
+            },
+            { 
+              href: '/admin/settings', 
+              icon: 'Settings', 
+              label: 'System Config', 
+              description: 'System settings' 
+            }
+          ];
+          break;
+
+        case 'board':
+          permissions = [
+            'board.dashboard.view',
+            'board.shortlisting.manage',
+            'board.interviews.manage',
+            'board.scoring.manage',
+            'board.reports.view'
+          ];
+          navigation = [
+            { 
+              href: '/board', 
+              icon: 'LayoutDashboard', 
+              label: 'Dashboard', 
+              description: 'Committee overview' 
+            },
+            { 
+              href: '/board/shortlisting', 
+              icon: 'CheckCircle', 
+              label: 'Shortlisting', 
+              description: 'Review & shortlist' 
+            },
+            { 
+              href: '/board/interviews', 
+              icon: 'Calendar', 
+              label: 'Interviews', 
+              description: 'Schedule & conduct' 
+            },
+            { 
+              href: '/board/reports', 
+              icon: 'BarChart3', 
+              label: 'Reports', 
+              description: 'Selection reports' 
+            }
+          ];
+          break;
+
+        case 'applicant':
+          permissions = [
+            'applicant.dashboard.view',
+            'applicant.profile.manage',
+            'applicant.applications.view',
+            'applicant.applications.create',
+            'applicant.documents.upload',
+            'jobs.public.view'
+          ];
+          navigation = [
+            { 
+              href: '/dashboard', 
+              icon: 'LayoutDashboard', 
+              label: 'Dashboard', 
+              description: 'Overview and stats' 
+            },
+            { 
+              href: '/profile', 
+              icon: 'User', 
+              label: 'Profile', 
+              description: 'Complete your profile' 
+            },
+            { 
+              href: '/applications', 
+              icon: 'FileText', 
+              label: 'My Applications', 
+              description: 'Track applications' 
+            },
+            { 
+              href: '/jobs', 
+              icon: 'Search', 
+              label: 'Browse Jobs', 
+              description: 'Find opportunities' 
+            },
+            { 
+              href: '/documents', 
+              icon: 'Upload', 
+              label: 'Documents', 
+              description: 'Upload certificates' 
+            }
+          ];
+          break;
+
+        default:
+          permissions = ['jobs.public.view'];
+          navigation = [];
+      }
+
+      res.json({
+        role: user.role,
+        permissions,
+        navigation,
+        redirectUrl: user.role === 'admin' ? '/admin' : user.role === 'board' ? '/board' : user.role === 'applicant' ? '/dashboard' : '/'
+      });
+    } catch (error) {
+      console.error('Error fetching user permissions:', error);
+      res.status(500).json({ message: 'Failed to fetch permissions' });
+    }
+  });
+
+  // Get available roles (for admin role management)
+  app.get('/api/admin/roles', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const roles = [
+        { value: 'admin', label: 'Administrator', description: 'Full system access and management' },
+        { value: 'board', label: 'Board Member', description: 'Interview and selection management' },
+        { value: 'applicant', label: 'Applicant', description: 'Job application and profile management' }
+      ];
+
+      res.json(roles);
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+      res.status(500).json({ message: 'Failed to fetch roles' });
+    }
+  });
+
   // Get active jobs
   app.get('/api/public/jobs', async (req, res) => {
     try {

@@ -35,12 +35,12 @@ export default function AdminApplications() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
 
-  const { data: applications = [], isLoading } = useQuery({
+  const { data: applications = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/applications'],
     enabled: !!user && user.role === 'admin',
   });
 
-  const { data: jobs = [] } = useQuery({
+  const { data: jobs = [] } = useQuery<any[]>({
     queryKey: ['/api/public/jobs'],
   });
 
@@ -109,7 +109,7 @@ export default function AdminApplications() {
     }
   };
 
-  const filteredApplications = applications.filter(app => {
+  const filteredApplications = applications.filter((app: any) => {
     const matchesSearch = 
       app.applicant?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.applicant?.surname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -120,7 +120,7 @@ export default function AdminApplications() {
     return matchesSearch && matchesJob && matchesStatus;
   });
 
-  const statusCounts = applications.reduce((acc, app) => {
+  const statusCounts = applications.reduce((acc: any, app: any) => {
     acc[app.status] = (acc[app.status] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
@@ -231,7 +231,7 @@ export default function AdminApplications() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Jobs</SelectItem>
-                        {jobs.map((job) => (
+                        {jobs.map((job: any) => (
                           <SelectItem key={job.id} value={job.id.toString()}>
                             {job.title}
                           </SelectItem>
@@ -293,7 +293,7 @@ export default function AdminApplications() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredApplications.map((application) => (
+                        {filteredApplications.map((application: any) => (
                           <tr key={application.id} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="py-3 px-4">
                               <div className="flex items-center space-x-3">

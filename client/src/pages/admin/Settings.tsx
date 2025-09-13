@@ -32,7 +32,10 @@ import {
   Briefcase,
   HomeIcon,
   HouseIcon,
-  Building2
+  Building2,
+  Info,
+  Camera,
+  Globe
 } from 'lucide-react';
 
 // Form schemas
@@ -96,6 +99,20 @@ const roleAssignmentSchema = z.object({
   assignedBy: z.string().optional(),
 });
 
+const aboutConfigSchema = z.object({
+  key: z.string().min(1, "Key is required"),
+  value: z.string().min(1, "Value is required"),
+  section: z.string().default('about'),
+});
+
+const galleryItemSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  category: z.string().min(1, "Category is required"),
+  imageUrl: z.string().optional(),
+  eventDate: z.string().optional(),
+});
+
 type NoticeFormData = z.infer<typeof noticeSchema>;
 type CountyFormData = z.infer<typeof countySchema>;
 type ConstituencyFormData = z.infer<typeof constituencySchema>;
@@ -108,6 +125,8 @@ type EthnicityFormData = z.infer<typeof ethnicitySchema>;
 type FaqFormData = z.infer<typeof faqSchema>;
 type DeptFormData = z.infer<typeof deptSchema>;
 type RoleAssignmentFormData = z.infer<typeof roleAssignmentSchema>;
+type AboutConfigFormData = z.infer<typeof aboutConfigSchema>;
+type GalleryItemFormData = z.infer<typeof galleryItemSchema>;
 
 export default function AdminSettings() {
   const { user } = useAuth();
@@ -140,6 +159,22 @@ export default function AdminSettings() {
   const ethnicity = configData.ethnicity || [];
   const departments = configData.departments || [];
   const admins = configData.admins || [];
+
+  // Fetch About and Gallery data
+  const { data: aboutConfig = {} } = useQuery<Record<string, any>>({
+    queryKey: ['/api/public/system-config?section=about'],
+    enabled: !!user && user.role === 'admin',
+  });
+  
+  const { data: contactConfig = {} } = useQuery<Record<string, any>>({
+    queryKey: ['/api/public/system-config?section=contact'],
+    enabled: !!user && user.role === 'admin',
+  });
+  
+  const { data: galleryItems = [] } = useQuery<any[]>({
+    queryKey: ['/api/public/gallery'],
+    enabled: !!user && user.role === 'admin',
+  });
   // Forms
   const noticeForm = useForm<NoticeFormData>({ resolver: zodResolver(noticeSchema) });
   const countyForm = useForm<CountyFormData>({ resolver: zodResolver(countySchema) });
@@ -153,6 +188,8 @@ export default function AdminSettings() {
   const faqForm = useForm<FaqFormData>({ resolver: zodResolver(faqSchema) });
   const deptForm = useForm<DeptFormData>({ resolver: zodResolver(deptSchema) });
   const roleAssignmentForm = useForm<RoleAssignmentFormData>({ resolver: zodResolver(roleAssignmentSchema) });
+  const aboutConfigForm = useForm<AboutConfigFormData>({ resolver: zodResolver(aboutConfigSchema) });
+  const galleryItemForm = useForm<GalleryItemFormData>({ resolver: zodResolver(galleryItemSchema) });
 
   // Generic mutation handler
   const createMutation = useMutation({
@@ -178,6 +215,8 @@ export default function AdminSettings() {
       else if (variables.endpoint.includes('ethnicity')) ethnicityForm.reset();
       else if (variables.endpoint.includes('faqs')) faqForm.reset();
       else if (variables.endpoint.includes('dept')) deptForm.reset();
+      else if (variables.endpoint.includes('system-config')) aboutConfigForm.reset();
+      else if (variables.endpoint.includes('gallery')) galleryItemForm.reset();
     },
     onError: (error: any) => {
       toast({
@@ -243,6 +282,18 @@ export default function AdminSettings() {
       icon: HelpCircle,
       description: 'Manage frequently asked questions'
     },
+    {
+      id: 'about',
+      label: 'About Page',
+      icon: Info,
+      description: 'Manage about page content'
+    },
+    {
+      id: 'gallery',
+      label: 'Gallery',
+      icon: Camera,
+      description: 'Manage gallery items and images'
+    },
   ];
 
   const handleCreateNotice = (data: NoticeFormData) => {
@@ -304,6 +355,18 @@ export default function AdminSettings() {
     });
   };
 
+  const handleCreateAboutConfig = (data: AboutConfigFormData) => {
+    createMutation.mutate({ endpoint: '/api/admin/system-config', data });
+  };
+
+  const handleCreateGalleryItem = (data: GalleryItemFormData) => {
+    const processedData = {
+      ...data,
+      eventDate: data.eventDate ? new Date(data.eventDate).toISOString() : null
+    };
+    createMutation.mutate({ endpoint: '/api/admin/gallery', data: processedData });
+  };
+
   const filteredConstituencies = selectedCounty 
     ? constituencies.filter((c: any) => c.countyId === parseInt(selectedCounty))
     : [];
@@ -334,7 +397,7 @@ export default function AdminSettings() {
 
             {/* Configuration Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-8 mb-8">
+              <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10 mb-8">
                 {tabs.map((tab) => (
                   <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-2">
                     <tab.icon className="w-4 h-4" />
@@ -1263,6 +1326,274 @@ export default function AdminSettings() {
                       )})}
                     </div>
                     
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* About Page Management Tab */}
+              <TabsContent value="about">
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle>About Page Configuration</CardTitle>
+                        <p className="text-sm text-gray-600 mt-1">Manage content displayed on the about page</p>
+                      </div>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Config
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Add About Page Configuration</DialogTitle>
+                          </DialogHeader>
+                          <form onSubmit={aboutConfigForm.handleSubmit(handleCreateAboutConfig)} className="space-y-4">
+                            <div>
+                              <Label htmlFor="config-key">Configuration Key</Label>
+                              <Select onValueChange={(value) => aboutConfigForm.setValue('key', value)}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select configuration key" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="heroTitle">Hero Title</SelectItem>
+                                  <SelectItem value="heroDescription">Hero Description</SelectItem>
+                                  <SelectItem value="mission">Mission Statement</SelectItem>
+                                  <SelectItem value="vision">Vision Statement</SelectItem>
+                                  <SelectItem value="values">Values (comma-separated)</SelectItem>
+                                  <SelectItem value="whoWeAre">Who We Are Content</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              {aboutConfigForm.formState.errors.key && (
+                                <p className="text-sm text-red-600 mt-1">
+                                  {aboutConfigForm.formState.errors.key.message}
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <Label htmlFor="config-value">Content</Label>
+                              <Textarea 
+                                id="config-value" 
+                                {...aboutConfigForm.register('value')} 
+                                placeholder="Enter the content for this configuration"
+                                rows={4}
+                              />
+                              {aboutConfigForm.formState.errors.value && (
+                                <p className="text-sm text-red-600 mt-1">
+                                  {aboutConfigForm.formState.errors.value.message}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex justify-end space-x-2">
+                              <Button type="submit">Add Configuration</Button>
+                            </div>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {Object.keys(aboutConfig).length === 0 ? (
+                          <div className="text-center py-8 text-gray-500">
+                            <Info className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                            <p>No about page configuration found. Click "Add Config" to get started.</p>
+                          </div>
+                        ) : (
+                          Object.entries(aboutConfig).map(([key, value]) => (
+                            <Card key={key}>
+                              <CardContent className="p-4">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wide">{key}</h4>
+                                    <p className="text-gray-900 mt-1">{String(value).substring(0, 200)}{String(value).length > 200 ? '...' : ''}</p>
+                                  </div>
+                                  <div className="flex space-x-2 ml-4">
+                                    <Button variant="ghost" size="sm">
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm">
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Contact Information</CardTitle>
+                      <p className="text-sm text-gray-600 mt-1">Manage contact details displayed on the about page</p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {Object.keys(contactConfig).length === 0 ? (
+                          <div className="text-center py-8 text-gray-500">
+                            <Globe className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                            <p>No contact configuration found.</p>
+                          </div>
+                        ) : (
+                          Object.entries(contactConfig).map(([key, value]) => (
+                            <Card key={key}>
+                              <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wide">{key}</h4>
+                                    <p className="text-gray-900">{String(value)}</p>
+                                  </div>
+                                  <Button variant="ghost" size="sm">
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              {/* Gallery Management Tab */}
+              <TabsContent value="gallery">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Gallery Management</CardTitle>
+                      <p className="text-sm text-gray-600 mt-1">Manage gallery items and images</p>
+                    </div>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Gallery Item
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add Gallery Item</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={galleryItemForm.handleSubmit(handleCreateGalleryItem)} className="space-y-4">
+                          <div>
+                            <Label htmlFor="gallery-title">Title</Label>
+                            <Input 
+                              id="gallery-title" 
+                              {...galleryItemForm.register('title')} 
+                              placeholder="Gallery item title"
+                            />
+                            {galleryItemForm.formState.errors.title && (
+                              <p className="text-sm text-red-600 mt-1">
+                                {galleryItemForm.formState.errors.title.message}
+                              </p>
+                            )}
+                          </div>
+                          <div>
+                            <Label htmlFor="gallery-description">Description</Label>
+                            <Textarea 
+                              id="gallery-description" 
+                              {...galleryItemForm.register('description')} 
+                              placeholder="Gallery item description"
+                              rows={3}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="gallery-category">Category</Label>
+                            <Select onValueChange={(value) => galleryItemForm.setValue('category', value)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="meetings">Meetings</SelectItem>
+                                <SelectItem value="training">Training</SelectItem>
+                                <SelectItem value="recruitment">Recruitment</SelectItem>
+                                <SelectItem value="events">Events</SelectItem>
+                                <SelectItem value="awards">Awards</SelectItem>
+                                <SelectItem value="outreach">Outreach</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {galleryItemForm.formState.errors.category && (
+                              <p className="text-sm text-red-600 mt-1">
+                                {galleryItemForm.formState.errors.category.message}
+                              </p>
+                            )}
+                          </div>
+                          <div>
+                            <Label htmlFor="gallery-imageUrl">Image URL</Label>
+                            <Input 
+                              id="gallery-imageUrl" 
+                              {...galleryItemForm.register('imageUrl')} 
+                              placeholder="https://example.com/image.jpg"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="gallery-eventDate">Event Date</Label>
+                            <Input 
+                              id="gallery-eventDate" 
+                              type="date"
+                              {...galleryItemForm.register('eventDate')} 
+                            />
+                          </div>
+                          <div className="flex justify-end space-x-2">
+                            <Button type="submit">Add Gallery Item</Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {galleryItems.length === 0 ? (
+                        <div className="col-span-3 text-center py-8 text-gray-500">
+                          <Camera className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                          <p>No gallery items yet. Click "Add Gallery Item" to get started.</p>
+                        </div>
+                      ) : (
+                        (galleryItems as any[]).map((item: any) => (
+                          <Card key={item.id} className="overflow-hidden">
+                            <div className="aspect-video bg-gray-100 relative">
+                              {item.imageUrl ? (
+                                <img 
+                                  src={item.imageUrl} 
+                                  alt={item.title}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Camera className="w-12 h-12 text-gray-400" />
+                                </div>
+                              )}
+                              <div className="absolute top-2 right-2">
+                                <Badge variant="secondary">{item.category}</Badge>
+                              </div>
+                            </div>
+                            <CardContent className="p-4">
+                              <h4 className="font-semibold mb-2">{item.title}</h4>
+                              <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.description}</p>
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs text-gray-500">
+                                  {item.eventDate ? new Date(item.eventDate).toLocaleDateString() : 'No date'}
+                                </p>
+                                <div className="flex space-x-2">
+                                  <Button variant="ghost" size="sm">
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm">
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>

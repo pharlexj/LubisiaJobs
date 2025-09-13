@@ -22,10 +22,10 @@ export default function AdminReports() {
   const [reportData, setReportData] = useState<any>(null);
 
   // Query for fetching report stats (dashboard data)
-  const { data: statsData, isLoading: statsLoading } = useQuery({
+  const { data: statsData, isLoading: statsLoading } = useQuery<any>({
     queryKey: ['/api/admin/reports', 'performance'],
     enabled: !!user && user.role === 'admin',
-    queryFn: () => apiRequest(`/api/admin/reports?type=performance`),
+    queryFn: () => apiRequest('GET', `/api/admin/reports?type=performance`),
   });
 
   // Mutation for generating reports
@@ -35,7 +35,7 @@ export default function AdminReports() {
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
       
-      return await apiRequest(`/api/admin/reports?${params.toString()}`);
+      return await apiRequest('GET', `/api/admin/reports?${params.toString()}`);
     },
     onSuccess: (data) => {
       setReportData(data);
