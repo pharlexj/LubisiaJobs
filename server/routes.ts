@@ -1028,6 +1028,54 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     }
   });
 
+  // Document upload endpoint
+  app.post('/api/applicant/documents', isAuthenticated, upload.single('document'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      const { type } = req.body;
+      if (!type) {
+        return res.status(400).json({ message: 'Document type is required' });
+      }
+
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'applicant') {
+        return res.status(403).json({ message: 'Only applicants can upload documents' });
+      }
+
+      // Get the applicant profile to get applicant ID
+      const applicantProfile = await storage.getApplicant(userId);
+      if (!applicantProfile) {
+        return res.status(404).json({ message: 'Applicant profile not found' });
+      }
+
+      // Save document to database
+      const document = await storage.saveDocument({
+        applicantId: applicantProfile.id,
+        type,
+        fileName: req.file.originalname,
+        filePath: `/uploads/${req.file.filename}`,
+        fileSize: req.file.size,
+        mimeType: req.file.mimetype
+      });
+
+      res.json({
+        id: document.id,
+        type: document.type,
+        fileName: document.fileName,
+        filePath: document.filePath,
+        message: 'Document uploaded successfully'
+      });
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      res.status(500).json({ message: 'Failed to upload document' });
+    }
+  });
+
   // File upload endpoint
   app.post('/api/upload', isAuthenticated, upload.single('file'), async (req: any, res) => {
     try {

@@ -1173,5 +1173,29 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
   await db.execute(sql`TRUNCATE TABLE departments RESTART IDENTITY CASCADE`);
 
 }
+
+  // Document operations
+  async saveDocument(documentData: {
+    applicantId: number;
+    type: string;
+    fileName: string;
+    filePath: string;
+    fileSize?: number;
+    mimeType?: string;
+  }) {
+    const [document] = await db
+      .insert(documents)
+      .values({
+        applicantId: documentData.applicantId,
+        type: documentData.type,
+        fileName: documentData.fileName,
+        filePath: documentData.filePath,
+        fileSize: documentData.fileSize,
+        mimeType: documentData.mimeType,
+      })
+      .returning();
+    
+    return document;
+  }
 }
 export const storage = new DatabaseStorage();

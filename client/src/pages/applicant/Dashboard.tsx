@@ -236,11 +236,7 @@ export default function ApplicantDashboard() {
                           </td>
                           <td className="py-3 px-4">
                             <div className="font-medium text-gray-900">
-                            {(() => {
-                            const jobMatch = jobs.find((j) => j.id === application.jobId);
-                            
-                            return jobMatch ? jobMatch.title : "—";
-                            })()}
+                              {jobMatch?.title || "—"}
                             </div>
                             <div className="text-sm text-gray-600">
                             {(() => {
