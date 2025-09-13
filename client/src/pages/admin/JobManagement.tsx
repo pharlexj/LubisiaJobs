@@ -155,6 +155,7 @@ export default function AdminJobManagement() {
         title: 'Job Created',
         description: 'Job posting has been created successfully.',
       });
+      queryClient.invalidateQueries({ queryKey: ['/api/public/config'] });
       queryClient.invalidateQueries({ queryKey: ['/api/public/jobs'] });
       setIsCreateModalOpen(false);
       form.reset();
@@ -180,7 +181,7 @@ export default function AdminJobManagement() {
   });
 
   const updateJobMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<JobFormData> }) => {
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
       return await apiRequest('PUT', `/api/admin/jobs/${id}`, data);
     },
     onSuccess: () => {
@@ -188,8 +189,11 @@ export default function AdminJobManagement() {
         title: 'Job Updated',
         description: 'Job posting has been updated successfully.',
       });
+      queryClient.invalidateQueries({ queryKey: ['/api/public/config'] });
       queryClient.invalidateQueries({ queryKey: ['/api/public/jobs'] });
-      setEditingJob(true);
+      setEditingJob(null);
+      resetForm();
+      setIsCreateModalOpen(false);
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -214,7 +218,105 @@ export default function AdminJobManagement() {
   const handleCreateJob = (data: JobFormData) => {
     console.log(' At handkecreate job',data);
     
-    createJobMutation.mutate(data);
+    if (editingJob) {
+      // Update existing job with proper type conversion
+      const processedData = {
+        ...data,
+        departmentId: parseInt(data.departmentId),
+        posts: parseInt(data.posts),
+        jg: parseInt(data.jg),
+        designationId: data.designationId ? parseInt(data.designationId) : 0,
+        certificateLevel: parseInt(data.certificateLevel),
+        requirements: data.requirements || null,
+      };
+      updateJobMutation.mutate({
+        id: editingJob.id,
+        data: processedData
+      });
+    } else {
+      // Create new job
+      createJobMutation.mutate(data);
+    }
+  };
+
+  const handleEditJob = (job: any) => {
+    setEditingJob(job);
+    // Populate form with job data
+    form.reset({
+      title: job.title || '',
+      description: job.description || '',
+      departmentId: job.departmentId?.toString() || '',
+      designationId: job.designationId?.toString() || '',
+      jg: job.jg?.toString() || '',
+      certificateLevel: job.certificateLevel || '',
+      requiredCourses: job.requiredCourses || '',
+      posts: job.posts?.toString() || '',
+      experience: job.experience || '',
+      category: job.category || '',
+      requirements: job.requirements || '',
+      advertNumb: job.advertNumb || '',
+      advertType: job.advertType || '',
+      startDate: job.startDate || '',
+      endDate: job.endDate || '',
+      isActive: job.isActive || false
+    });
+    setIsCreateModalOpen(true);
+  };
+
+  const handleViewJob = (job: any) => {
+    // Navigate to job details page or show job details modal
+    console.log('View job:', job);
+    // You can implement a view modal or redirect to details page
+  };
+
+  // Delete job mutation
+  const deleteJobMutation = useMutation({
+    mutationFn: async (jobId: number) => {
+      return await apiRequest('DELETE', `/api/admin/jobs/${jobId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Job Deleted',
+        description: 'Job posting has been deleted successfully.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/public/config'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/public/jobs'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete job',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleDeleteJob = (jobId: number) => {
+    if (confirm('Are you sure you want to delete this job? This action cannot be undone.')) {
+      deleteJobMutation.mutate(jobId);
+    }
+  };
+
+  const resetForm = () => {
+    setEditingJob(null);
+    form.reset({
+      title: '',
+      description: '',
+      departmentId: '',
+      designationId: '',
+      jg: '',
+      certificateLevel: '',
+      requiredCourses: '',
+      posts: '',
+      experience: '',
+      category: '',
+      requirements: '',
+      advertNumb: '',
+      advertType: '',
+      startDate: '',
+      endDate: '',
+      isActive: false
+    });
   };
 
   const handleToggleJobStatus = (jobId: number, isActive: boolean) => {
@@ -272,9 +374,14 @@ export default function AdminJobManagement() {
                 <p className="text-gray-600">Create, edit, and manage job postings</p>
               </div>
               
-              <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+              <Dialog open={isCreateModalOpen} onOpenChange={(open) => {
+                setIsCreateModalOpen(open);
+                if (!open) {
+                  resetForm();
+                }
+              }}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button onClick={() => resetForm()}>
                     <Plus className="w-4 h-4 mr-2" />
                     Post New Job
                   </Button>
@@ -292,7 +399,9 @@ export default function AdminJobManagement() {
                     </div>
                   )}
                   <DialogHeader>
-                    <DialogTitle>Create New Job Posting</DialogTitle>
+                    <DialogTitle>
+                      {editingJob ? 'Edit Job Posting' : 'Create New Job Posting'}
+                    </DialogTitle>
                   </DialogHeader>                  
                   <form onSubmit={form.handleSubmit(handleCreateJob)} className="space-y-4">
                     <div className='grid grid-cols-3 gap-4'>
@@ -550,9 +659,11 @@ export default function AdminJobManagement() {
                       </Button>
                       <Button 
                         type="submit"
-                        disabled={createJobMutation.isPending}
+                        disabled={createJobMutation.isPending || updateJobMutation.isPending}
                       >
-                        {createJobMutation.isPending ? 'Creating...' : 'Create Job'}
+                        {createJobMutation.isPending || updateJobMutation.isPending ? 
+                          (editingJob ? 'Updating...' : 'Creating...') : 
+                          (editingJob ? 'Update Job' : 'Create Job')}
                       </Button>
                     </div>
                   </form>
@@ -710,14 +821,33 @@ export default function AdminJobManagement() {
                             </td>
                             <td className="py-3 px-4">
                               <div className="flex space-x-2">
-                                <Button variant="ghost" size="sm">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => handleViewJob(job)}
+                                  data-testid={`button-view-${job.id}`}
+                                  title="View job details"
+                                >
                                   <Eye className="w-4 h-4" />
                                 </Button>
-                                <Button variant="ghost" size="sm">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => handleEditJob(job)}
+                                  data-testid={`button-edit-${job.id}`}
+                                  title="Edit job"
+                                >
                                   <Edit className="w-4 h-4" />
                                 </Button>
-                                <Button variant="ghost" size="sm">
-                                  <Upload className="w-4 h-4" />
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => handleDeleteJob(job.id)}
+                                  data-testid={`button-delete-${job.id}`}
+                                  title="Delete job"
+                                  className="text-red-600 hover:text-red-800"
+                                >
+                                  <Trash2 className="w-4 h-4" />
                                 </Button>
                               </div>
                             </td>
