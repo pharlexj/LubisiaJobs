@@ -2,74 +2,50 @@ import { useState, useEffect, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, User } from 'lucide-react';
-
-// Mock data - this will be replaced with database data later
-const mockBoardMembers = [
-  {
-    id: 1,
-    name: "Dr. Mary Kiprotich",
-    position: "Chairperson",
-    qualification: "PhD in Public Administration",
-    bio: "Dr. Kiprotich brings over 15 years of experience in public administration and governance. She has been instrumental in implementing transparent recruitment processes.",
-    avatar: null,
-    expertise: ["Public Administration", "Governance", "Policy Development"]
-  },
-  {
-    id: 2,
-    name: "John Wekesa",
-    position: "Vice Chairperson", 
-    qualification: "Masters in Human Resource Management",
-    bio: "A seasoned HR professional with extensive experience in talent acquisition and organizational development across both public and private sectors.",
-    avatar: null,
-    expertise: ["Human Resources", "Talent Management", "Organizational Development"]
-  },
-  {
-    id: 3,
-    name: "Grace Nasimiyu",
-    position: "Board Member",
-    qualification: "LLB, Advocate of the High Court",
-    bio: "An accomplished legal practitioner specializing in employment law and public sector governance. She ensures all board decisions comply with legal requirements.",
-    avatar: null,
-    expertise: ["Employment Law", "Legal Compliance", "Governance"]
-  },
-  {
-    id: 4,
-    name: "Prof. James Mutua",
-    position: "Board Member",
-    qualification: "PhD in Business Administration",
-    bio: "A distinguished academic and consultant with expertise in strategic management and organizational effectiveness in public institutions.",
-    avatar: null,
-    expertise: ["Strategic Management", "Organizational Development", "Public Policy"]
-  },
-  {
-    id: 5,
-    name: "Sarah Chebet",
-    position: "Board Member",
-    qualification: "Masters in Public Policy",
-    bio: "A policy expert with a strong background in public service reforms and capacity building initiatives across various government levels.",
-    avatar: null,
-    expertise: ["Public Policy", "Service Delivery", "Capacity Building"]
-  },
-  {
-    id: 6,
-    name: "David Kiprotich",
-    position: "Secretary/CEO",
-    qualification: "Masters in Public Administration",
-    bio: "Serves as the chief executive officer of the board, overseeing day-to-day operations and ensuring smooth implementation of board decisions.",
-    avatar: null,
-    expertise: ["Executive Leadership", "Operations Management", "Strategic Implementation"]
-  }
-];
+import { useQuery } from '@tanstack/react-query';
+import type { BoardMember } from '@shared/schema';
 
 export default function BoardLeadershipCarousel() {
+  const { data: boardMembers = [], isLoading } = useQuery({
+    queryKey: ['/api/public/board-members'],
+  }) as { data: BoardMember[], isLoading: boolean };
   const [emblaRef, emblaApi] = useEmblaCarousel({ 
-    loop: true,
+    loop: boardMembers.length > 1,
     align: 'start',
     slidesToScroll: 1
   });
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [canScrollPrev, setCanScrollPrev] = useState(false);
   const [canScrollNext, setCanScrollNext] = useState(false);
+  
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[...Array(3)].map((_, i) => (
+          <Card key={i} className="h-80 animate-pulse">
+            <CardContent className="p-6 text-center">
+              <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-6"></div>
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                <div className="h-3 bg-gray-200 rounded w-full"></div>
+                <div className="h-3 bg-gray-200 rounded w-2/3 mx-auto"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+  
+  if (boardMembers.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+        <p className="text-gray-500">No board members available at this time.</p>
+      </div>
+    );
+  }
 
   const scrollPrev = useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev();
@@ -106,15 +82,15 @@ export default function BoardLeadershipCarousel() {
     <div className="relative">
       <div className="embla overflow-hidden" ref={emblaRef} data-testid="board-leadership-carousel">
         <div className="embla__container flex">
-          {mockBoardMembers.map((member) => (
+          {boardMembers.map((member) => (
             <div key={member.id} className="embla__slide flex-[0_0_100%] min-w-0 md:flex-[0_0_50%] lg:flex-[0_0_33.333%] px-3">
               <Card className="h-full hover:shadow-lg transition-shadow duration-300">
                 <CardContent className="p-6 text-center h-full flex flex-col">
                   {/* Avatar */}
                   <div className="relative mb-6">
-                    {member.avatar ? (
+                    {member.photoUrl ? (
                       <img 
-                        src={member.avatar} 
+                        src={member.photoUrl} 
                         alt={member.name}
                         className="w-24 h-24 rounded-full mx-auto object-cover border-4 border-[#1D523A]/10"
                       />
@@ -146,36 +122,11 @@ export default function BoardLeadershipCarousel() {
                     >
                       {member.position}
                     </p>
-                    <p className="text-sm text-gray-600 mb-3">{member.qualification}</p>
                     
                     {/* Bio */}
-                    <p className="text-xs text-gray-500 mb-4 leading-relaxed line-clamp-3">
-                      {member.bio}
+                    <p className="text-sm text-gray-500 leading-relaxed line-clamp-4">
+                      {member.bio || 'No bio available.'}
                     </p>
-
-                    {/* Expertise Tags */}
-                    <div className="flex flex-wrap gap-1 justify-center">
-                      {member.expertise.slice(0, 2).map((skill, index) => (
-                        <span
-                          key={index}
-                          className="px-2 py-1 text-xs rounded-full text-white"
-                          style={{ backgroundColor: '#09CDE3' }}
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                      {member.expertise.length > 2 && (
-                        <span
-                          className="px-2 py-1 text-xs rounded-full"
-                          style={{ 
-                            backgroundColor: '#EEF200',
-                            color: '#1D523A'
-                          }}
-                        >
-                          +{member.expertise.length - 2}
-                        </span>
-                      )}
-                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -213,7 +164,7 @@ export default function BoardLeadershipCarousel() {
 
       {/* Dots Indicator */}
       <div className="flex justify-center mt-6 space-x-2">
-        {mockBoardMembers.map((_, index) => (
+        {boardMembers.map((_, index) => (
           <button
             key={index}
             className={`w-2 h-2 rounded-full transition-all duration-300 ${
