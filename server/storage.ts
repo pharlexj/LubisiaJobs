@@ -61,6 +61,7 @@ import {
   type InsertGalleryItem,
   type InsertSystemConfig,
   type InsertBoardMember,
+  type Ethnicity,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, like, sql,lt, PromiseOf, or } from "drizzle-orm";
@@ -147,7 +148,7 @@ export class DatabaseStorage implements IStorage {
   }
   async getUsers(): Promise<any[]> {
     const user = await db
-      .select({ name: sql<string>`CONCAT(${users.firstName}, ' ', ${users.lastName})`, email: users.email })
+      .select({ name: sql<string>`CONCAT(${users.firstName}, ' ', ${users.surname})`, email: users.email })
       .from(users)
       .where(or(eq(users.role, 'admin'), eq(users.role, "board")));
     return user;
@@ -172,10 +173,14 @@ async getApplicant(userId: string): Promise<any> {
   const [applicant] = await db
     .select()
     .from(applicants)
+    .leftJoin(users, eq(applicants.userId, users.id))
     .leftJoin(employees, eq(applicants.id, employees.applicantId))
     .where(eq(applicants.userId, userId));
 
-  if (!applicant) return undefined;
+  if (!applicant) {
+     const [applicant] =await db.select({firstName:users.firstName,surname:users.surname,nationalId:users.nationalId,idPassportType:users.idPassportType,phoneNumber:users.phoneNumber}).from(users).where(eq(users.id, userId))
+    return applicant;
+  };
 
   const applicantId = applicant.applicants.id;
 
@@ -313,7 +318,6 @@ async updateApplicant(applicantId: number, data: any, step:number) {
       salutation: data.salutation,
       idPassportType: data.idPassportType,
       nationalId: data.nationalId,
-      idPassportNumber: data.idPassportNumber,
       dateOfBirth: data.dateOfBirth,
       gender: data.gender,
       nationality: data.nationality,
@@ -946,6 +950,14 @@ async getFaq() {
     .returning();
   return newJobGroup;
 }
+  // Job Groups
+  async seedEthnicity(Ethnic: Omit<Ethnicity, 'id' | 'createdAt'>): Promise<Ethnicity> {
+  const [newEthnicity] = await db
+    .insert(ethnicity)
+    .values(Ethnic)
+    .returning();
+  return newEthnicity;
+}
   //Seed Counties
   async seedCounties(county: Omit<County, 'id' | 'createdAt'>): Promise<County> {
   const [newCounties] = await db
@@ -1164,7 +1176,7 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
         id: users.id,
         email: users.email,
         firstName: users.firstName,
-        lastName: users.lastName,
+        lastName: users.surname,
         role: users.role,
         createdAt: users.createdAt,
         profileCompleted: applicants.profileCompletionPercentage,
@@ -1252,6 +1264,7 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
   await db.execute(sql`TRUNCATE TABLE specializations RESTART IDENTITY CASCADE`);
   await db.execute(sql`TRUNCATE TABLE study_area RESTART IDENTITY CASCADE`);
   await db.execute(sql`TRUNCATE TABLE departments RESTART IDENTITY CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE ethnicity RESTART IDENTITY CASCADE`);
 
 }
 

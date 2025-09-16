@@ -38,7 +38,7 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
   const { data: applicantProfile } = useQuery({
     queryKey: ['/api/applicant/profile'],
     enabled: isAuthenticated && user?.role === 'applicant'
-  }) as { data: { educationRecords?: any[] } | undefined };
+  }) as { data: { education?: any[] } | undefined };
 
   const jobGroups = config?.jobGroups || [];
   const departments = config?.departments || [];
@@ -100,7 +100,7 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
     }
     
     // If requirements exist but no education records, not eligible
-    if (!applicantProfile?.educationRecords || applicantProfile.educationRecords.length === 0) {
+    if (!applicantProfile?.education || applicantProfile.education.length === 0) {
       return false;
     }
     
@@ -117,7 +117,7 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
     }
     
     // Check if applicant has matching education qualifications
-    const hasMatchingEducation = applicantProfile.educationRecords.some((education: any) => {
+    const hasMatchingEducation = applicantProfile.education.some((education: any) => {
       // Check course match if required courses are specified
       const courseMatch = requiredCourseIds.size === 0 || 
         (education.courseId && requiredCourseIds.has(education.courseId));

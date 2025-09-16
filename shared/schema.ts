@@ -35,23 +35,7 @@ export const applicationStatusEnum = pgEnum("application_status", [
   "draft", "submitted", "shortlisted", "interviewed", "rejected", "hired"
 ]);
 
-// Users table for Replit Auth
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
-  nationalId: varchar("national_id", { length: 11 }),
-  idPassportNumber: varchar("id_passport_number", { length: 11 }),
-  idPassportType: varchar("id_passport_type", { length: 20 }),
-  phoneNumber: varchar('phone_number'),
-  password: varchar("password"),
-  passwordHash: varchar("password_hash").notNull(),
-  role: userRoleEnum("role").default("applicant"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+
 
 // Counties
 export const counties = pgTable("counties", {
@@ -147,7 +131,6 @@ export const applicants = pgTable("applicants", {
   phoneVerifiedAt: date("phone_verified_at"),
   altPhoneNumber: varchar("alt_phone_number", { length: 20 }),
   nationalId: varchar("national_id", { length: 50 }),
-  idPassportNumber: varchar("id_passport_number", { length: 50 }),
   idPassportType: varchar("id_passport_type", { length: 20 }), // 'national_id', 'passport', 'alien_id'
   dateOfBirth: date("date_of_birth"),
   gender: varchar("gender", { length: 10 }),
@@ -158,16 +141,31 @@ export const applicants = pgTable("applicants", {
   address: varchar("address", { length: 250 }),
   ethnicity: varchar("ethnicity", { length: 50 }),
   religion: varchar("religion", { length: 50 }),
-  isPwd: boolean("is_pwd"),
+  isPwd: boolean("is_pwd").default(false),
   pwdNumber: varchar("pwd_number", { length: 100 }),
-  isEmployee: boolean("is_employee"),
+  isEmployee: boolean("is_employee").default(false),
   kraPin: varchar("kra_pin", { length: 50 }),
   professionId: integer("profession_id").references(() => professions.id),
   profileCompletionPercentage: integer("profile_completion_percentage").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
-
+// Users table for Replit Auth
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  surname: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  nationalId: varchar("national_id", { length: 11 }),
+  idPassportType: varchar("id_passport_type", { length: 20 }),
+  phoneNumber: varchar('phone_number'),
+  password: varchar("password"),
+  passwordHash: varchar("password_hash").notNull(),
+  role: userRoleEnum("role").default("applicant"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 // Jobs
 export const jobs = pgTable("jobs", {
   id: serial("id").primaryKey(),
@@ -219,6 +217,7 @@ export const education = pgTable("education_records", {
   id: serial("id").primaryKey(),
   applicantId: integer("applicant_id").notNull().references(() => applicants.id),
   courseId: integer("course_id").references(() => coursesOffered.id),
+  courseName: varchar("course_name", { length: 255 }),
   certificateLevelId: integer("certificate_level_id").notNull().references(() => awards.id),
   specializationId: integer("specialization_id").notNull().references(() => specializations.id),
   studyArea: varchar("study_area", { length: 255 }).notNull(),
@@ -614,6 +613,7 @@ export type Faq = typeof faq.$inferSelect;
 export type GalleryItem = typeof galleryItems.$inferSelect;
 export type SystemConfig = typeof systemConfig.$inferSelect;
 export type BoardMember = typeof boardMembers.$inferSelect;
+export type Ethnicity = typeof ethnicity.$inferInsert;
 
 // Insert schemas for forms
 export const insertGalleryItem = createInsertSchema(galleryItems).omit({ id: true, createdAt: true, updatedAt: true });

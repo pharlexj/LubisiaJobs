@@ -75,7 +75,7 @@ export default function ApplicantApplications() {
     }
   };
 
-  const filteredApplications = applications.filter(app => {
+  const filteredApplications = (applications as any).filter((app:any) => {
     const matchesSearch = app.job?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          app.job?.department?.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
@@ -83,7 +83,7 @@ export default function ApplicantApplications() {
     return matchesSearch && matchesStatus;
   });
 
-  const statusCounts = applications.reduce((acc, app) => {
+  const statusCounts = (applications as any).reduce((acc:any, app:any) => {
     acc[app.status] = (acc[app.status] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
@@ -132,7 +132,7 @@ export default function ApplicantApplications() {
               <Card>
                 <CardContent className="p-6 text-center">
                   <div className="text-3xl font-bold text-gray-900 mb-2">
-                    {applications.length}
+                    {(applications as any).length}
                   </div>
                   <div className="text-gray-600">Total Applications</div>
                 </CardContent>
@@ -212,14 +212,14 @@ export default function ApplicantApplications() {
                 <CardContent className="p-12 text-center">
                   <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    {applications.length === 0 ? 'No Applications Yet' : 'No Applications Found'}
+                    {(applications as any).length === 0 ? 'No Applications Yet' : 'No Applications Found'}
                   </h3>
                   <p className="text-gray-600 mb-6">
-                    {applications.length === 0 
+                    {(applications as any).length === 0 
                       ? 'Start browsing and applying for jobs to see them here.'
                       : 'No applications match your current filters. Try adjusting your search criteria.'}
                   </p>
-                  {applications.length === 0 ? (
+                  {(applications as any).length === 0 ? (
                     <Button onClick={() => setLocation('/jobs')}>Browse Jobs</Button>
                   ) : (
                     <Button 
@@ -236,7 +236,7 @@ export default function ApplicantApplications() {
               </Card>
             ) : (
               <div className="space-y-4">
-                {filteredApplications.map((application) => (
+                {filteredApplications.map((application:any) => (
                   <Card key={application.id} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-6">
                       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">

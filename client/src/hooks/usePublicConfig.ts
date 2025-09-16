@@ -74,13 +74,13 @@ type PublicConfig = {
   courses: Courses[];
   jg: Jg[];
   ethnicity: any[];
-  certificatelevel: CertificateLevel[];
+  certificateLevels: CertificateLevel[];
   jobs: Jobs[];
   departments: Department[];
   designations: Designation[];
   applications: Applications[];
   counties: County[];
-  studyArea: StudyAreas[];
+  studyAreas: StudyAreas[];
   specializations: Specialization[];
   professionalQualification: any[];
   jobGroups: Jg[];
@@ -89,6 +89,7 @@ type PublicConfig = {
   wards: any[],
   constituencie: any[],
   admins: any[],
+  userData:any[],
   
 };
 

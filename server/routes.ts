@@ -9,6 +9,7 @@ import bcrypt from "bcrypt";
 import passport from "passport";
 import { sendOtpHandler, verifyOtpHandler } from "../client/src/lib/africastalking-sms";
 import { ApplicantService } from "./applicantService";
+import { log } from "util";
 
 // OTP utility functions
 const applicantService = new ApplicantService(storage);
@@ -115,7 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // --- Signup ---
   app.post("/api/auth/signup", profilePhotoUpload.single("profilePhoto"), async (req, res) => {
     try {
-      const { email, password, lastName, phoneNumber,idPassportNumber } = req.body;      
+      const { email, password, surname, phoneNumber, nationalId } = req.body;      
       const profilePhoto = req.file ? req.file.filename : "default.jpg";
       const fileUrl = `/uploads/profile-photos/${profilePhoto}`
       const isValidEmail = await storage.verifyEmail(email);
@@ -130,10 +131,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         password: hashedPassword,
         passwordHash: hashedPassword,
-        lastName: lastName,
+        surname: surname,
         phoneNumber,
         profileImageUrl: fileUrl,
-        idPassportNumber
+        nationalId
       });
 
       // Immediately log the user in
@@ -661,7 +662,7 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
         awards, courses, institutions, studyAreas, specializations,        
         ethnicity, jobGroups, jobs, certificateLevels, counties,
         constituencies,
-        wards, notices,faqs,admins,
+        wards, notices,faqs,admins,userData
       ] = await Promise.all([
         storage.getDepartments(),
         storage.getDesignations(),
@@ -680,6 +681,7 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
         storage.getNotices(),
         storage.getFaq(),
         storage.getUsers(),
+        storage.getApplicant(req.user.id),
       ]);
       
       res.json({
@@ -699,7 +701,8 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
         wards,
         notices,
         faqs,
-        admins
+        admins,
+        userData,
       });      
     } catch (error) {
       console.error('Error fetching config:', error);
@@ -713,20 +716,22 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
       const userId = req.user.id;
       const {applicantId, data } = req.body;
       const user = await storage.getUser(userId); 
+      
       if (!user || user.role !== 'applicant') {
         return res.status(403).json({ message: 'Access denied' });
       }
       
       // Check if profile already exists
       const existingProfile = await storage.getApplicant(userId);
-      if (existingProfile) {
+      console.log("Existing Data",existingProfile);
+      
+      if (existingProfile.applicantId) {
            const updateProfile = await applicantService.updateBasicInfo(applicantId, data);
         return res.json(updateProfile);
       }
-      const profileData = {        
-        ...req.body,
+      const profileData = {
         userId,
-
+        ...req.body.data,
       };
       const profile = await storage.createApplicant(profileData);
       res.json(profile);
@@ -744,6 +749,7 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
     if (!applicantId) {
       return res.status(400).json({ error: "Applicant ID missing" });
     }
+console.log("Update Data", data);
 
     const updatedProfile = await storage.updateApplicant(applicantId, data, step);
     res.json(updatedProfile);
@@ -799,6 +805,25 @@ app.post("/api/auth/verify-otp", verifyOtpHandler);
 
       const applications = await storage.getApplications({ applicantId: profile.id });
       res.json(applications);
+    } catch (error) {
+      console.error('Error fetching applications:', error);
+      res.status(500).json({ message: 'Failed to fetch applications' });
+    }
+  });
+  app.get('/api/applicant/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'applicant') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const profile = await storage.getApplicant(userId);
+      if (!profile) {
+        return res.status(404).json({ message: 'Profile not found' });
+      }
+      res.json(profile);
     } catch (error) {
       console.error('Error fetching applications:', error);
       res.status(500).json({ message: 'Failed to fetch applications' });
@@ -1306,7 +1331,6 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       if (!applicantProfile) {
         return res.status(404).json({ message: 'Applicant profile not found' });
       }
-
       // Save document to database
       const document = await storage.saveDocument({
         applicantId: applicantProfile.id,

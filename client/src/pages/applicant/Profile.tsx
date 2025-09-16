@@ -47,8 +47,7 @@ export default function Profile() {
     defaultStep = parseFloat(stepParam) as Step;
   } else {
     const completed = profile?.applicantProfile?.completedSteps || [];
-    const lastStep =
-      completed.length > 0 ? (completed[completed.length - 1] as Step) : 1;
+    const lastStep = completed.length > 0 ? (completed[completed.length - 1] as Step) : 1;
 
     if (lastStep === 1 && isEmployeeVerified) defaultStep = 1.5;
     else if (lastStep === 1 && !isEmployeeVerified) defaultStep = 2;
@@ -128,7 +127,11 @@ export default function Profile() {
   // ✅ Mutation for saving
   const updateProfileMutation = useMutation({
     mutationFn: async (payload: any) => {
+
+      // return console.log(payload);
+      
       const { method, applicantId, step, data } = payload;
+      if (step ===8) return await apiRequest("POST","/api/applicant/documents",{data,applicantId})
       if (method === "POST") {
         return await apiRequest("POST", "/api/applicant/profile", {
           data,

@@ -149,7 +149,9 @@ export default function ApplicantDocuments() {
             const isUploading = uploadingFiles[docType.id];
 
             return (
-              <Card key={docType.id}>
+              <div className="space-y-6">
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                <Card key={docType.id}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">{docType.label}</CardTitle>
@@ -233,6 +235,8 @@ export default function ApplicantDocuments() {
                   )}
                 </CardContent>
               </Card>
+              </div>
+              </div>
             );
           })}
         </div>

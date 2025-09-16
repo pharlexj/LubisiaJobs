@@ -107,7 +107,7 @@ export default function ApplicantDashboard() {
                   // Logic to decide next step
                   let nextStep: number | 1.5 = lastStep < 8 ? lastStep + 1 : 8;
                   if (lastStep === 1 && isEmployeeVerified) nextStep = 1.5;
-                  if (lastStep === 1 && !isEmployeeVerified) nextStep = 2;
+                  if (lastStep === 1 && !isEmployeeVerified) nextStep = 1;
 
                   navigate(`/profile?step=${nextStep}`);
                 }}

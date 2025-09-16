@@ -34,7 +34,7 @@ rememberMe: z.boolean().default(false),
 const signupSchema = z
 .object({
 firstName: z.string().min(2, "First name must be at least 2 characters"),
-lastName: z.string().min(2, "Last name must be at least 2 characters"),
+surname: z.string().min(2, "Last name must be at least 2 characters"),
 email: z.string().email("Invalid email address"),
 phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
 idPassportType: z
@@ -42,7 +42,7 @@ idPassportType: z
 required_error: "Please select ID/Passport type",
 })
 .optional(),
-idPassportNumber: z.string().min(5, "ID/Passport number is required"),
+nationalId: z.string().min(5, "ID/Passport number is required"),
 password: z
 .string()
 .min(8, "Password must be at least 8 characters")
@@ -122,11 +122,11 @@ type SignupData = z.infer<typeof signupSchema>;
     resolver: zodResolver(signupSchema),
     defaultValues: {
       firstName: '',
-      lastName: '',
+      surname: '',
       email: '',
       phoneNumber: '',
       idPassportType: undefined,
-      idPassportNumber: '',
+      nationalId: '',
       password: '',
       confirmPassword: '',
       profilePhoto: undefined,
@@ -201,6 +201,7 @@ type SignupData = z.infer<typeof signupSchema>;
         description: error.message || "Signup failed.",
         variant: "destructive",
       });
+      console.log('Error Signing up', error)
     },
   });
 
@@ -265,12 +266,12 @@ const handleSendOtp = () => {
   const handleSignup = (data: SignupData) => {
     const formData = new FormData();
     formData.append("firstName", data.firstName);
-    formData.append("lastName", data.lastName);
+    formData.append("surname", data.surname);
     formData.append("email", data.email);
     formData.append("password", data.password);
     formData.append("phoneNumber", data.phoneNumber);
     formData.append("idPassportType", data?.idPassportType ?? "");
-    formData.append("idPassportNumber", data.idPassportNumber);
+    formData.append("nationalId", data.nationalId);
 
     if (profilePhoto) {
       formData.append("profilePhoto", profilePhoto);
@@ -508,16 +509,16 @@ const strength = getPasswordStrength(passwordValue);
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="lastName">Last Name</Label>
+                      <Label htmlFor="surname">Last Name</Label>
                       <Input
-                        id="lastName"
-                        data-testid="input-lastName"
+                        id="surname"
+                        data-testid="input-surname"
                         placeholder="Last Name"
-                        {...signupForm.register('lastName')}
+                        {...signupForm.register('surname')}
                       />
-                      {signupForm.formState.errors.lastName && (
+                      {signupForm.formState.errors.surname && (
                         <p className="text-sm text-red-600 mt-1">
-                          {signupForm.formState.errors.lastName.message}
+                          {signupForm.formState.errors.surname.message}
                         </p>
                       )}
                     </div>
@@ -578,16 +579,16 @@ const strength = getPasswordStrength(passwordValue);
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="idPassportNumber">ID/Passport Number</Label>
+                      <Label htmlFor="nationalId">ID/Passport Number</Label>
                       <Input
-                        id="idPassportNumber"
-                        data-testid="input-idPassportNumber"
+                        id="nationalId"
+                        data-testid="input-nationalId"
                         placeholder="Enter number"
-                        {...signupForm.register('idPassportNumber')}
+                        {...signupForm.register('nationalId')}
                       />
-                      {signupForm.formState.errors.idPassportNumber && (
+                      {signupForm.formState.errors.nationalId && (
                         <p className="text-sm text-red-600 mt-1">
-                          {signupForm.formState.errors.idPassportNumber.message}
+                          {signupForm.formState.errors.nationalId.message}
                         </p>
                       )}
                     </div>

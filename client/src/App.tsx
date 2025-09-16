@@ -13,7 +13,6 @@ import Gallery from "@/pages/Gallery";
 import FAQs from "@/pages/FAQs";
 import Notices from "@/pages/Notices";
 import Jobs from "@/pages/Jobs";
-
 // Applicant pages
 import ApplicantDashboard from "@/pages/applicant/Dashboard";
 import ApplicantProfile from "@/pages/applicant/Profile";
@@ -32,8 +31,13 @@ import AdminSettings from "@/pages/admin/Settings";
 import BoardDashboard from "@/pages/board/Dashboard";
 import BoardShortlisting from "@/pages/board/Shortlisting";
 import BoardInterviews from "@/pages/board/Interviews";
+import { useEffect } from "react";
 
 function Router() {
+  useEffect(() => {
+      document.title = "County Website";
+      <link rel="icon" type="image/svg+xml" href="/uploads/myICON.ico" />
+    }, []);
   return (
     <Switch>
       {/* Public routes */}

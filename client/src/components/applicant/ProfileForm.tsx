@@ -1,33 +1,23 @@
 import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Upload, FileText } from "lucide-react";
-
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import EmployeeVerificationDialog from "@/components/applicant/EmployeeVerificationDialog";
 import LocationDropdowns from "@/components/common/LocationDropdowns";
 import { sanitizeDate, filterEmptyFields } from "./../../lib/sanitizeDates";
 import { toast } from "@/hooks/use-toast";
-
-import {
-  stepSchemas,
-  stepDefaults,
-  educationStepSchema,
-} from "../../../../shared/schemas";
+import { z } from "zod";
+import { stepSchemas, stepDefaults, educationStepSchema, } from "../../../../shared/schemas";
+import { formatZodError } from "./../../lib/errFormat";
 
 // -------------------- Types -------------------- //
 interface ProfileFormProps {
@@ -51,16 +41,16 @@ export default function ProfileForm({
   defaultValues: profile
     ? {
         ...stepDefaults[step],
-
         // spread root profile fields
         ...profile,
-
         // ensure nested employee object exists
         employee: profile.employee || {},
       }
     : stepDefaults[step],
-});
-
+  });
+  
+  // console.log("Profile", profile);
+  
 
   // ✅ Field Arrays for dynamic sections
   const {
@@ -136,11 +126,9 @@ export default function ProfileForm({
   }
 }, [profile, step]);
 
-
   // ✅ Submit handler
   const handleSubmit = async (data: any) => {
     let stepData: any = {};
-
     try {
       switch (step) {
         case 1:
@@ -153,6 +141,7 @@ export default function ProfileForm({
               : null,
             wardId: data.wardId ? parseInt(data.wardId) : null,
             isPwd: !!data.isPwd,
+            isEmployee: !!data.isEmployee,
             pwdNumber: data.isPwd ? data.pwdNumber : null,
           };
           break;
@@ -202,10 +191,13 @@ export default function ProfileForm({
           stepData = {
             employmentHistory: data.employmentHistory.map((job: any) => ({
               ...job,
+              isCurrent: !!job.isCurrent,
               startDate: sanitizeDate(job.startDate),
               endDate: sanitizeDate(job.endDate),
             })),
           };
+          console.log(stepData);
+          
           break;
 
         case 7:
@@ -273,24 +265,7 @@ const renderErrors = (errors: any, parentKey = ""): JSX.Element[] => {
         className="space-y-6"
         noValidate
       >
-        {/* Errors */}
-        {/* {Object.keys(form.formState.errors).length > 0 && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
-            <div className="font-bold text-red-700 mb-2">
-              Form Validation Errors:
-            </div>
-            <ul className="text-sm text-red-700">
-              {Object.entries(form.formState.errors).map(([field, error]) => (
-                <li key={field}>
-                  <strong>{field}:</strong>{" "}
-                  {typeof error?.message === "string"
-                    ? error.message
-                    : "Invalid value"}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )} */}
+        {/* Errors */}        
 
         {Object.keys(form.formState.errors).length > 0 && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
@@ -332,12 +307,18 @@ const renderErrors = (errors: any, parentKey = ""): JSX.Element[] => {
 
         <div>
           <Label>First Name *</Label>
-          <Input {...form.register("firstName")} />
+          <Input {...form.register("firstName")}
+          defaultValue={profile?.firstName || ""}
+          disabled={!!profile?.firstName}
+          />
         </div>
 
         <div>
           <Label>Surname *</Label>
-          <Input {...form.register("surname")} />
+          <Input {...form.register("surname")}
+          defaultValue={profile?.surname || ""}
+          disabled={!!profile?.surname}
+          />
         </div>
 
         <div>
@@ -347,12 +328,13 @@ const renderErrors = (errors: any, parentKey = ""): JSX.Element[] => {
       </div>
 
       {/* ID/Passport & DOB */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
           <Label>ID/Passport Type *</Label>
           <Select
             value={form.watch("idPassportType") || ""}
             onValueChange={(val) => form.setValue("idPassportType", val)}
+            disabled={!!profile?.idPassportType}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select type" />
@@ -367,17 +349,10 @@ const renderErrors = (errors: any, parentKey = ""): JSX.Element[] => {
 
         <div>
           <Label>ID / Passport No *</Label>
-          <Input {...form.register("nationalId")} />
+          <Input {...form.register("nationalId")} defaultValue={profile?.nationalId || ""}
+                  disabled={!!profile?.nationalId} />
         </div>
-
-        <div>
-          <Label>Date of Birth *</Label>
-          <Input type="date" {...form.register("dateOfBirth")} />
-        </div>
-      </div>
-
       {/* Gender & Nationality */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label>Gender *</Label>
           <Select
@@ -393,27 +368,13 @@ const renderErrors = (errors: any, parentKey = ""): JSX.Element[] => {
             </SelectContent>
           </Select>
         </div>
-
         <div>
-          <Label>Nationality</Label>
-          <Input {...form.register("nationality")} />
+          <Label>Date of Birth *</Label>
+          <Input type="date" {...form.register("dateOfBirth")} />
         </div>
       </div>
-
-      {/* Phone Numbers */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label>Phone Number *</Label>
-          <Input {...form.register("phoneNumber")} />
-        </div>
-        <div>
-          <Label>Alternate Phone</Label>
-          <Input {...form.register("altPhoneNumber")} />
-        </div>
-      </div>
-
-      {/* Ethnicity & Religion from API */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Ethnicity & Religion from API */}
         <div>
           <Label>Ethnicity</Label>
           <Select
@@ -432,7 +393,6 @@ const renderErrors = (errors: any, parentKey = ""): JSX.Element[] => {
             </SelectContent>
           </Select>
         </div>
-
         <div>
           <Label>Religion</Label>
           <Select
@@ -449,11 +409,32 @@ const renderErrors = (errors: any, parentKey = ""): JSX.Element[] => {
               <SelectItem value="Other">Other</SelectItem>
             </SelectContent>
           </Select>
+          </div>
+          {/* Phone Numbers */}
+          <div>
+            <Label>Phone Number *</Label>
+            <Input {...form.register("phoneNumber")} />
+          </div>
+        <div>
+          <Label>Nationality</Label>
+          <Select value={form.watch("nationality") || ""} onValueChange={(val)=> form.setValue("nationality", val)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select Nationality" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Kenyan">Kenyan</SelectItem>
+              <SelectItem value="Ugandan">Ugandan</SelectItem>
+              <SelectItem value="Tanzanian">Tanzanian</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
-
       {/* KRA Pin & Disability */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <Label>Alternate Phone</Label>
+          <Input {...form.register("altPhoneNumber")} />
+        </div>
         <div>
           <Label>KRA Pin</Label>
           <Input {...form.register("kraPin")} />
@@ -668,7 +649,7 @@ case 1.5: // Employee Details
                       <SelectValue placeholder="Select certificate level" />
                     </SelectTrigger>
                     <SelectContent>
-                      {config?.certificatelevel?.map((level: any) => (
+                      {config?.certificateLevels?.map((level: any) => (
                         <SelectItem key={level.id} value={level.id.toString()}>
                           {level.name}
                         </SelectItem>
@@ -694,7 +675,7 @@ case 1.5: // Employee Details
                       <SelectValue placeholder="Select study area" />
                     </SelectTrigger>
                     <SelectContent>
-                      {config?.studyArea?.map((area: any) => (
+                      {config?.studyAreas?.map((area: any) => (
                         <SelectItem key={area.id} value={area.id.toString()}>
                           {area.name}
                         </SelectItem>
@@ -737,28 +718,7 @@ case 1.5: // Employee Details
                 {/* Course (from API) */}
                 <div>
                   <Label>Course</Label>
-                  <Select
-                    value={
-                      form.watch(`education.${index}.courseId`)?.toString() || ""
-                    }
-                    onValueChange={(val) =>
-                      form.setValue(
-                        `education.${index}.courseId`,
-                        parseInt(val, 10)
-                      )
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select course" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {config?.courses?.map((c: any) => (
-                        <SelectItem key={c.id} value={c.id.toString()}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input {...form.register(`education.${index}.courseName`)} placeholder="Enter course name" />
                 </div>
               </div>
 
@@ -962,7 +922,7 @@ case 1.5: // Employee Details
                     <SelectValue placeholder="Select area of study" />
                   </SelectTrigger>
                   <SelectContent>
-                    {((config as any)?.studyArea || []).map((area: any) => (
+                    {((config as any)?.studyAreas || []).map((area: any) => (
                       <SelectItem key={area.id} value={area.id.toString()}>
                         {area.name}
                       </SelectItem>

@@ -141,7 +141,6 @@ const Awards = [
   'Diploma Higher', 'Advanced Diploma', 'Ordinary Diploma',
   'Certificate', 'O-Level', 'A-Level', 'KCSE', 'KCPE'
 ];
-
 const counties = [
   'Baringo', 'Bomet', 'Bungoma', 'Busia', 'Elgeyo Marakwet', 'Embu', 'Garissa',
   'Homa Bay', 'Isiolo', 'Kajiado', 'Kakamega', 'Kericho', 'Kiambu', 'Kilifi',
@@ -155,6 +154,7 @@ const depts = [
   'Finance and Economic Planning', 'Education and Technical Training', 'Health Services and Sanitation',
   'Public Service Management', 'Agriculture', 'Land Housing and Urban Development', 'County Public Service Board','Water, Environment and Natural Resources and Natural Resources'
 ];
+const ethnicity = ["Luhya","Kalenjin","Kikuyu","Luo","Teso","Kisii","Kenyan Somalis"];
 const subCountyMap: Record<string, string[]> = {
   'Trans Nzoia': ['Kiminini', 'Saboti', 'Endebess', 'Cherangany', 'Kwanza'],
   'Bungoma': ['Kabuchai', 'Kimilili', 'Sirisia', 'Webuye East', 'Webuye West', 'Bumula', 'Kanduyi', 'Mt Elgon','Tongaren'],
@@ -293,6 +293,11 @@ async function seedDept() {
     await storage.seedDepartment({ name });
   }
 }
+async function seedEthnicity() {
+  for (const name of ethnicity) {
+    await storage.seedEthnicity({ name });
+  }
+}
 async function seedJobGroups() {
   for (const name of jobGroups) {
     await storage.seedJobGroup({ name });
@@ -348,7 +353,6 @@ async function seedSpecialization() {
 
   console.log('✅ Specialization seeded');
 }
-
 async function seedWards() {
   for (const [constituencyName, wardNames] of Object.entries(wardMap)) {
     const constituency = await storage.getConstituencyByName(constituencyName);
@@ -392,6 +396,7 @@ async function runAllSeeds() {
   await seedAwards();
   await seedCertificateLevel();
   await seedDept();
+  await seedEthnicity();
 
   console.log('🌱 All seed operations completed');
 }
