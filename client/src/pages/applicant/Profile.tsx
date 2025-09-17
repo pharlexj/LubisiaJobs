@@ -38,20 +38,42 @@ export default function Profile() {
 
   const isEmployeeVerified = profile?.applicantProfile?.isEmployee;
 
-  // ✅ Decide initial step
+  // ✅ Helper to get next allowed step based on completion
+  const getNextAllowedStep = (completedSteps: number[], isEmployee: boolean): Step => {
+    if (completedSteps.length === 0) return 1; // Start at step 1
+    
+    const highestCompleted = Math.max(...completedSteps) as Step;
+    
+    // Map next allowed step based on highest completed
+    if (highestCompleted === 1) {
+      return isEmployee ? 1.5 : 2;
+    } else if (highestCompleted === 1.5) {
+      return 2;
+    } else {
+      return Math.min(8, (highestCompleted + 1)) as Step;
+    }
+  };
+
+  // ✅ Decide initial step (with proper URL bypass protection)
   const searchParams = new URLSearchParams(window.location.search);
   const stepParam = searchParams.get("step");
 
   let defaultStep: Step = 1;
-  if (stepParam) {
-    defaultStep = parseFloat(stepParam) as Step;
-  } else {
-    const completed = profile?.applicantProfile?.completedSteps || [];
-    const lastStep = completed.length > 0 ? (completed[completed.length - 1] as Step) : 1;
+  const completed = profile?.applicantProfile?.completedSteps || [];
+  
+  // Calculate the maximum allowed step based on actual completion
+  const maxAllowedStep = getNextAllowedStep(completed, isEmployeeVerified);
 
-    if (lastStep === 1 && isEmployeeVerified) defaultStep = 1.5;
-    else if (lastStep === 1 && !isEmployeeVerified) defaultStep = 2;
-    else defaultStep = lastStep < 8 ? ((lastStep + 1) as Step) : 8;
+  if (stepParam) {
+    const requestedStep = parseFloat(stepParam) as Step;
+    // Validate requested step and clamp to allowed range
+    if (requestedStep >= 1 && requestedStep <= 8 && [1, 1.5, 2, 3, 4, 5, 6, 7, 8].includes(requestedStep)) {
+      defaultStep = Math.min(requestedStep, maxAllowedStep) as Step;
+    } else {
+      defaultStep = maxAllowedStep; // Invalid step requested, use max allowed
+    }
+  } else {
+    defaultStep = maxAllowedStep;
   }
 
   const [currentStep, setCurrentStep] = useState<Step>(defaultStep);
@@ -172,14 +194,26 @@ export default function Profile() {
     },
   });
 
-  // ✅ Save handler
+  // ✅ Save handler with automatic progression
   const handleSaveStep = (payload: any) => {
-    updateProfileMutation.mutate(payload);
-
-    // Auto-move to employee details if needed
-    if (currentStep === 1 && payload.data.isEmployee) {
-      setTimeout(() => setCurrentStep(1.5), 800);
-    }
+    updateProfileMutation.mutate(payload, {
+      onSuccess: () => {
+        // Determine next step based on current step and fresh payload data
+        let nextStep: Step;
+        
+        if (currentStep === 1) {
+          // Use fresh payload data for employee status
+          nextStep = payload.data.isEmployee ? 1.5 : 2;
+        } else if (currentStep < 8) {
+          // For other steps, use current getNextStep logic
+          nextStep = getNextStep(currentStep);
+        } else {
+          return; // Don't advance from step 8
+        }
+        
+        setTimeout(() => setCurrentStep(nextStep), 500);
+      },
+    });
   };
 
   // ✅ Step navigation
@@ -196,10 +230,8 @@ export default function Profile() {
     return (current - 1) as Step;
   };
 
-  const handleNextStep = () => {
-    const next = getNextStep(currentStep);
-    if (next <= 8) setCurrentStep(next);
-  };
+  // Step navigation now handled through validation in ProfileForm
+  // No direct next step - user must save current step to advance
   const handlePrevStep = () => {
     const prev = getPrevStep(currentStep);
     if (prev >= 1) setCurrentStep(prev);
@@ -322,7 +354,9 @@ export default function Profile() {
                   </Button>
                   <div className="flex space-x-4">
                     {currentStep < 8 ? (
-                      <Button onClick={handleNextStep}>Next Step</Button>
+                      <p className="text-sm text-gray-600 self-center">
+                        Save this step to continue to the next step
+                      </p>
                     ) : (
                       <Button
                         onClick={() => {
