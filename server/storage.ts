@@ -472,10 +472,30 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
   }
 
   const application = await db
-    .select()
+    .select({
+      id: applications.id,
+      jobId: applications.jobId,
+      applicantId: applications.applicantId,
+      status: applications.status,
+      submittedOn: applications.submittedOn,
+      remarks: applications.remarks,
+      interviewDate: applications.interviewDate,
+      interviewScore: applications.interviewScore,
+      createdAt: applications.createdAt,
+      updatedAt: applications.updatedAt,
+      job: {
+        id: jobs.id,
+        title: jobs.title,
+        department: {
+          id: departments.id,
+          name: departments.name
+        }
+      }
+    })
     .from(applications)
+    .leftJoin(jobs, eq(applications.jobId, jobs.id))
+    .leftJoin(departments, eq(jobs.departmentId, departments.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    // .leftJoin(jobs,eq(applications.jobId, jobs.id))
     .orderBy(desc(applications.createdAt));
 
     return application;
