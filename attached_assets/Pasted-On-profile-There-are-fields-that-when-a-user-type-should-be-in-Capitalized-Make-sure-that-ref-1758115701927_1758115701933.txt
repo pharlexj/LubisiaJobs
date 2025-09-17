@@ -1,0 +1,15 @@
+On /profile
+•	There are fields that when a user type should be in Capitalized
+•	Make sure that referees are three and not more or less mandatory
+•	Applicants must first fill the current step completely before proceeding otherwise if not done not allowed to proceed;
+•	Fix the issue of starting at step 2 regardless of whether the applicant must start filling the profile or has filled to let say to step 5 but still forced to start at step 2, what I wanted is that the applicant will be taken to the step that was not complete to proceed from there and if completed, should be taken while loading the page to the step they once were before. 
+•	Solve the issue of uploaded documents that when the applicant loads the page and had uploaded, it should be seen or populated; and the filenames that are referenced are lacking file extensions; please fix that too; and lastly when the applicant views the file should not open from another tab but rather open with pdf iframe within the page (make a reusable method that will be shared across the project)
+•	Fix the issues in education_history and other steps that when the page has loaded and the applicant wants to add another information, those fields in selects are not notice as existing and thus the validations error pops that they are missing yet the applicant can see that is populated in the fields.
+•	We have forms under employment, educations, short courses, referees/or professions that are dynamic for adding and removing, now when the applicant removes an entry it is not cascading to the db, please implement this too.
+At /applications
+•	The applicant can see `No Applications Yet` message even after having submitted the application successful, please fix.
+At /jobs
+•	I wanted to point out that for applicant to be eligible, they should have filled the profile, has exactly three referees, and job being posted has a studyarea id and certificate level id, same to what an applicant filled in the profile on education part; therefore this field should be same for the that in job and education history of the applicant together with referees and again the advert is categorize to whether open/internal, open is for everyone and internal is for every employee of the county which is also asked while filling the profile; please consider this too
+•	Remove the word requirement because when posting the job, it will be included in the jobs details.
+At admin on posting for jobs
+There is and error for parsing though the post goes well to the db but an error message eventual pops out, fix
