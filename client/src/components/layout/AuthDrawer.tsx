@@ -111,8 +111,7 @@ type SignupData = z.infer<typeof signupSchema>;
   type OtpData = z.infer<typeof otpSchema>;
  // --- Helper: refresh session ---
   const refreshSession = async () => {
-    const res = await apiRequest("GET", "/api/auth/me");
-    const data = await res;
+    const data = await apiRequest("GET", "/api/auth/me");
     queryClient.setQueryData(["/api/auth/me"], data);
     return data;
   };
@@ -148,7 +147,8 @@ type SignupData = z.infer<typeof signupSchema>;
       return res;
     },
     onSuccess: async () => {
-        const { user, redirectUrl } = await refreshSession();
+        const data = await refreshSession();
+        const { user, redirectUrl } = data;
       queryClient.setQueryData(['auth', 'me'], user);
 
       toast({
@@ -242,7 +242,8 @@ const handleSendOtp = () => {
       });
 
       // ✅ now login
-      const { user, redirectUrl } = await refreshSession();
+      const data = await refreshSession();
+      const { user, redirectUrl } = data;
       queryClient.setQueryData(["auth", "me"], user);
 
       if (redirectUrl) {
@@ -323,7 +324,7 @@ const handleOtpVerification = (data: z.infer<typeof otpSchema>) => {
     }
 
     setProfilePhoto(file);
-    signupForm.setValue('profilePhoto', file);
+    signupForm.setValue('profilePhoto', file as any);
 
     // Create preview
     const reader = new FileReader();
@@ -333,7 +334,7 @@ const handleOtpVerification = (data: z.infer<typeof otpSchema>) => {
     reader.readAsDataURL(file);
   } else {
     // Explicitly set null when no file
-    signupForm.setValue('profilePhoto', undefined);
+    signupForm.setValue('profilePhoto', null as any);
   }
 };
 
