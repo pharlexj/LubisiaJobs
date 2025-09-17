@@ -130,25 +130,19 @@ export default function AdminJobManagement() {
   const createJobMutation = useMutation({
     mutationFn: async (data: JobFormData) => {
       console.log("Sending payload:", data);
-      const response = await apiRequest('POST', '/api/admin/jobs', {
+      // apiRequest already returns parsed JSON, no need to call .json() again
+      return await apiRequest('POST', '/api/admin/jobs', {
         ...data,
         departmentId: parseInt(data.departmentId),
         posts: parseInt(data.posts),
         jg: parseInt(data.jg),
-        designationId:data.designationId || 0,
+        designationId: data.designationId ? parseInt(data.designationId) : null,
         certificateLevel: parseInt(data.certificateLevel),
         requiredCourses: data.requiredCourses,
         experience: data.experience,
         advertType: data.advertType,
         requirements: data.requirements || null,
       });
-      // Parse response as JSON
-      try {
-        const result = await response.json();
-        return result;
-      } catch (err) {
-        throw new Error('Failed to parse job creation response');
-      }
     },
     onSuccess: () => {
       toast({
@@ -225,7 +219,7 @@ export default function AdminJobManagement() {
         departmentId: parseInt(data.departmentId),
         posts: parseInt(data.posts),
         jg: parseInt(data.jg),
-        designationId: data.designationId ? parseInt(data.designationId) : 0,
+        designationId: data.designationId ? parseInt(data.designationId) : null,
         certificateLevel: parseInt(data.certificateLevel),
         requirements: data.requirements || null,
       };
