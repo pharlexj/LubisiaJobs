@@ -19,6 +19,7 @@ import { z } from "zod";
 import { stepSchemas, stepDefaults, educationStepSchema, } from "../../../../shared/schemas";
 import { formatZodError } from "./../../lib/errFormat";
 import { useFileUpload, uploadConfigs } from "@/hooks/useFileUpload";
+import { capitalizeWords, createCapitalizeHandler } from "@/lib/utils";
 
 // -------------------- Types -------------------- //
 interface ProfileFormProps {
@@ -318,23 +319,33 @@ const renderErrors = (errors: any, parentKey = ""): JSX.Element[] => {
 
         <div>
           <Label>First Name *</Label>
-          <Input {...form.register("firstName")}
-          defaultValue={profile?.firstName || ""}
-          disabled={!!profile?.firstName}
+          <Input 
+            {...form.register("firstName")} 
+            defaultValue={profile?.firstName || ""}
+            disabled={!!profile?.firstName}
+            onChange={createCapitalizeHandler((value) => form.setValue("firstName", value, { shouldDirty: true, shouldValidate: true }))}
+            data-testid="input-firstName"
           />
         </div>
 
         <div>
           <Label>Surname *</Label>
-          <Input {...form.register("surname")}
-          defaultValue={profile?.surname || ""}
-          disabled={!!profile?.surname}
+          <Input 
+            {...form.register("surname")}
+            defaultValue={profile?.surname || ""}
+            disabled={!!profile?.surname}
+            onChange={createCapitalizeHandler((value) => form.setValue("surname", value, { shouldDirty: true, shouldValidate: true }))}
+            data-testid="input-surname"
           />
         </div>
 
         <div>
           <Label>Other Name</Label>
-          <Input {...form.register("otherName")} />
+          <Input 
+            {...form.register("otherName")}
+            onChange={createCapitalizeHandler((value) => form.setValue("otherName", value, { shouldDirty: true, shouldValidate: true }))}
+            data-testid="input-otherName"
+          />
         </div>
       </div>
 
@@ -495,12 +506,22 @@ case 1.5: // Employee Details
 
         <div>
           <Label>Designation *</Label>
-          <Input {...form.register("employee.designation")} placeholder="e.g., Senior ICT Officer"/>
+          <Input 
+            {...form.register("employee.designation")}
+            placeholder="e.g., Senior ICT Officer"
+            onChange={createCapitalizeHandler((value) => form.setValue("employee.designation", value, { shouldDirty: true, shouldValidate: true }))}
+            data-testid="input-designation"
+          />
         </div>
 
         <div>
           <Label>Duty Station *</Label>
-          <Input {...form.register("employee.dutyStation")} placeholder="e.g., Kitale County Referral Hospital.."/>
+          <Input 
+            {...form.register("employee.dutyStation")}
+            placeholder="e.g., Kitale County Referral Hospital.."
+            onChange={createCapitalizeHandler((value) => form.setValue("employee.dutyStation", value, { shouldDirty: true, shouldValidate: true }))}
+            data-testid="input-dutyStation"
+          />
         </div>
 
         <div>
@@ -1185,11 +1206,21 @@ case 1.5: // Employee Details
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Name *</Label>
-                <Input {...form.register(`referees.${index}.name`)}  placeholder="e.g., Mr. Moses Lubisia"/>
+                <Input 
+                  {...form.register(`referees.${index}.name`)}
+                  placeholder="e.g., Mr. Moses Lubisia"
+                  onChange={createCapitalizeHandler((value) => form.setValue(`referees.${index}.name`, value, { shouldDirty: true, shouldValidate: true }))}
+                  data-testid={`input-referee-name-${index}`}
+                />
               </div>
               <div>
                 <Label>Organization *</Label>
-                <Input {...form.register(`referees.${index}.organization`)} placeholder="e.g., Ministry of Health and Sanitation"/>
+                <Input 
+                  {...form.register(`referees.${index}.organization`)}
+                  placeholder="e.g., Ministry of Health and Sanitation"
+                  onChange={createCapitalizeHandler((value) => form.setValue(`referees.${index}.organization`, value, { shouldDirty: true, shouldValidate: true }))}
+                  data-testid={`input-referee-organization-${index}`}
+                />
               </div>
             </div>
 
@@ -1197,7 +1228,12 @@ case 1.5: // Employee Details
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Position</Label>
-                <Input {...form.register(`referees.${index}.position`)} placeholder="e.g., Director of ICT"/>                
+                <Input 
+                  {...form.register(`referees.${index}.position`)}
+                  placeholder="e.g., Director of ICT"
+                  onChange={createCapitalizeHandler((value) => form.setValue(`referees.${index}.position`, value, { shouldDirty: true, shouldValidate: true }))}
+                  data-testid={`input-referee-position-${index}`}
+                />                
               </div>
               <div>
                 <Label>Phone Number *</Label>
@@ -1217,7 +1253,12 @@ case 1.5: // Employee Details
               </div>
               <div>
                 <Label>Relationship</Label>
-                <Input {...form.register(`referees.${index}.relationship`)} placeholder="e.g., Supervisor, Director, Team Leader"/>
+                <Input 
+                  {...form.register(`referees.${index}.relationship`)}
+                  placeholder="e.g., Supervisor, Director, Team Leader"
+                  onChange={createCapitalizeHandler((value) => form.setValue(`referees.${index}.relationship`, value, { shouldDirty: true, shouldValidate: true }))}
+                  data-testid={`input-referee-relationship-${index}`}
+                />
               </div>
             </div>
           </CardContent>
