@@ -13,6 +13,7 @@ import { Plus, Trash2, Upload, FileText, CheckCircle } from "lucide-react";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import EmployeeVerificationDialog from "@/components/applicant/EmployeeVerificationDialog";
 import LocationDropdowns from "@/components/common/LocationDropdowns";
+import PDFViewer from "@/components/common/PDFViewer";
 import { sanitizeDate, filterEmptyFields } from "./../../lib/sanitizeDates";
 import { toast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -92,6 +93,11 @@ export default function ProfileForm({
     useState(false);
   const [isVerifiedEmployee, setIsVerifiedEmployee] = useState(false);
   const [verifiedEmployeeData, setVerifiedEmployeeData] = useState<any>(null);
+  const [pdfViewer, setPdfViewer] = useState<{ isOpen: boolean; fileUrl: string; fileName: string }>({ 
+    isOpen: false, 
+    fileUrl: '', 
+    fileName: '' 
+  });
 
   // ✅ Dynamic file upload system
   const { uploadFile, state: uploadState } = useFileUpload(uploadConfigs.documents);
@@ -113,13 +119,36 @@ export default function ProfileForm({
     }
   };
 
-  // ✅ Get upload status for a document type
-  const getDocumentUploadStatus = (type: string) => {
+  // ✅ Get document status (existing from DB or newly uploaded)
+  const getDocumentStatus = (type: string) => {
+    // Check existing documents from profile first
+    const existingDoc = profile?.documents?.find((doc: any) => doc.docType === type);
+    if (existingDoc) {
+      return {
+        isUploading: uploadState.uploadProgress[type] || false,
+        isUploaded: true,
+        document: existingDoc
+      };
+    }
+    
+    // Check newly uploaded files
     return {
       isUploading: uploadState.uploadProgress[type] || false,
       isUploaded: !!uploadState.uploadedFiles[type],
-      uploadedFile: uploadState.uploadedFiles[type]
+      document: uploadState.uploadedFiles[type] || null
     };
+  };
+  
+  // ✅ Extract file extension from filename
+  const getFileExtension = (filename: string) => {
+    return filename.split('.').pop()?.toUpperCase() || 'FILE';
+  };
+  
+  // ✅ Format file size
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return 'Unknown size';
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(1)} MB`;
   };
 
   
@@ -1282,7 +1311,7 @@ case 8: // Document Uploads
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {documentTypes.map((docType) => {
-          const { isUploading, isUploaded, uploadedFile } = getDocumentUploadStatus(docType.id);
+          const { isUploading, isUploaded, document } = getDocumentStatus(docType.id);
           
           return (
             <Card
@@ -1340,9 +1369,44 @@ case 8: // Document Uploads
                 </Button>
 
                 {/* Status */}
-                {isUploaded && uploadedFile ? (
-                  <div className="text-sm text-green-700 text-center">
-                    <div className="font-medium">{uploadedFile.fileName || 'Uploaded'}</div>
+                {isUploaded && document ? (
+                  <div className="text-sm text-green-700 text-center space-y-2">
+                    <div className="space-y-1">
+                      <div className="font-medium">{document.fileName || document.filePath?.split('/').pop() || 'Uploaded'}</div>
+                      <div className="flex items-center justify-center gap-2 text-xs">
+                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                          {getFileExtension(document.fileName || document.filePath || '')}
+                        </span>
+                        <span>{formatFileSize(document.fileSize)}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-center">
+                      {document.filePath && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const fileName = document.fileName || document.filePath?.split('/').pop() || 'Document';
+                            const isPDF = document.filePath.toLowerCase().includes('.pdf') || 
+                                          fileName.toLowerCase().endsWith('.pdf');
+                            
+                            if (isPDF) {
+                              setPdfViewer({ 
+                                isOpen: true, 
+                                fileUrl: document.filePath, 
+                                fileName 
+                              });
+                            } else {
+                              window.open(document.filePath, '_blank');
+                            }
+                          }}
+                          data-testid={`button-view-${docType.id}`}
+                        >
+                          View
+                        </Button>
+                      )}
+                    </div>
                     <div className="text-xs">✓ Successfully uploaded</div>
                   </div>
                 ) : isUploading ? (
@@ -1351,7 +1415,7 @@ case 8: // Document Uploads
                   <div className="text-xs text-gray-500 text-center">
                     Drag & drop or click to upload
                     <br />
-                    PDF (max 10MB)
+                    PDF, JPG, PNG (max 10MB)
                   </div>
                 )}
               </CardContent>
@@ -1390,6 +1454,13 @@ case 8: // Document Uploads
         onOpenChange={setShowEmployeeVerification}
         applicantIdNumber={form.getValues("nationalId") || ""}
         onVerificationSuccess={handleEmployeeVerificationSuccess}
+      />
+      
+      <PDFViewer
+        isOpen={pdfViewer.isOpen}
+        onClose={() => setPdfViewer({ isOpen: false, fileUrl: '', fileName: '' })}
+        fileUrl={pdfViewer.fileUrl}
+        fileName={pdfViewer.fileName}
       />
     </>
   );
