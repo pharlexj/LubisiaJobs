@@ -18,7 +18,6 @@ import { toast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { stepSchemas, stepDefaults, educationStepSchema, } from "../../../../shared/schemas";
 import { formatZodError } from "./../../lib/errFormat";
-
 // -------------------- Types -------------------- //
 interface ProfileFormProps {
   step: number;
@@ -26,7 +25,6 @@ interface ProfileFormProps {
   onSave: (data: any) => void;
   isLoading: boolean;
 }
-
 // -------------------- Component -------------------- //
 export default function ProfileForm({
   step,
@@ -1035,30 +1033,29 @@ case 1.5: // Employee Details
       )})}
     </div>
   );
-
-case 6: // Employment History
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between">
-        <h4 className="font-medium">Employment History</h4>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() =>
-            addEmployment({
-              employer: "",
-              position: "",
-              startDate: "",
-              endDate: "",
-              isCurrent: false,
-              responsibilities: "",
-            })
-          }
-        >
-          <Plus className="w-4 h-4 mr-2" /> Add Employment
-        </Button>
-      </div>
-      {employmentHistory.map((field, index) => (
+  case 6: // Employment History
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between">
+          <h4 className="font-medium">Employment History</h4>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() =>
+              addEmployment({
+                employer: "",
+                position: "",
+                startDate: "",
+                endDate: "",
+                isCurrent: false,
+                responsibilities: "",
+              })
+            }
+          >
+            <Plus className="w-4 h-4 mr-2" /> Add Employment
+          </Button>
+        </div>
+        {employmentHistory.map((field, index) => (
                     <Card key={field.id}>
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-4">
@@ -1285,12 +1282,11 @@ case 8: // Document Uploads
 })()}
 
 {/* ---------------- Submit Button ---------------- */}
-<div className="flex justify-end">
-  <Button type="submit" disabled={isLoading}>
-    {isLoading ? "Saving..." : "Save & Continue"}
-  </Button>
-</div>
-
+    <div className="flex justify-end">
+      <Button type="submit" disabled={isLoading}>
+        {isLoading ? "Saving..." : "Save & Continue"}
+      </Button>
+    </div>
       </form>
 
       <EmployeeVerificationDialog
