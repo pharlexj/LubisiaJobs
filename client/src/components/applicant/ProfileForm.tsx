@@ -18,11 +18,8 @@ import { toast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { stepSchemas, stepDefaults, educationStepSchema, } from "../../../../shared/schemas";
 import { formatZodError } from "./../../lib/errFormat";
-<<<<<<< HEAD
-=======
 import { useFileUpload, uploadConfigs } from "@/hooks/useFileUpload";
 
->>>>>>> 93a23bf47a7686b467bf6e51a5b65671137a1c8a
 // -------------------- Types -------------------- //
 interface ProfileFormProps {
   step: number;
@@ -52,7 +49,7 @@ export default function ProfileForm({
     : stepDefaults[step],
   });
   
-  // console.log("Profile", profile);
+  console.log("Profile", profile);
   
 
   // ✅ Field Arrays for dynamic sections
@@ -1269,7 +1266,7 @@ case 8: // Document Uploads
                 {/* File input (hidden) */}
                 <input
                   type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
+                  accept=".pdf"
                   className="hidden"
                   id={`file-${docType.id}`}
                   onChange={(e) =>
@@ -1304,7 +1301,7 @@ case 8: // Document Uploads
                   <div className="text-xs text-gray-500 text-center">
                     Drag & drop or click to upload
                     <br />
-                    PDF, JPG, PNG (max 10MB)
+                    PDF (max 10MB)
                   </div>
                 )}
               </CardContent>
@@ -1332,7 +1329,7 @@ case 8: // Document Uploads
 
 {/* ---------------- Submit Button ---------------- */}
     <div className="flex justify-end">
-      <Button type="submit" disabled={isLoading}>
+      <Button type="submit" disabled={isLoading || step === 8}>
         {isLoading ? "Saving..." : "Save & Continue"}
       </Button>
     </div>

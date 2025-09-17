@@ -103,103 +103,106 @@ export default function ApplicantDocuments() {
           <p className="text-gray-600">Upload and manage your required documents</p>
         </div>
 
-        <div className="grid gap-6">
-          {documentTypes.map((docType) => {
-            const { status, document } = getDocumentStatus(docType.id);
-            const isUploading = state.uploadProgress[docType.id] || state.isUploading;
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  {documentTypes.map((docType) => {
+    const { status, document } = getDocumentStatus(docType.id);
+    const isUploading = state.uploadProgress[docType.id] || state.isUploading;
 
-            return (
-              <div className="space-y-6">
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                <Card key={docType.id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">{docType.label}</CardTitle>
-                    <div className="flex items-center space-x-2">
-                      {docType.required && (
-                        <Badge variant="secondary" className="text-xs">Required</Badge>
-                      )}
-                      {getStatusBadge(status)}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {document ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                        <FileText className="w-8 h-8 text-blue-600" />
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900">{document.fileName}</p>
-                          <p className="text-sm text-gray-600">
-                            {formatFileSize(document.fileSize)} • {new Date(document.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(document.filePath, '_blank')}
-                        >
-                          View
-                        </Button>
-                      </div>
-                      
-                      <div className="border-t pt-4">
-                        <label htmlFor={`replace-${docType.id}`} className="block text-sm text-gray-700 mb-2">
-                          Replace document:
-                        </label>
-                        <input
-                          id={`replace-${docType.id}`}
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              handleFileUpload(file, docType.id);
-                            }
-                          }}
-                          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                          disabled={isUploading}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
-                      <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600 mb-4">
-                        Upload your {docType.label.toLowerCase()}
-                      </p>
-                      <label htmlFor={`upload-${docType.id}`}>
-                        <Button variant="outline" disabled={isUploading} asChild>
-                          <span>
-                            {isUploading ? 'Uploading...' : 'Choose File'}
-                          </span>
-                        </Button>
-                      </label>
-                      <input
-                        id={`upload-${docType.id}`}
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            handleFileUpload(file, docType.id);
-                          }
-                        }}
-                        className="hidden"
-                        disabled={isUploading}
-                      />
-                      <p className="text-xs text-gray-500 mt-2">
-                        Supports PDF, JPG, JPEG, PNG (max 10MB)
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+    return (
+      <Card key={docType.id}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">{docType.label}</CardTitle>
+            <div className="flex items-center space-x-2">
+              {docType.required && (
+                <Badge variant="secondary" className="text-xs">
+                  Required
+                </Badge>
+              )}
+              {getStatusBadge(status)}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {document ? (
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                <FileText className="w-8 h-8 text-blue-600" />
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">{document.fileName}</p>
+                  <p className="text-sm text-gray-600">
+                    {formatFileSize(document.fileSize)} •{" "}
+                    {new Date(document.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(document.filePath, "_blank")}
+                >
+                  View
+                </Button>
               </div>
+
+              <div className="border-t pt-4">
+                <label
+                  htmlFor={`replace-${docType.id}`}
+                  className="block text-sm text-gray-700 mb-2"
+                >
+                  Replace document:
+                </label>
+                <input
+                  id={`replace-${docType.id}`}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleFileUpload(file, docType.id);
+                    }
+                  }}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 
+                             file:rounded-md file:border-0 file:text-sm file:font-medium 
+                             file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  disabled={isUploading}
+                />
               </div>
-            );
-          })}
-        </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+              <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 mb-4">
+                Upload your {docType.label.toLowerCase()}
+              </p>
+              <label htmlFor={`upload-${docType.id}`}>
+                <Button variant="outline" disabled={isUploading} asChild>
+                  <span>{isUploading ? "Uploading..." : "Choose File"}</span>
+                </Button>
+              </label>
+              <input
+                id={`upload-${docType.id}`}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handleFileUpload(file, docType.id);
+                  }
+                }}
+                className="hidden"
+                disabled={isUploading}
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Supports PDF, JPG, JPEG, PNG (max 10MB)
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  })}
+</div>
+
 
         <div className="mt-8 p-4 bg-blue-50 rounded-lg">
           <h3 className="font-medium text-blue-900 mb-2">Upload Guidelines</h3>
