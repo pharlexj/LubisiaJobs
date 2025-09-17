@@ -331,6 +331,28 @@ switch (req.user?.role) {
       res.status(500).json({ message: 'Failed to fetch notices' });
     }
   });
+  
+  // Public study areas (for job requirements)
+  app.get('/api/public/study-areas', async (req, res) => {
+    try {
+      const studyAreas = await storage.getStudyArea();
+      res.json(studyAreas);
+    } catch (error) {
+      console.error('Error fetching study areas:', error);
+      res.status(500).json({ message: 'Failed to fetch study areas' });
+    }
+  });
+  
+  // Public certificate levels (for job requirements)
+  app.get('/api/public/certificate-levels', async (req, res) => {
+    try {
+      const certLevels = await storage.getCertLevel();
+      res.json(certLevels);
+    } catch (error) {
+      console.error('Error fetching certificate levels:', error);
+      res.status(500).json({ message: 'Failed to fetch certificate levels' });
+    }
+  });
   app.get('/api/public/faqs', async (req, res) => {
     try {
       const faq = await storage.getFaq();
@@ -799,6 +821,58 @@ console.log("Update Data", data);
       }
 
       const { jobId } = req.body;
+      
+      // Get detailed applicant profile with completion data
+      const applicant = await storage.getApplicantById(profile.id);
+      if (!applicant) {
+        return res.status(404).json({ message: 'Applicant profile not found' });
+      }
+      
+      // Get job details with requirements
+      const job = await storage.getJob(parseInt(jobId));
+      if (!job) {
+        return res.status(404).json({ message: 'Job not found' });
+      }
+      
+      // ✅ Eligibility Check 1: Profile must be 100% complete
+      if (applicant.profileCompletionPercentage !== 100) {
+        return res.status(400).json({ 
+          message: 'Profile must be 100% complete to apply for jobs',
+          currentCompletion: applicant.profileCompletionPercentage
+        });
+      }
+      
+      // ✅ Eligibility Check 2: Must have exactly 3 referees
+      if (!applicant.referees || applicant.referees.length !== 3) {
+        return res.status(400).json({ 
+          message: 'You must have exactly 3 referees to apply for jobs',
+          currentReferees: applicant.referees?.length || 0
+        });
+      }
+      
+      // ✅ Eligibility Check 3: Study area requirement (if job has one)
+      if (job.jobs?.requiredStudyAreaId) {
+        const hasMatchingStudyArea = applicant.education?.some(
+          (edu: any) => edu.studyArea === job.jobs.requiredStudyAreaId
+        );
+        if (!hasMatchingStudyArea) {
+          return res.status(400).json({ 
+            message: 'Your educational background does not match the required study area for this job'
+          });
+        }
+      }
+      
+      // ✅ Eligibility Check 4: Certificate level requirement (if job has one)
+      if (job.jobs?.certificateLevel) {
+        const hasMatchingCertLevel = applicant.education?.some(
+          (edu: any) => edu.certificateLevelId === job.jobs.certificateLevel
+        );
+        if (!hasMatchingCertLevel) {
+          return res.status(400).json({ 
+            message: 'Your certificate level does not match the requirements for this job'
+          });
+        }
+      }
       
       // Check if already applied
       const existingApplications = await storage.getApplications({ 

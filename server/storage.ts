@@ -790,8 +790,8 @@ async getFaq() {
       {
         id: 7,
         name: "Referees",
-        required: false,
-        completed: applicant.referees?.length > 0,
+        required: true,
+        completed: applicant.referees?.length === 3,
       },
       {
         id: 8,
@@ -838,7 +838,7 @@ async getFaq() {
   if (applicant.employmentHistory?.length > 0) {
     steps.push(6); // Employment History
   }
-  if (applicant.referees?.length > 0) {
+  if (applicant.referees?.length === 3) {
     steps.push(7); // Referees
   }
   if (applicant.documents?.length > 0) {
