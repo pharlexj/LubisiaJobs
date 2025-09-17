@@ -40,6 +40,7 @@ export default function ProfileForm({
 
   const form = useForm({
   resolver: zodResolver(stepSchemas[step]),
+  mode: "onTouched", // Prevent validation until user interacts with field
   defaultValues: profile
     ? {
         ...stepDefaults[step],
@@ -154,11 +155,17 @@ export default function ProfileForm({
   
   useEffect(() => {
   if (profile) {
-    form.reset({
-      ...stepDefaults[step],
-      ...profile,
-      employee: profile.employee || {},
-    });
+    // Use setTimeout to ensure form validation doesn't run prematurely
+    setTimeout(() => {
+      form.reset({
+        ...stepDefaults[step],
+        ...profile,
+        employee: profile.employee || {},
+      });
+      
+      // Clear all validation errors after reset
+      form.clearErrors();
+    }, 0);
 
     // ✅ Sync verified employee state
     setIsVerifiedEmployee(!!profile.isEmployee);
@@ -331,7 +338,11 @@ const renderErrors = (errors: any, parentKey = ""): JSX.Element[] => {
           <Label>Salutation *</Label>
           <Select
             value={form.watch("salutation") || ""}
-            onValueChange={(val) => form.setValue("salutation", val)}
+            onValueChange={(val) => {
+              form.setValue("salutation", val);
+              // Clear any validation error
+              form.clearErrors("salutation");
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select salutation" />
@@ -384,7 +395,11 @@ const renderErrors = (errors: any, parentKey = ""): JSX.Element[] => {
           <Label>ID/Passport Type *</Label>
           <Select
             value={form.watch("idPassportType") || ""}
-            onValueChange={(val) => form.setValue("idPassportType", val)}
+            onValueChange={(val) => {
+              form.setValue("idPassportType", val);
+              // Clear any validation error
+              form.clearErrors("idPassportType");
+            }}
             disabled={!!profile?.idPassportType}
           >
             <SelectTrigger>
@@ -408,7 +423,11 @@ const renderErrors = (errors: any, parentKey = ""): JSX.Element[] => {
           <Label>Gender *</Label>
           <Select
             value={form.watch("gender") || ""}
-            onValueChange={(val) => form.setValue("gender", val)}
+            onValueChange={(val) => {
+              form.setValue("gender", val);
+              // Clear any validation error
+              form.clearErrors("gender");
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select gender" />
@@ -576,9 +595,11 @@ case 1.5: // Employee Details
           <Label>Department *</Label>
           <Select
             value={form.watch("employee.departmentId")?.toString() || ""}
-            onValueChange={(val) =>
-              form.setValue("employee.departmentId", parseInt(val, 10))
-            }
+            onValueChange={(val) => {
+              form.setValue("employee.departmentId", parseInt(val, 10));
+              // Clear any validation error
+              form.clearErrors("employee.departmentId");
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select department" />
@@ -643,7 +664,7 @@ case 1.5: // Employee Details
               institution: "",
               qualification: "",
               certificateLevelId: null,
-              studyAreaId: null,
+              studyArea: 0,
               specializationId: null,
               courseId: null,
               grade: "",
@@ -699,12 +720,14 @@ case 1.5: // Employee Details
                       form.watch(`education.${index}.certificateLevelId`)?.toString() ||
                       ""
                     }
-                    onValueChange={(val) =>
+                    onValueChange={(val) => {
                       form.setValue(
                         `education.${index}.certificateLevelId`,
                         parseInt(val, 10)
-                      )
-                    }
+                      );
+                      // Clear any validation error
+                      form.clearErrors(`education.${index}.certificateLevelId`);
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select certificate level" />
@@ -730,6 +753,9 @@ case 1.5: // Employee Details
                     onValueChange={(val) => {
                       form.setValue(`education.${index}.studyArea`,parseInt(val, 10));
                       form.setValue(`education.${index}.specializationId`, null);
+                      // Clear validation errors
+                      form.clearErrors(`education.${index}.studyArea`);
+                      form.clearErrors(`education.${index}.specializationId`);
                     }}
                   >
                     <SelectTrigger>
