@@ -177,10 +177,10 @@ type SignupData = z.infer<typeof signupSchema>;
         credentials: "include",
       });
       if (!res.ok) throw new Error(await res.text());
-      return res;
+      return res.json();
     },
-    onSuccess: (res) => {
-      const { user } = res;
+    onSuccess: (data) => {
+      const { user } = data;
 
       // ✅ save phone for OTP step
       setPendingPhoneNumber(user.phoneNumber);

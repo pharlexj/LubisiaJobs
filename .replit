@@ -46,4 +46,4 @@ localPort = 37299
 externalPort = 3000
 
 [agent]
-integrations = ["javascript_database:1.0.0"]
+integrations = ["javascript_database:1.0.0", "javascript_log_in_with_replit:1.0.0"]
