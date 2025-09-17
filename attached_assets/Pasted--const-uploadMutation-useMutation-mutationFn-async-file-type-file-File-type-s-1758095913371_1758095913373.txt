@@ -1,0 +1,75 @@
+  const uploadMutation = useMutation({
+    mutationFn: async ({ file, type }: { file: File; type: string }) => {
+      const formData = new FormData();
+      formData.append('document', file);
+      formData.append('type', type);
+      
+      const response = await fetch('/api/applicant/documents', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Document uploaded successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to upload document",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFileUpload = async (file: File, type: string) => {
+    setUploadingFiles(prev => ({ ...prev, [type]: true }));
+    
+    try {
+      await uploadMutation.mutateAsync({ file, type });
+    } finally {
+      setUploadingFiles(prev => ({ ...prev, [type]: false }));
+    }
+  };
+
+  const getDocumentStatus = (type: string) => {
+    const document = documents.find(doc => doc.type === type);
+    if (document) {
+      return { status: 'uploaded', document };
+    }
+    return { status: 'pending', document: null };
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'uploaded':
+        return (
+          <Badge className="bg-green-100 text-green-800">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Uploaded
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline" className="text-orange-600 border-orange-300">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            Pending
+          </Badge>
+        );
+    }
+  };
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return 'Unknown size';
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(1)} MB`;
+  };

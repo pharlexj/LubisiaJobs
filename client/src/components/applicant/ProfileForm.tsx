@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Upload, FileText } from "lucide-react";
+import { Plus, Trash2, Upload, FileText, CheckCircle } from "lucide-react";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import EmployeeVerificationDialog from "@/components/applicant/EmployeeVerificationDialog";
 import LocationDropdowns from "@/components/common/LocationDropdowns";
@@ -18,6 +18,11 @@ import { toast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { stepSchemas, stepDefaults, educationStepSchema, } from "../../../../shared/schemas";
 import { formatZodError } from "./../../lib/errFormat";
+<<<<<<< HEAD
+=======
+import { useFileUpload, uploadConfigs } from "@/hooks/useFileUpload";
+
+>>>>>>> 93a23bf47a7686b467bf6e51a5b65671137a1c8a
 // -------------------- Types -------------------- //
 interface ProfileFormProps {
   step: number;
@@ -90,24 +95,33 @@ export default function ProfileForm({
   const [isVerifiedEmployee, setIsVerifiedEmployee] = useState(false);
   const [verifiedEmployeeData, setVerifiedEmployeeData] = useState<any>(null);
 
-  // ✅ Documents upload
-  const [uploadedDocuments, setUploadedDocuments] = useState<{
-    [key: string]: File | null;
-  }>({
-    national_id: null,
-    certificates: null,
-    transcripts: null,
-    professional_certs: null,
-    kra_pin: null,
-    good_conduct: null,
-  });
+  // ✅ Dynamic file upload system
+  const { uploadFile, state: uploadState } = useFileUpload(uploadConfigs.documents);
 
-  // ✅ Handle file uploads
-  const handleFileUpload = (documentType: string, file: File | null) => {
-    setUploadedDocuments((prev) => ({
-      ...prev,
-      [documentType]: file,
-    }));
+  // ✅ Document types for step 8
+  const documentTypes = [
+    { id: 'national_id', label: 'National ID', required: true },
+    { id: 'certificates', label: 'Academic Certificates', required: true },
+    { id: 'transcripts', label: 'Academic Transcripts', required: true },
+    { id: 'professional_certs', label: 'Professional Certificates', required: false },
+    { id: 'kra_pin', label: 'KRA PIN Certificate', required: true },
+    { id: 'good_conduct', label: 'Certificate of Good Conduct', required: true },
+  ];
+
+  // ✅ Handle file uploads - now actually uploads to server
+  const handleFileUpload = async (documentType: string, file: File | null) => {
+    if (file) {
+      await uploadFile(file, documentType, { type: documentType });
+    }
+  };
+
+  // ✅ Get upload status for a document type
+  const getDocumentUploadStatus = (type: string) => {
+    return {
+      isUploading: uploadState.uploadProgress[type] || false,
+      isUploaded: !!uploadState.uploadedFiles[type],
+      uploadedFile: uploadState.uploadedFiles[type]
+    };
   };
 
   
@@ -203,7 +217,9 @@ export default function ProfileForm({
           break;
 
         case 8:
-          stepData = { documents: uploadedDocuments };
+          // For step 8, documents are already uploaded to server via the upload hook
+          // Just pass the uploaded file data or indicate completion
+          stepData = { documents: uploadState.uploadedFiles };
           break;
 
         default:
@@ -1218,60 +1234,93 @@ case 8: // Document Uploads
       <h4 className="font-medium">Upload Required Documents</h4>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Object.entries(uploadedDocuments).map(([key, file]) => (
-          <Card
-            key={key}
-            className="border-dashed border-2 cursor-pointer hover:border-primary transition"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              const droppedFile = e.dataTransfer.files?.[0];
-              if (droppedFile) {
-                handleFileUpload(key, droppedFile);
-              }
-            }}
-          >
-            <CardContent className="flex flex-col items-center justify-center p-6 space-y-3">
-              {/* Icon */}
-              <Upload className="w-8 h-8 text-gray-400" />
-
-              {/* Label */}
-              <Label className="capitalize">{key.replace("_", " ")}</Label>
-
-              {/* File input (hidden) */}
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                className="hidden"
-                id={`file-${key}`}
-                onChange={(e) =>
-                  handleFileUpload(key, e.target.files?.[0] || null)
+        {documentTypes.map((docType) => {
+          const { isUploading, isUploaded, uploadedFile } = getDocumentUploadStatus(docType.id);
+          
+          return (
+            <Card
+              key={docType.id}
+              className={`border-2 cursor-pointer transition ${
+                isUploaded ? 'border-green-300 bg-green-50' : 'border-dashed hover:border-primary'
+              }`}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const droppedFile = e.dataTransfer.files?.[0];
+                if (droppedFile) {
+                  handleFileUpload(docType.id, droppedFile);
                 }
-              />
+              }}
+            >
+              <CardContent className="flex flex-col items-center justify-center p-6 space-y-3">
+                {/* Icon */}
+                {isUploaded ? (
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                ) : (
+                  <Upload className="w-8 h-8 text-gray-400" />
+                )}
 
-              {/* Upload button */}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  document.getElementById(`file-${key}`)?.click()
-                }
-              >
-                Choose File
-              </Button>
+                {/* Label */}
+                <Label className="text-center font-medium">
+                  {docType.label}
+                  {docType.required && <span className="text-red-500 ml-1">*</span>}
+                </Label>
 
-              {/* File name or placeholder */}
-              {file ? (
-                <div className="text-sm text-green-700">{file.name}</div>
-              ) : (
-                <div className="text-xs text-gray-500">
-                  Drag & drop or click to upload
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                {/* File input (hidden) */}
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="hidden"
+                  id={`file-${docType.id}`}
+                  onChange={(e) =>
+                    handleFileUpload(docType.id, e.target.files?.[0] || null)
+                  }
+                  disabled={isUploading}
+                />
+
+                {/* Upload button */}
+                <Button
+                  type="button"
+                  variant={isUploaded ? "outline" : "outline"}
+                  size="sm"
+                  onClick={() =>
+                    document.getElementById(`file-${docType.id}`)?.click()
+                  }
+                  disabled={isUploading}
+                  data-testid={`button-upload-${docType.id}`}
+                >
+                  {isUploading ? 'Uploading...' : isUploaded ? 'Replace' : 'Choose File'}
+                </Button>
+
+                {/* Status */}
+                {isUploaded && uploadedFile ? (
+                  <div className="text-sm text-green-700 text-center">
+                    <div className="font-medium">{uploadedFile.fileName || 'Uploaded'}</div>
+                    <div className="text-xs">✓ Successfully uploaded</div>
+                  </div>
+                ) : isUploading ? (
+                  <div className="text-sm text-blue-600">Uploading...</div>
+                ) : (
+                  <div className="text-xs text-gray-500 text-center">
+                    Drag & drop or click to upload
+                    <br />
+                    PDF, JPG, PNG (max 10MB)
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+        <h5 className="font-medium text-blue-900 mb-2">Upload Guidelines</h5>
+        <ul className="text-sm text-blue-800 space-y-1">
+          <li>• Ensure all documents are clear and legible</li>
+          <li>• Documents should be in PDF, JPG, or PNG format</li>
+          <li>• Maximum file size is 10MB per document</li>
+          <li>• All required documents (*) must be uploaded to proceed</li>
+        </ul>
       </div>
     </div>
   );

@@ -1,12 +1,11 @@
-import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import Navigation from '@/components/layout/Navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useFileUpload, uploadConfigs } from '@/hooks/useFileUpload';
 
 type Document = {
   id: number;
@@ -36,9 +35,6 @@ const documentTypes = [
 
 export default function ApplicantDocuments() {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
 
   const { data: profile, isLoading } = useQuery<ProfileResponse>({
     queryKey: ["/api/auth/user"],
@@ -47,47 +43,11 @@ export default function ApplicantDocuments() {
 
   const documents = profile?.applicantProfile?.documents || [];
 
-  const uploadMutation = useMutation({
-    mutationFn: async ({ file, type }: { file: File; type: string }) => {
-      const formData = new FormData();
-      formData.append('document', file);
-      formData.append('type', type);
-      
-      const response = await fetch('/api/applicant/documents', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-      
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Document uploaded successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to upload document",
-        variant: "destructive",
-      });
-    },
-  });
+  // Use the dynamic file upload hook
+  const { uploadFile, state } = useFileUpload(uploadConfigs.documents);
 
   const handleFileUpload = async (file: File, type: string) => {
-    setUploadingFiles(prev => ({ ...prev, [type]: true }));
-    
-    try {
-      await uploadMutation.mutateAsync({ file, type });
-    } finally {
-      setUploadingFiles(prev => ({ ...prev, [type]: false }));
-    }
+    await uploadFile(file, type, { type });
   };
 
   const getDocumentStatus = (type: string) => {
@@ -146,7 +106,7 @@ export default function ApplicantDocuments() {
         <div className="grid gap-6">
           {documentTypes.map((docType) => {
             const { status, document } = getDocumentStatus(docType.id);
-            const isUploading = uploadingFiles[docType.id];
+            const isUploading = state.uploadProgress[docType.id] || state.isUploading;
 
             return (
               <div className="space-y-6">

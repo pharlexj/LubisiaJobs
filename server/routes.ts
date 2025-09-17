@@ -241,56 +241,9 @@ switch (req.user?.role) {
       res.status(500).json({ message: 'Failed to save employee details' });
     }
   });
-  // OTP routes
-
-app.post("/api/auth/send-otp", sendOtpHandler);
-app.post("/api/auth/verify-otp", verifyOtpHandler);
-
-  app.post('/api/auth/send-otp', async (req, res) => {
-    try {
-      const { phoneNumber } = req.body;
-      
-      if (!phoneNumber) {
-        return res.status(400).json({ message: 'Phone number is required' });
-      }
-
-      // Generate OTP
-      const otp = generateOtp();
-      
-      // Store OTP in database
-      await storage.createOtp(phoneNumber, otp);
-      
-      // Send SMS (in production, use real SMS service)
-      const message = `Your TNCPSB verification code is: ${otp}. Valid for 5 minutes.`;
-      await sendSms(phoneNumber, message);
-      
-      res.json({ message: 'OTP sent successfully' });
-    } catch (error) {
-      console.error('Error sending OTP:', error);
-      res.status(500).json({ message: 'Failed to send OTP' });
-    }
-  });
-
-  app.post('/api/auth/verify-otp', async (req, res) => {
-    try {
-      const { phoneNumber, otp } = req.body;
-      
-      if (!phoneNumber || !otp) {
-        return res.status(400).json({ message: 'Phone number and OTP are required' });
-      }
-
-      const isValid = await storage.verifyOtp(phoneNumber, otp);
-      
-      if (isValid) {
-        res.json({ message: 'OTP verified successfully', verified: true });
-      } else {
-        res.status(400).json({ message: 'Invalid or expired OTP', verified: false });
-      }
-    } catch (error) {
-      console.error('Error verifying OTP:', error);
-      res.status(500).json({ message: 'Failed to verify OTP' });
-    }
-  });
+  // OTP routes using AfricaTalking SMS service
+  app.post("/api/auth/send-otp", sendOtpHandler);
+  app.post("/api/auth/verify-otp", verifyOtpHandler);
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
