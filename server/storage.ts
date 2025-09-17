@@ -795,11 +795,16 @@ async getFaq() {
   if (applicant.firstName && applicant.surname && applicant.phoneNumber) {
     steps.push(1); // Personal Details
   }
-  if (applicant.isEmployee && applicant.employee) {
-    steps.push(1.5); // Employee Details
+  if (applicant.isEmployee && applicant.employee && 
+      applicant.employee.personalNumber && 
+      applicant.employee.designation && 
+      applicant.employee.dutyStation && 
+      applicant.employee.jg && 
+      applicant.employee.departmentId) {
+    steps.push(1.5); // Employee Details - all required fields present
   }
-  if (applicant.address) {
-    steps.push(2); // Address
+  if (applicant.countyId && applicant.constituencyId && applicant.wardId) {
+    steps.push(2); // Address - all location selections required
   }
   if (applicant.education?.length > 0) {
     steps.push(3); // Education

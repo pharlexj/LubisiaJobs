@@ -54,29 +54,29 @@ export default function Profile() {
     }
   };
 
-  // ✅ Decide initial step (with proper URL bypass protection)
-  const searchParams = new URLSearchParams(window.location.search);
-  const stepParam = searchParams.get("step");
+  // ✅ Calculate correct step based on data (will be computed in useEffect)
+  const calculateCorrectStep = (): Step => {
+    if (!profile?.applicantProfile) return 1;
+    
+    const searchParams = new URLSearchParams(window.location.search);
+    const stepParam = searchParams.get("step");
+    const completed = profile?.applicantProfile?.completedSteps || [];
+    const maxAllowedStep = getNextAllowedStep(completed, !!isEmployeeVerified);
 
-  let defaultStep: Step = 1;
-  const completed = profile?.applicantProfile?.completedSteps || [];
-  
-  // Calculate the maximum allowed step based on actual completion
-  const maxAllowedStep = getNextAllowedStep(completed, isEmployeeVerified);
-
-  if (stepParam) {
-    const requestedStep = parseFloat(stepParam) as Step;
-    // Validate requested step and clamp to allowed range
-    if (requestedStep >= 1 && requestedStep <= 8 && [1, 1.5, 2, 3, 4, 5, 6, 7, 8].includes(requestedStep)) {
-      defaultStep = Math.min(requestedStep, maxAllowedStep) as Step;
+    if (stepParam) {
+      const requestedStep = parseFloat(stepParam) as Step;
+      // Validate requested step and clamp to allowed range
+      if (requestedStep >= 1 && requestedStep <= 8 && [1, 1.5, 2, 3, 4, 5, 6, 7, 8].includes(requestedStep)) {
+        return Math.min(requestedStep, maxAllowedStep) as Step;
+      } else {
+        return maxAllowedStep; // Invalid step requested, use max allowed
+      }
     } else {
-      defaultStep = maxAllowedStep; // Invalid step requested, use max allowed
+      return maxAllowedStep;
     }
-  } else {
-    defaultStep = maxAllowedStep;
-  }
+  };
 
-  const [currentStep, setCurrentStep] = useState<Step>(defaultStep);
+  const [currentStep, setCurrentStep] = useState<Step>(1);
 
   // ✅ Steps definition (with completed flag driven by DB)
   const steps = [
@@ -236,6 +236,14 @@ export default function Profile() {
     const prev = getPrevStep(currentStep);
     if (prev >= 1) setCurrentStep(prev);
   };
+
+  // ✅ Update current step when profile data loads
+  useEffect(() => {
+    if (!isLoading && profile?.applicantProfile) {
+      const correctStep = calculateCorrectStep();
+      setCurrentStep(correctStep);
+    }
+  }, [isLoading, profile?.applicantProfile, isEmployeeVerified]);
 
   // ✅ Auth check
   useEffect(() => {
