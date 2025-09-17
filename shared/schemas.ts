@@ -126,7 +126,10 @@ export const refereeSchema = z.object({
 });
 
 export const refereesStepSchema = z.object({
-  referees: z.array(refereeSchema),
+  referees: z.array(refereeSchema)
+    .min(3, "You must provide exactly 3 referees")
+    .max(3, "You can only provide exactly 3 referees")
+    .length(3, "Exactly 3 referees are required"),
 });
 
 // ------------------ Step 8: Documents ------------------ //
@@ -225,6 +228,22 @@ export const stepDefaults: Record<number, any> = {
   },
   7: {
     referees: [
+      {
+        name: "",
+        position: "",
+        organization: "",
+        relationship: "",
+        email: "",
+        phoneNumber: "",
+      },
+      {
+        name: "",
+        position: "",
+        organization: "",
+        relationship: "",
+        email: "",
+        phoneNumber: "",
+      },
       {
         name: "",
         position: "",

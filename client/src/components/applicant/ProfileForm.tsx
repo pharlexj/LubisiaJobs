@@ -1167,23 +1167,31 @@ case 1.5: // Employee Details
   return (
     <div className="space-y-6">
       <div className="flex justify-between">
-        <h4 className="font-medium">Referees</h4>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() =>
-            addReferee({
-              name: "",
-              organization: "",
-              position: "",
-              phoneNumber: "",
-              email: "",
-              relationship: "",
-            })
-          }
-        >
-          <Plus className="w-4 h-4 mr-2" /> Add Referee
-        </Button>
+        <div>
+          <h4 className="font-medium">Referees</h4>
+          <p className="text-sm text-gray-600 mt-1">
+            Exactly 3 referees are required ({referees.length}/3)
+          </p>
+        </div>
+        {referees.length < 3 && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() =>
+              addReferee({
+                name: "",
+                organization: "",
+                position: "",
+                phoneNumber: "",
+                email: "",
+                relationship: "",
+              })
+            }
+            data-testid="button-add-referee"
+          >
+            <Plus className="w-4 h-4 mr-2" /> Add Referee
+          </Button>
+        )}
       </div>
 
       {referees.map((field, index) => (
@@ -1191,11 +1199,12 @@ case 1.5: // Employee Details
           <CardContent className="p-4 space-y-4">
             <div className="flex justify-between items-center">
               <h5 className="font-medium">Referee {index + 1}</h5>
-              {referees.length > 1 && (
+              {referees.length > 3 && (
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={() => removeReferee(index)}
+                  data-testid={`button-remove-referee-${index}`}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
