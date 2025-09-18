@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import { stepSchemas, stepDefaults, educationStepSchema, } from "../../../../sha
 import { formatZodError } from "./../../lib/errFormat";
 import { useFileUpload, uploadConfigs } from "@/hooks/useFileUpload";
 import { capitalizeWords, createCapitalizeHandler } from "@/lib/utils";
+
 
 // -------------------- Types -------------------- //
 interface ProfileFormProps {
@@ -51,11 +52,7 @@ export default function ProfileForm({
       }
     : stepDefaults[step],
   });
-  
-  console.log("Profile", profile);
-  
-
-  // ✅ Field Arrays for dynamic sections
+    // ✅ Field Arrays for dynamic sections
   const {
     fields: educationRecords,
     append: addEducation,
@@ -103,6 +100,8 @@ export default function ProfileForm({
   // ✅ Dynamic file upload system
   const { uploadFile, state: uploadState } = useFileUpload(uploadConfigs.documents);
 
+  // Create refs for each file input dynamically
+  const fileInputs = useRef<{ [key: string]: HTMLInputElement | null }>({});
   // ✅ Document types for step 8
   const documentTypes = [
     { id: 'national_id', label: 'National ID', required: true },
@@ -123,7 +122,7 @@ export default function ProfileForm({
   // ✅ Get document status (existing from DB or newly uploaded)
   const getDocumentStatus = (type: string) => {
     // Check existing documents from profile first
-    const existingDoc = profile?.documents?.find((doc: any) => doc.docType === type);
+    const existingDoc = profile?.documents?.find((doc: any) => doc.type === type);  
     if (existingDoc) {
       return {
         isUploading: uploadState.uploadProgress[type] || false,
@@ -241,9 +240,7 @@ export default function ProfileForm({
               startDate: sanitizeDate(job.startDate),
               endDate: sanitizeDate(job.endDate),
             })),
-          };
-          console.log(stepData);
-          
+          };          
           break;
 
         case 7:
@@ -1331,6 +1328,7 @@ case 1.5: // Employee Details
     </div>
   );
 case 8: // Document Uploads
+
   return (
     <div className="space-y-6">
       <h4 className="font-medium">Upload Required Documents</h4>
@@ -1338,12 +1336,12 @@ case 8: // Document Uploads
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {documentTypes.map((docType) => {
           const { isUploading, isUploaded, document } = getDocumentStatus(docType.id);
-          
+
           return (
             <Card
               key={docType.id}
               className={`border-2 cursor-pointer transition ${
-                isUploaded ? 'border-green-300 bg-green-50' : 'border-dashed hover:border-primary'
+                isUploaded ? "border-green-300 bg-green-50" : "border-dashed hover:border-primary"
               }`}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
@@ -1368,12 +1366,13 @@ case 8: // Document Uploads
                   {docType.required && <span className="text-red-500 ml-1">*</span>}
                 </Label>
 
-                {/* File input (hidden) */}
+                {/* File input (hidden, controlled via ref) */}
                 <input
                   type="file"
                   accept=".pdf"
                   className="hidden"
                   id={`file-${docType.id}`}
+                  ref={(el) => (fileInputs.current[docType.id] = el)}
                   onChange={(e) =>
                     handleFileUpload(docType.id, e.target.files?.[0] || null)
                   }
@@ -1383,25 +1382,27 @@ case 8: // Document Uploads
                 {/* Upload button */}
                 <Button
                   type="button"
-                  variant={isUploaded ? "outline" : "outline"}
+                  variant="outline"
                   size="sm"
-                  onClick={() =>
-                    document.getElementById(`file-${docType.id}`)?.click()
-                  }
+                  onClick={() => fileInputs.current[docType.id]?.click()}
                   disabled={isUploading}
                   data-testid={`button-upload-${docType.id}`}
                 >
-                  {isUploading ? 'Uploading...' : isUploaded ? 'Replace' : 'Choose File'}
+                  {isUploading ? "Uploading..." : isUploaded ? "Replace" : "Choose File"}
                 </Button>
 
                 {/* Status */}
                 {isUploaded && document ? (
                   <div className="text-sm text-green-700 text-center space-y-2">
                     <div className="space-y-1">
-                      <div className="font-medium">{document.fileName || document.filePath?.split('/').pop() || 'Uploaded'}</div>
+                      <div className="font-medium">
+                        {document.fileName ||
+                          document.filePath?.split("/").pop() ||
+                          "Uploaded"}
+                      </div>
                       <div className="flex items-center justify-center gap-2 text-xs">
                         <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
-                          {getFileExtension(document.fileName || document.filePath || '')}
+                          {getFileExtension(document.fileName || document.filePath || "")}
                         </span>
                         <span>{formatFileSize(document.fileSize)}</span>
                       </div>
@@ -1413,18 +1414,22 @@ case 8: // Document Uploads
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const fileName = document.fileName || document.filePath?.split('/').pop() || 'Document';
-                            const isPDF = document.filePath.toLowerCase().includes('.pdf') || 
-                                          fileName.toLowerCase().endsWith('.pdf');
-                            
+                            const fileName =
+                              document.fileName ||
+                              document.filePath?.split("/").pop() ||
+                              "Document";
+                            const isPDF =
+                              document.filePath.toLowerCase().includes(".pdf") ||
+                              fileName.toLowerCase().endsWith(".pdf");
+
                             if (isPDF) {
-                              setPdfViewer({ 
-                                isOpen: true, 
-                                fileUrl: document.filePath, 
-                                fileName 
+                              setPdfViewer({
+                                isOpen: true,
+                                fileUrl: document.filePath,
+                                fileName,
                               });
                             } else {
-                              window.open(document.filePath, '_blank');
+                              window.open(document.filePath, "_blank");
                             }
                           }}
                           data-testid={`button-view-${docType.id}`}
@@ -1441,7 +1446,7 @@ case 8: // Document Uploads
                   <div className="text-xs text-gray-500 text-center">
                     Drag & drop or click to upload
                     <br />
-                    PDF, JPG, PNG (max 10MB)
+                    PDF (max 10MB)
                   </div>
                 )}
               </CardContent>
@@ -1454,7 +1459,7 @@ case 8: // Document Uploads
         <h5 className="font-medium text-blue-900 mb-2">Upload Guidelines</h5>
         <ul className="text-sm text-blue-800 space-y-1">
           <li>• Ensure all documents are clear and legible</li>
-          <li>• Documents should be in PDF, JPG, or PNG format</li>
+          <li>• Documents should be in PDF format</li>
           <li>• Maximum file size is 10MB per document</li>
           <li>• All required documents (*) must be uploaded to proceed</li>
         </ul>

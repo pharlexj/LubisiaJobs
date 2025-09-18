@@ -1,7 +1,12 @@
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { X, Download, ExternalLink } from 'lucide-react';
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { X, Download, ExternalLink } from "lucide-react";
 
 interface PDFViewerProps {
   isOpen: boolean;
@@ -10,24 +15,30 @@ interface PDFViewerProps {
   fileName: string;
 }
 
-export default function PDFViewer({ isOpen, onClose, fileUrl, fileName }: PDFViewerProps) {
+export default function PDFViewer({
+  isOpen,
+  onClose,
+  fileUrl,
+  fileName,
+}: PDFViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   const handleDownload = () => {
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = fileUrl;
     link.download = fileName;
     link.click();
   };
 
   const handleExternalView = () => {
-    window.open(fileUrl, '_blank');
+    window.open(fileUrl, "_blank");
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl h-[80vh] p-0">
-        <DialogHeader className="px-6 py-4 border-b">
+        {/* Sticky, slim header */}
+        <DialogHeader className="sticky top-0 z-10 bg-white px-4 py-2 border-b">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-lg font-semibold truncate">
               {fileName}
@@ -62,7 +73,7 @@ export default function PDFViewer({ isOpen, onClose, fileUrl, fileName }: PDFVie
             </div>
           </div>
         </DialogHeader>
-        
+
         <div className="flex-1 relative bg-gray-100">
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-white">
@@ -72,22 +83,26 @@ export default function PDFViewer({ isOpen, onClose, fileUrl, fileName }: PDFVie
               </div>
             </div>
           )}
-          
+
           <iframe
             src={fileUrl}
             className="w-full h-full border-0"
             onLoad={() => setIsLoading(false)}
             onError={() => {
               setIsLoading(false);
-              // If iframe fails, show fallback
-              console.warn('PDF iframe failed to load, showing fallback options');
+              console.warn(
+                "PDF iframe failed to load, showing fallback options"
+              );
             }}
             title={`PDF Viewer - ${fileName}`}
             data-testid="iframe-pdf-viewer"
           />
-          
-          {/* Fallback for browsers that don't support PDF iframe */}
-          <div className="absolute inset-0 flex items-center justify-center bg-white hidden" id="pdf-fallback">
+
+          {/* Fallback for unsupported browsers */}
+          <div
+            className="absolute inset-0 flex items-center justify-center bg-white hidden"
+            id="pdf-fallback"
+          >
             <div className="text-center p-8">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <X className="w-8 h-8 text-red-600" />
@@ -99,11 +114,18 @@ export default function PDFViewer({ isOpen, onClose, fileUrl, fileName }: PDFVie
                 Your browser doesn't support inline PDF viewing.
               </p>
               <div className="flex gap-3 justify-center">
-                <Button onClick={handleDownload} data-testid="button-fallback-download">
+                <Button
+                  onClick={handleDownload}
+                  data-testid="button-fallback-download"
+                >
                   <Download className="w-4 h-4 mr-2" />
                   Download PDF
                 </Button>
-                <Button variant="outline" onClick={handleExternalView} data-testid="button-fallback-external">
+                <Button
+                  variant="outline"
+                  onClick={handleExternalView}
+                  data-testid="button-fallback-external"
+                >
                   <ExternalLink className="w-4 h-4 mr-2" />
                   Open in New Tab
                 </Button>
