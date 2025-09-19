@@ -32,6 +32,7 @@ import {
   systemConfig,
   boardMembers,
   noticeSubscriptions,
+  notifications,
   type User,
   type UpsertUser,
   type Applicant,
@@ -64,6 +65,10 @@ import {
   type InsertGalleryItem,
   type InsertSystemConfig,
   type InsertBoardMember,
+  type Notification,
+  type NotificationRecipient,
+  type InsertNotificationRecipient,
+  type InsertNotification,
   type Ethnicity,
 } from "@shared/schema";
 import { db } from "./db";
@@ -149,6 +154,22 @@ export interface IStorage {
   getUsersReport(startDate?: string, endDate?: string): Promise<any>;
   getPerformanceReport(startDate?: string, endDate?: string): Promise<any>;
   getAllUsersForRoleAssignment(): Promise<any[]>;
+  
+  // Notification operations
+  getNotifications(): Promise<Notification[]>;
+  createNotification(data: InsertNotification): Promise<Notification>;
+  getNotificationStats(): Promise<{
+    totalSent: number;
+    openRate: number;
+    activeUsers: number;
+    pending: number;
+  }>;
+  // Enhanced recipient tracking
+  createNotificationRecipients(notificationId: number, recipients: InsertNotificationRecipient[]): Promise<void>;
+  updateRecipientStatus(recipientId: number, status: string, metadata?: any): Promise<void>;
+  getNotificationRecipients(notificationId: number, status?: string): Promise<NotificationRecipient[]>;
+  retryFailedRecipients(notificationId: number): Promise<void>;
+  trackNotificationOpen(trackingToken: string): Promise<boolean>;
 }
 export class DatabaseStorage implements IStorage {
   // User operations
@@ -698,6 +719,54 @@ async getFaq() {
       .values(member)
       .returning();
     return boardMember;
+  }
+
+  // Notification operations
+  async getNotifications(): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async createNotification(data: InsertNotification): Promise<Notification> {
+    const [notification] = await db
+      .insert(notifications)
+      .values(data)
+      .returning();
+    return notification;
+  }
+
+  async getNotificationStats(): Promise<{
+    totalSent: number;
+    openRate: number;
+    activeUsers: number;
+    pending: number;
+  }> {
+    // For now return mock data - can be enhanced later
+    const totalSent = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(notifications)
+      .where(eq(notifications.status, 'sent'))
+      .then(rows => rows[0]?.count || 0);
+
+    const pending = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(notifications)
+      .where(eq(notifications.status, 'scheduled'))
+      .then(rows => rows[0]?.count || 0);
+
+    const activeUsers = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .then(rows => rows[0]?.count || 0);
+
+    return {
+      totalSent,
+      openRate: 85, // Mock data for now
+      activeUsers,
+      pending,
+    };
   }
   async createNotice(notice: Omit<Notice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notice> {
     const [newNotice] = await db.insert(notices).values(notice).returning();

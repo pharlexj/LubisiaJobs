@@ -1144,15 +1144,15 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
         return res.status(403).json({ message: 'Access denied' });
       }
 
-      // Return empty array for now - can be implemented later
-      res.json([]);
+      const notifications = await storage.getNotifications();
+      res.json(notifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
       res.status(500).json({ message: 'Failed to fetch notifications' });
     }
   });
 
-  // Send notification (admin)
+  // Create notification (admin) with validation
   app.post('/api/admin/notifications', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1160,18 +1160,72 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
         return res.status(403).json({ message: 'Access denied' });
       }
 
-      // For now, just return success - can be implemented with actual notification service
-      res.json({ 
-        id: Date.now(), 
-        ...req.body, 
-        status: 'sent',
-        createdAt: new Date().toISOString()
-      });
+      // Basic validation - schema import needed for full Zod validation
+      const requiredFields = ['title', 'message', 'type', 'targetAudience', 'priority'];
+      const missingFields = requiredFields.filter(field => !req.body[field]);
+      
+      if (missingFields.length > 0) {
+        return res.status(400).json({ 
+          message: 'Missing required fields',
+          errors: missingFields.map(field => ({ field, message: `${field} is required` }))
+        });
+      }
+
+      // Calculate recipient count based on target audience
+      let recipientCount = 0;
+      const allUsers = await storage.getAllUsersForRoleAssignment();
+      
+      switch (req.body.targetAudience) {
+        case 'all':
+          recipientCount = allUsers.length;
+          break;
+        case 'applicants':
+          recipientCount = allUsers.filter((u: any) => u.role === 'applicant').length;
+          break;
+        case 'admins':
+          recipientCount = allUsers.filter((u: any) => u.role === 'admin').length;
+          break;
+        case 'board':
+          recipientCount = allUsers.filter((u: any) => u.role === 'board').length;
+          break;
+        default:
+          recipientCount = 0;
+      }
+
+      const notificationData = {
+        ...req.body,
+        createdBy: user.id,
+        status: req.body.scheduledAt ? 'scheduled' : 'sent',
+        sentAt: req.body.scheduledAt ? null : new Date(),
+        recipientCount,
+        deliveredCount: req.body.scheduledAt ? 0 : recipientCount, // Mark as delivered immediately if not scheduled
+      };
+
+      const notification = await storage.createNotification(notificationData);
+      res.json(notification);
     } catch (error) {
-      console.error('Error sending notification:', error);
-      res.status(500).json({ message: 'Failed to send notification' });
+      console.error('Error creating notification:', error);
+      res.status(500).json({ message: 'Failed to create notification' });
     }
   });
+
+  // Get notification stats (admin) 
+  app.get('/api/admin/notification-stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const stats = await storage.getNotificationStats();
+      res.json(stats);
+    } catch (error) {
+      console.error('Error fetching notification stats:', error);
+      res.status(500).json({ message: 'Failed to fetch notification stats' });
+    }
+  });
+
+  // Removed old notification endpoint as it's been replaced with the full implementation above
 
   // Create county (admin)
   app.post('/api/admin/counties', isAuthenticated, async (req: any, res) => {

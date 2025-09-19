@@ -10,6 +10,7 @@ import {
   pgEnum,
   jsonb,
   index,
+  uniqueIndex,
   serial
 } from "drizzle-orm/pg-core";
 
@@ -438,6 +439,53 @@ export const noticeSubscriptions = pgTable("notice_subscriptions", {
   unsubscribedAt: timestamp("unsubscribed_at"),
 });
 
+// Admin notifications for system alerts
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 250 }).notNull(),
+  message: text("message").notNull(),
+  type: varchar("type", { length: 50 }).notNull(), // 'email', 'sms', 'system'
+  targetAudience: varchar("target_audience", { length: 50 }).notNull(), // 'all', 'applicants', 'admins', 'board'
+  priority: varchar("priority", { length: 20 }).default("medium"), // 'low', 'medium', 'high', 'urgent'
+  scheduledAt: timestamp("scheduled_at"),
+  sentAt: timestamp("sent_at"),
+  status: varchar("status", { length: 20 }).default("draft"), // 'draft', 'scheduled', 'sent', 'failed'
+  // Enhanced tracking fields
+  totalRecipients: integer("total_recipients").default(0),
+  queuedCount: integer("queued_count").default(0),
+  sentCount: integer("sent_count").default(0),
+  deliveredCount: integer("delivered_count").default(0),
+  openedCount: integer("opened_count").default(0),
+  failedCount: integer("failed_count").default(0),
+  filterSnapshot: jsonb("filter_snapshot"), // For audit purposes
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const notificationRecipients = pgTable("notification_recipients", {
+  id: serial("id").primaryKey(),
+  notificationId: integer("notification_id").notNull().references(() => notifications.id, { onDelete: 'cascade' }),
+  userId: integer("user_id").references(() => users.id),
+  channel: varchar("channel", { length: 20 }).notNull(), // 'email', 'sms', 'in_app'
+  status: varchar("status", { length: 20 }).notNull().default('queued'), // 'queued', 'sending', 'sent', 'delivered', 'opened', 'failed', 'bounced'
+  attempts: integer("attempts").default(0),
+  providerMessageId: varchar("provider_message_id", { length: 255 }),
+  trackingToken: varchar("tracking_token", { length: 64 }).unique(),
+  lastError: text("last_error"),
+  queuedAt: timestamp("queued_at").defaultNow(),
+  sentAt: timestamp("sent_at"),
+  deliveredAt: timestamp("delivered_at"),
+  openedAt: timestamp("opened_at"),
+  readAt: timestamp("read_at"),
+  metadata: jsonb("metadata"),
+}, (table) => ({
+  notificationIdIdx: index("notification_recipients_notification_id_idx").on(table.notificationId),
+  statusIdx: index("notification_recipients_status_idx").on(table.status),
+  channelStatusIdx: index("notification_recipients_channel_status_idx").on(table.channel, table.status),
+  trackingTokenIdx: uniqueIndex("notification_recipients_tracking_token_idx").on(table.trackingToken),
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   applicant: one(applicants, {
@@ -447,6 +495,26 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   createdJobs: many(jobs),
   createdNotices: many(notices),
   createdGalleryItems: many(galleryItems),
+  notificationRecipients: many(notificationRecipients),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one, many }) => ({
+  createdBy: one(users, {
+    fields: [notifications.createdBy],
+    references: [users.id],
+  }),
+  recipients: many(notificationRecipients),
+}));
+
+export const notificationRecipientsRelations = relations(notificationRecipients, ({ one }) => ({
+  notification: one(notifications, {
+    fields: [notificationRecipients.notificationId],
+    references: [notifications.id],
+  }),
+  user: one(users, {
+    fields: [notificationRecipients.userId],
+    references: [users.id],
+  }),
 }));
 
 export const applicantsRelations = relations(applicants, ({ one, many }) => ({
@@ -574,6 +642,17 @@ export const insertNoticeSchema = createInsertSchema(notices).omit({
   updatedAt: true,
 });
 
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertNotificationRecipientSchema = createInsertSchema(notificationRecipients).omit({
+  id: true,
+  queuedAt: true,
+});
+
 // OTP verification table
 export const otpVerification = pgTable("otp_verification", {
   id: serial("id").primaryKey(),
@@ -599,6 +678,7 @@ export type Applicant = typeof applicants.$inferSelect;
 export type Job = typeof jobs.$inferSelect;
 export type Application = typeof applications.$inferSelect;
 export type Notice = typeof notices.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
 export type County = typeof counties.$inferSelect;
 export type Constituency = typeof constituencies.$inferSelect;
 export type Ward = typeof wards.$inferSelect;
@@ -619,6 +699,9 @@ export type PanelScores = typeof panelScores.$inferSelect;
 export type ProfessionalQualification = typeof professionalQualifications.$inferSelect;
 export type Employee = typeof employees.$inferSelect;
 export type InsertEmployee = typeof employees.$inferInsert;
+export type InsertNotification = typeof notifications.$inferInsert;
+export type NotificationRecipient = typeof notificationRecipients.$inferSelect;
+export type InsertNotificationRecipient = z.infer<typeof insertNotificationRecipientSchema>;
 export type Institution = typeof institutions.$inferSelect;
 export type CertificateLevel = typeof certificateLevel.$inferSelect;
 export type ShortCourse = typeof shortCourse.$inferSelect;

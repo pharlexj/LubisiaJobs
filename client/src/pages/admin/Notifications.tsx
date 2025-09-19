@@ -18,6 +18,75 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus, Send, Bell, Users, Mail, MessageSquare } from 'lucide-react';
 
+// Stats Cards Component
+function NotificationStatsCards() {
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['/api/admin/notification-stats']
+  });
+
+  const statsData = [
+    {
+      title: 'Total Sent',
+      value: stats?.totalSent || 0,
+      icon: Send,
+      color: 'bg-blue-100',
+      iconColor: 'text-primary',
+      change: '+12% this month'
+    },
+    {
+      title: 'Open Rate',
+      value: `${stats?.openRate || 0}%`,
+      icon: Mail,
+      color: 'bg-green-100', 
+      iconColor: 'text-secondary',
+      change: '+3% improvement'
+    },
+    {
+      title: 'Active Users',
+      value: stats?.activeUsers || 0,
+      icon: Users,
+      color: 'bg-purple-100',
+      iconColor: 'text-purple-600',
+      change: '+8% this week'
+    },
+    {
+      title: 'Pending',
+      value: stats?.pending || 0,
+      icon: Bell,
+      color: 'bg-yellow-100',
+      iconColor: 'text-yellow-600',
+      change: 'Scheduled'
+    }
+  ];
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      {statsData.map((stat, index) => (
+        <Card key={index} data-testid={`card-stats-${stat.title.toLowerCase().replace(' ', '-')}`}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm" data-testid={`text-${stat.title.toLowerCase().replace(' ', '-')}-label`}>
+                  {stat.title}
+                </p>
+                <p className="text-3xl font-bold text-gray-900" data-testid={`text-${stat.title.toLowerCase().replace(' ', '-')}-value`}>
+                  {statsLoading ? '...' : stat.value.toLocaleString()}
+                </p>
+                <p className="text-green-600 text-sm mt-1" data-testid={`text-${stat.title.toLowerCase().replace(' ', '-')}-change`}>
+                  {stat.change}
+                </p>
+              </div>
+              <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center`}>
+                <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 const notificationSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
   message: z.string().min(10, "Message must be at least 10 characters"),
@@ -61,14 +130,26 @@ export default function AdminNotifications() {
         title: 'Notification Sent',
         description: 'Your notification has been sent successfully.',
       });
+      // Invalidate both notifications list and stats
       queryClient.invalidateQueries({ queryKey: ['/api/admin/notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/notification-stats'] });
       setIsCreateModalOpen(false);
       form.reset();
     },
     onError: (error: any) => {
+      // Enhanced error handling with structured response
+      let errorMessage = 'Failed to send notification';
+      
+      if (error.errors && Array.isArray(error.errors)) {
+        // Handle validation errors
+        errorMessage = error.errors.map((err: any) => err.message || err.field).join(', ');
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: 'Error',
-        description: error.message || 'Failed to send notification',
+        description: errorMessage,
         variant: 'destructive',
       });
     },
@@ -254,67 +335,7 @@ export default function AdminNotifications() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-600 text-sm">Total Sent</p>
-                      <p className="text-3xl font-bold text-gray-900">1,234</p>
-                      <p className="text-green-600 text-sm mt-1">+12% this month</p>
-                    </div>
-                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Send className="w-6 h-6 text-primary" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-600 text-sm">Open Rate</p>
-                      <p className="text-3xl font-bold text-gray-900">85%</p>
-                      <p className="text-green-600 text-sm mt-1">+3% improvement</p>
-                    </div>
-                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                      <Mail className="w-6 h-6 text-secondary" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-600 text-sm">Active Users</p>
-                      <p className="text-3xl font-bold text-gray-900">2,456</p>
-                      <p className="text-green-600 text-sm mt-1">+8% this week</p>
-                    </div>
-                    <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                      <Users className="w-6 h-6 text-purple-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-600 text-sm">Pending</p>
-                      <p className="text-3xl font-bold text-gray-900">23</p>
-                      <p className="text-yellow-600 text-sm mt-1">Scheduled</p>
-                    </div>
-                    <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                      <Bell className="w-6 h-6 text-yellow-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <NotificationStatsCards />
 
             {/* Notification History */}
             <Card>

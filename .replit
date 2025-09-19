@@ -45,9 +45,5 @@ externalPort = 3001
 localPort = 37299
 externalPort = 3000
 
-[[ports]]
-localPort = 39975
-externalPort = 3002
-
 [agent]
 integrations = ["javascript_database:1.0.0", "javascript_log_in_with_replit:1.0.0"]
