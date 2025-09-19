@@ -118,7 +118,7 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl w-full h-[90vh] flex flex-col" data-testid="document-viewer-modal">
-        <DialogHeader className="flex-shrink-0 pb-4">
+        <DialogHeader className="flex-shrink-0 pb-2">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <DialogTitle className="text-lg font-semibold truncate pr-4" data-testid="document-title">
@@ -141,7 +141,7 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
 
         {/* Toolbar for PDF controls */}
         {isPDF && (
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-4 flex-shrink-0">
+          <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg mb-2 flex-shrink-0">
             <div className="flex items-center space-x-2">
               <Button
                 variant="outline"
@@ -185,7 +185,7 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
         )}
 
         {/* Document content */}
-        <div className="flex-1 overflow-auto bg-gray-100 rounded-lg flex items-center justify-center p-4">
+        <div className="flex-1 overflow-auto bg-gray-100 rounded-lg flex items-center justify-center p-1">
           {isLoading && (
             <div className="flex items-center space-x-2" data-testid="loading-indicator">
               <Loader2 className="w-6 h-6 animate-spin" />
