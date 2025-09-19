@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import Navigation from '@/components/layout/Navigation';
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import { useFileUpload, uploadConfigs } from '@/hooks/useFileUpload';
+import DocumentViewer from '@/components/documents/DocumentViewer';
 
 type Document = {
   id: number;
@@ -35,6 +37,7 @@ const documentTypes = [
 
 export default function ApplicantDocuments() {
   const { user } = useAuth();
+  const [viewingDocument, setViewingDocument] = useState<Document | null>(null);
 
   const { data: profile, isLoading } = useQuery<ProfileResponse>({
     queryKey: ["/api/auth/user"],
@@ -138,7 +141,8 @@ export default function ApplicantDocuments() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => window.open(document.filePath, "_blank")}
+                  onClick={() => setViewingDocument(document)}
+                  data-testid={`button-view-${docType.id}`}
                 >
                   View
                 </Button>
@@ -213,6 +217,15 @@ export default function ApplicantDocuments() {
             <li>• All required documents must be uploaded before submitting applications</li>
           </ul>
         </div>
+
+        {/* Document Viewer Modal */}
+        {viewingDocument && (
+          <DocumentViewer
+            document={viewingDocument}
+            isOpen={!!viewingDocument}
+            onClose={() => setViewingDocument(null)}
+          />
+        )}
       </div>
     </div>
   );
