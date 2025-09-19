@@ -11,6 +11,17 @@ import { sendOtpHandler, verifyOtpHandler } from "../client/src/lib/africastalki
 import { ApplicantService } from "./applicantService";
 import { log } from "util";
 import { z } from "zod";
+import { createInsertSchema } from 'drizzle-zod';
+import { boardMembers } from "@shared/schema";
+
+// Board member validation schemas
+const insertBoardMemberSchema = createInsertSchema(boardMembers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+const updateBoardMemberSchema = insertBoardMemberSchema.partial();
 
 // OTP utility functions
 const applicantService = new ApplicantService(storage);
@@ -1124,9 +1135,21 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
         return res.status(403).json({ message: 'Access denied' });
       }
 
+      // Validate request body with Zod
+      const result = insertBoardMemberSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: 'Validation failed',
+          errors: result.error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
+
       const boardMemberData = {
-        ...req.body,
-        order: req.body.order || 0,
+        ...result.data,
+        order: result.data.order || 0,
       };
 
       const boardMember = await storage.createBoardMember(boardMemberData);
@@ -1134,6 +1157,68 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     } catch (error) {
       console.error('Error creating board member:', error);
       res.status(500).json({ message: 'Failed to create board member' });
+    }
+  });
+
+  // Update board member (admin)
+  app.put('/api/admin/board-members/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const boardMemberId = parseInt(req.params.id);
+      if (isNaN(boardMemberId)) {
+        return res.status(400).json({ message: 'Invalid board member ID' });
+      }
+
+      // Validate request body with Zod
+      const result = updateBoardMemberSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: 'Validation failed',
+          errors: result.error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
+
+      const boardMember = await storage.updateBoardMember(boardMemberId, result.data);
+      if (!boardMember) {
+        return res.status(404).json({ message: 'Board member not found' });
+      }
+
+      res.json(boardMember);
+    } catch (error) {
+      console.error('Error updating board member:', error);
+      res.status(500).json({ message: 'Failed to update board member' });
+    }
+  });
+
+  // Delete board member (admin)
+  app.delete('/api/admin/board-members/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const boardMemberId = parseInt(req.params.id);
+      if (isNaN(boardMemberId)) {
+        return res.status(400).json({ message: 'Invalid board member ID' });
+      }
+
+      const boardMember = await storage.deleteBoardMember(boardMemberId);
+      if (!boardMember) {
+        return res.status(404).json({ message: 'Board member not found' });
+      }
+
+      res.json({ message: 'Board member deleted successfully', boardMember });
+    } catch (error) {
+      console.error('Error deleting board member:', error);
+      res.status(500).json({ message: 'Failed to delete board member' });
     }
   });
 

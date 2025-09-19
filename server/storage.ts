@@ -171,6 +171,12 @@ export interface IStorage {
   getNotificationRecipients(notificationId: number, status?: string): Promise<NotificationRecipient[]>;
   retryFailedRecipients(notificationId: number): Promise<void>;
   trackNotificationOpen(trackingToken: string): Promise<boolean>;
+  
+  // Board member operations
+  getBoardMembers(): Promise<BoardMember[]>;
+  createBoardMember(member: InsertBoardMember): Promise<BoardMember>;
+  updateBoardMember(id: number, member: Partial<InsertBoardMember>): Promise<BoardMember>;
+  deleteBoardMember(id: number): Promise<BoardMember>;
 }
 export class DatabaseStorage implements IStorage {
   // User operations
@@ -718,6 +724,25 @@ async getFaq() {
     const [boardMember] = await db
       .insert(boardMembers)
       .values(member)
+      .returning();
+    return boardMember;
+  }
+
+  async updateBoardMember(id: number, member: Partial<InsertBoardMember>) {
+    const [boardMember] = await db
+      .update(boardMembers)
+      .set({ ...member, updatedAt: sql`now()` })
+      .where(eq(boardMembers.id, id))
+      .returning();
+    return boardMember;
+  }
+
+  async deleteBoardMember(id: number) {
+    // Soft delete by setting isActive to false
+    const [boardMember] = await db
+      .update(boardMembers)
+      .set({ isActive: false, updatedAt: sql`now()` })
+      .where(eq(boardMembers.id, id))
       .returning();
     return boardMember;
   }

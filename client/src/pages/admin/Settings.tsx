@@ -159,6 +159,12 @@ export default function AdminSettings() {
   const [uploadedImageFile, setUploadedImageFile] = useState<File | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string>('');
 
+  // Board member upload states
+  const [boardPhotoMode, setBoardPhotoMode] = useState<'url' | 'upload'>('url');
+  const [boardPhotoFile, setBoardPhotoFile] = useState<File | null>(null);
+  const [boardPhotoPreview, setBoardPhotoPreview] = useState<string>('');
+  const [editingBoardMember, setEditingBoardMember] = useState<any | null>(null);
+
   // Fetch configuration data
   const { data: config } = useQuery({
     queryKey: ['/api/public/config'],
@@ -232,6 +238,17 @@ export default function AdminSettings() {
     successMessage: 'Image uploaded successfully!',
     errorMessage: 'Failed to upload image',
     invalidateQueries: ['/api/public/gallery']
+  });
+
+  // File upload configuration for board member photos
+  const boardPhotoUpload = useFileUpload({
+    endpoint: '/api/upload',
+    fieldName: 'file',
+    acceptedTypes: ['image/jpeg', 'image/jpg', 'image/png'],
+    maxSizeInMB: 5,
+    successMessage: 'Board member photo uploaded successfully!',
+    errorMessage: 'Failed to upload board member photo',
+    invalidateQueries: ['/api/admin/board-members']
   });
 
   // Generic mutation handler
@@ -415,8 +432,67 @@ export default function AdminSettings() {
     createMutation.mutate({ endpoint: '/api/admin/system-config', data });
   };
 
-  const handleCreateBoardMember = (data: BoardMemberFormData) => {
-    createMutation.mutate({ endpoint: '/api/admin/board-members', data });
+  const handleCreateBoardMember = async (data: BoardMemberFormData) => {
+    try {
+      // Validate that either URL or file is provided for photo
+      if (boardPhotoMode === 'url' && (!data.photoUrl || data.photoUrl.trim() === '')) {
+        // Allow empty photoUrl since it's optional
+      } else if (boardPhotoMode === 'upload' && !boardPhotoFile) {
+        // Allow no file upload since photo is optional
+      }
+
+      let photoUrl = data.photoUrl || '';
+
+      // Handle file upload if in upload mode
+      if (boardPhotoMode === 'upload' && boardPhotoFile) {
+        toast({
+          title: 'Processing...',
+          description: 'Uploading photo and creating board member...',
+        });
+
+        // Upload the file first
+        const uploadResult = await boardPhotoUpload.uploadFile(boardPhotoFile, 'board-member-photo', {
+          memberName: data.name,
+          position: data.position
+        });
+
+        // Use the uploaded file URL
+        photoUrl = uploadResult.fileUrl || uploadResult.url || uploadResult.path || '';
+      }
+
+      // Create the board member with the photo URL (either from input or upload)
+      const processedData = {
+        ...data,
+        photoUrl,
+        order: data.order || 0
+      };
+
+      if (editingBoardMember) {
+        // Update existing member
+        await apiRequest('PUT', `/api/admin/board-members/${editingBoardMember.id}`, processedData);
+        toast({
+          title: 'Success',
+          description: 'Board member updated successfully.',
+        });
+        setEditingBoardMember(null);
+      } else {
+        // Create new member
+        createMutation.mutate({ endpoint: '/api/admin/board-members', data: processedData });
+      }
+
+      // Reset upload states after successful submission
+      setBoardPhotoFile(null);
+      setBoardPhotoPreview('');
+      setBoardPhotoMode('url');
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/board-members'] });
+
+    } catch (error: any) {
+      toast({
+        title: 'Operation Failed',
+        description: error.message || 'Failed to process board member',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleCreateGalleryItem = async (data: GalleryItemFormData) => {
@@ -493,6 +569,60 @@ export default function AdminSettings() {
   const filteredSpecializations = selectedStudyArea 
     ? specializations.filter((s: any) => s.studyArea === parseInt(selectedStudyArea))
     : [];
+
+  // Board member photo handling functions
+  const handleBoardPhotoFileSelect = (file: File) => {
+    setBoardPhotoFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    setBoardPhotoPreview(previewUrl);
+  };
+
+  const handleBoardPhotoDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files);
+    const imageFile = files.find(file => file.type.startsWith('image/'));
+    if (imageFile) {
+      handleBoardPhotoFileSelect(imageFile);
+    }
+  };
+
+  const handleBoardPhotoDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleEditBoardMember = (member: any) => {
+    setEditingBoardMember(member);
+    boardMemberForm.reset({
+      name: member.name,
+      position: member.position,
+      bio: member.bio || '',
+      photoUrl: member.photoUrl || '',
+      order: member.order || 0
+    });
+    if (member.photoUrl) {
+      setBoardPhotoMode('url');
+      setBoardPhotoPreview('');
+    }
+  };
+
+  const handleDeleteBoardMember = async (memberId: number) => {
+    if (confirm('Are you sure you want to delete this board member?')) {
+      try {
+        await apiRequest('DELETE', `/api/admin/board-members/${memberId}`);
+        toast({
+          title: 'Success',
+          description: 'Board member deleted successfully.',
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/board-members'] });
+      } catch (error: any) {
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to delete board member',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
   return (
     <div className="min-h-screen bg-neutral-50">
       <Navigation />
@@ -1485,14 +1615,22 @@ export default function AdminSettings() {
                     </div>
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button>
+                        <Button onClick={() => {
+                          setEditingBoardMember(null);
+                          boardMemberForm.reset();
+                          setBoardPhotoMode('url');
+                          setBoardPhotoFile(null);
+                          setBoardPhotoPreview('');
+                        }}>
                           <Plus className="w-4 h-4 mr-2" />
                           Add Board Member
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent className="max-w-2xl">
                         <DialogHeader>
-                          <DialogTitle>Add Board Member</DialogTitle>
+                          <DialogTitle>
+                            {editingBoardMember ? 'Edit Board Member' : 'Add Board Member'}
+                          </DialogTitle>
                         </DialogHeader>
                         <form onSubmit={boardMemberForm.handleSubmit(handleCreateBoardMember)} className="space-y-4">
                           <div className="grid grid-cols-2 gap-4">
@@ -1532,13 +1670,114 @@ export default function AdminSettings() {
                               rows={3}
                             />
                           </div>
-                          <div>
-                            <Label htmlFor="board-photo">Photo URL</Label>
-                            <Input 
-                              id="board-photo" 
-                              {...boardMemberForm.register('photoUrl')} 
-                              placeholder="https://example.com/photo.jpg"
-                            />
+                          {/* Photo Upload Section */}
+                          <div className="space-y-4">
+                            <Label>Board Member Photo</Label>
+                            
+                            {/* Upload Mode Toggle */}
+                            <div className="flex rounded-md border border-gray-200 p-1">
+                              <Button
+                                type="button"
+                                variant={boardPhotoMode === 'url' ? 'default' : 'ghost'}
+                                size="sm"
+                                className="flex-1"
+                                onClick={() => {
+                                  setBoardPhotoMode('url');
+                                  setBoardPhotoFile(null);
+                                  setBoardPhotoPreview('');
+                                }}
+                                data-testid="button-board-photo-url-mode"
+                              >
+                                <Link className="w-4 h-4 mr-1" />
+                                URL
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={boardPhotoMode === 'upload' ? 'default' : 'ghost'}
+                                size="sm"
+                                className="flex-1"
+                                onClick={() => {
+                                  setBoardPhotoMode('upload');
+                                  boardMemberForm.setValue('photoUrl', '');
+                                }}
+                                data-testid="button-board-photo-upload-mode"
+                              >
+                                <Upload className="w-4 h-4 mr-1" />
+                                Upload
+                              </Button>
+                            </div>
+
+                            {/* URL Input Mode */}
+                            {boardPhotoMode === 'url' && (
+                              <div>
+                                <Input 
+                                  {...boardMemberForm.register('photoUrl')} 
+                                  placeholder="https://example.com/board-member-photo.jpg"
+                                  data-testid="input-board-photo-url"
+                                />
+                              </div>
+                            )}
+
+                            {/* File Upload Mode */}
+                            {boardPhotoMode === 'upload' && (
+                              <div>
+                                <div 
+                                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer"
+                                  onDrop={handleBoardPhotoDrop}
+                                  onDragOver={handleBoardPhotoDragOver}
+                                  onClick={() => {
+                                    const input = document.createElement('input');
+                                    input.type = 'file';
+                                    input.accept = 'image/*';
+                                    input.onchange = (e) => {
+                                      const file = (e.target as HTMLInputElement).files?.[0];
+                                      if (file) handleBoardPhotoFileSelect(file);
+                                    };
+                                    input.click();
+                                  }}
+                                  data-testid="board-photo-drop-zone"
+                                >
+                                  {boardPhotoFile ? (
+                                    <div className="space-y-2">
+                                      <img 
+                                        src={boardPhotoPreview} 
+                                        alt="Preview" 
+                                        className="w-24 h-24 object-cover rounded-full mx-auto"
+                                      />
+                                      <p className="text-sm font-medium text-green-600">
+                                        {boardPhotoFile.name}
+                                      </p>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setBoardPhotoFile(null);
+                                          setBoardPhotoPreview('');
+                                        }}
+                                        data-testid="button-remove-board-photo"
+                                      >
+                                        <X className="w-4 h-4 mr-1" />
+                                        Remove
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-2">
+                                      <Camera className="w-12 h-12 text-gray-400 mx-auto" />
+                                      <div>
+                                        <p className="text-sm font-medium text-gray-900">
+                                          Drag and drop a photo here
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                          or click to browse (JPEG, PNG up to 5MB)
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                           <div>
                             <Label htmlFor="board-order">Display Order</Label>
@@ -1550,7 +1789,12 @@ export default function AdminSettings() {
                             />
                           </div>
                           <div className="flex justify-end space-x-2">
-                            <Button type="submit">Add Board Member</Button>
+                            <Button 
+                              type="submit" 
+                              data-testid="button-submit-board-member"
+                            >
+                              {editingBoardMember ? 'Update Board Member' : 'Add Board Member'}
+                            </Button>
                           </div>
                         </form>
                       </DialogContent>
@@ -1566,22 +1810,57 @@ export default function AdminSettings() {
                       ) : (
                         (boardMembers as any[]).map((member: any) => (
                           <Card key={member.id}>
-                            <CardContent className="p-4 text-center">
-                              {member.photoUrl && (
-                                <div className="w-20 h-20 mx-auto mb-4 rounded-full overflow-hidden bg-gray-200">
+                            <CardContent className="p-4 text-center relative">
+                              {/* Edit/Delete Action Buttons */}
+                              <div className="absolute top-2 right-2 flex space-x-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleEditBoardMember(member)}
+                                  data-testid={`button-edit-board-member-${member.id}`}
+                                >
+                                  <Edit className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleDeleteBoardMember(member.id)}
+                                  className="text-red-600 hover:text-red-700 hover:border-red-300"
+                                  data-testid={`button-delete-board-member-${member.id}`}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+
+                              {/* Photo */}
+                              <div className="w-20 h-20 mx-auto mb-4 rounded-full overflow-hidden bg-gray-200">
+                                {member.photoUrl ? (
                                   <img 
                                     src={member.photoUrl} 
                                     alt={member.name}
                                     className="w-full h-full object-cover"
+                                    data-testid={`img-board-member-${member.id}`}
                                   />
-                                </div>
-                              )}
-                              <h4 className="font-semibold text-lg">{member.name}</h4>
-                              <p className="text-primary font-medium">{member.position}</p>
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Users className="w-8 h-8 text-gray-400" />
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Member Info */}
+                              <h4 className="font-semibold text-lg" data-testid={`text-board-member-name-${member.id}`}>
+                                {member.name}
+                              </h4>
+                              <p className="text-primary font-medium" data-testid={`text-board-member-position-${member.id}`}>
+                                {member.position}
+                              </p>
                               {member.bio && (
-                                <p className="text-sm text-gray-600 mt-2 line-clamp-3">{member.bio}</p>
+                                <p className="text-sm text-gray-600 mt-2 line-clamp-3" data-testid={`text-board-member-bio-${member.id}`}>
+                                  {member.bio}
+                                </p>
                               )}
-                              <Badge className="mt-2" variant="outline">
+                              <Badge className="mt-2" variant="outline" data-testid={`badge-board-member-order-${member.id}`}>
                                 Order: {member.order || 0}
                               </Badge>
                             </CardContent>
