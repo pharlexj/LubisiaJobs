@@ -426,6 +426,18 @@ export const boardMembers = pgTable("board_members", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Notice subscriptions for email notifications
+export const noticeSubscriptions = pgTable("notice_subscriptions", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  isActive: boolean("is_active").default(true),
+  subscriptionToken: varchar("subscription_token", { length: 100 }).notNull().unique(),
+  notificationTypes: varchar("notification_types", { length: 500 }).default("all"), // JSON array: ["announcement", "interview", "urgent"] or "all"
+  subscribedAt: timestamp("subscribed_at").defaultNow(),
+  lastNotifiedAt: timestamp("last_notified_at"),
+  unsubscribedAt: timestamp("unsubscribed_at"),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   applicant: one(applicants, {
@@ -625,3 +637,7 @@ export type InsertSystemConfig = z.infer<typeof insertSystemConfig>;
 
 export const insertBoardMember = createInsertSchema(boardMembers).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertBoardMember = z.infer<typeof insertBoardMember>;
+
+export const insertNoticeSubscription = createInsertSchema(noticeSubscriptions).omit({ id: true, subscribedAt: true });
+export type InsertNoticeSubscription = z.infer<typeof insertNoticeSubscription>;
+export type NoticeSubscription = typeof noticeSubscriptions.$inferSelect;

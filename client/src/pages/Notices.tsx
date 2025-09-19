@@ -1,20 +1,66 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import Navigation from '@/components/layout/Navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 import { Calendar, Search, Filter, Download, Eye } from 'lucide-react';
+
+const subscriptionSchema = z.object({
+  email: z.string().email('Please enter a valid email address').min(1, 'Email is required'),
+  notificationTypes: z.string().default('all'),
+});
+
+type SubscriptionFormData = z.infer<typeof subscriptionSchema>;
 
 export default function Notices() {
   const { data: notices = [], isLoading } = useQuery({
     queryKey: ['/api/public/notices'],
   });  
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
-  const [email, setEmail] = useState('');
+
+  const form = useForm<SubscriptionFormData>({
+    resolver: zodResolver(subscriptionSchema),
+    defaultValues: {
+      email: '',
+      notificationTypes: 'all',
+    },
+  });
+
+  const subscribeMutation = useMutation({
+    mutationFn: async (subscriptionData: SubscriptionFormData) => {
+      return await apiRequest('POST', '/api/public/subscribe', subscriptionData);
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: 'Successfully Subscribed!', 
+        description: `You'll receive notice updates at ${form.getValues('email')}. Check your email for confirmation.`,
+        duration: 5000
+      });
+      form.reset();
+    },
+    onError: (error: any) => {
+      const message = error.message || 'Failed to subscribe. Please try again.';
+      toast({ 
+        title: 'Subscription Failed', 
+        description: message, 
+        variant: 'destructive' 
+      });
+    }
+  });
+
+  const onSubmit = (data: SubscriptionFormData) => {
+    subscribeMutation.mutate(data);
+  };
 
   const getNoticeTypeColor = (type: string) => {
     switch (type) {
@@ -222,26 +268,35 @@ export default function Notices() {
               Subscribe to receive email notifications when new notices are published. 
               Never miss important updates about job opportunities and recruitment processes.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-              <Input 
-                placeholder="Enter your email address" 
-                className="flex-1"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <Button
-                onClick={() => {
-                  if (email) {
-                    toast({ title: 'Subscribed!', description: `You'll receive updates at ${email}` });
-                    setEmail('');
-                  } else {
-                    toast({ title: 'Email Required', description: 'Please enter a valid email address', variant: 'destructive' });
-                  }
-                }}
-              >
-                Subscribe
-              </Button>
-            </div>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-md mx-auto">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl>
+                          <Input
+                            placeholder="Enter your email address"
+                            data-testid="input-email-subscription"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="submit"
+                    disabled={subscribeMutation.isPending}
+                    data-testid="button-subscribe"
+                  >
+                    {subscribeMutation.isPending ? 'Subscribing...' : 'Subscribe'}
+                  </Button>
+                </div>
+              </form>
+            </Form>
             <p className="text-xs text-gray-500 mt-3">
               You can unsubscribe at any time. We respect your privacy.
             </p>
