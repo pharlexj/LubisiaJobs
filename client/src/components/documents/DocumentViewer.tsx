@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url,
 ).toString();
 
-interface Document {
+interface UserDocument {
   id: number;
   type: string;
   fileName: string;
@@ -33,7 +33,7 @@ interface Document {
 }
 
 interface DocumentViewerProps {
-  document: Document;
+  document: UserDocument;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -45,6 +45,20 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
   const [rotation, setRotation] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Reset state when document changes or modal opens
+  useEffect(() => {
+    if (isOpen && document) {
+      setPageNumber(1);
+      setScale(1.0);
+      setRotation(0);
+      setLoadError(null);
+      
+      // Set initial loading state based on document type
+      const isPDF = document.mimeType?.includes('pdf') || document.fileName.toLowerCase().endsWith('.pdf');
+      setIsLoading(isPDF); // Only show loading for PDFs, images will handle their own loading
+    }
+  }, [document, isOpen]);
 
   const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -188,7 +202,7 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
             </div>
           )}
 
-          {!isLoading && !loadError && isPDF && (
+          {!loadError && isPDF && (
             <div className="bg-white shadow-lg" data-testid="pdf-content">
               <Document
                 file={document.filePath}
@@ -208,18 +222,24 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
             </div>
           )}
 
-          {!isLoading && !loadError && isImage && (
+          {!loadError && isImage && (
             <div className="max-w-full max-h-full flex items-center justify-center" data-testid="image-content">
+              {isLoading && <div className="flex items-center space-x-2"><Loader2 className="w-6 h-6 animate-spin" /><span>Loading image...</span></div>}
               <img
                 src={document.filePath}
                 alt={document.fileName}
-                className="max-w-full max-h-full object-contain shadow-lg rounded"
+                className={`max-w-full max-h-full object-contain shadow-lg rounded ${isLoading ? 'hidden' : ''}`}
                 style={{ transform: `scale(${scale}) rotate(${rotation}deg)` }}
+                onLoad={() => setIsLoading(false)}
+                onError={() => {
+                  setLoadError('Failed to load image');
+                  setIsLoading(false);
+                }}
               />
             </div>
           )}
 
-          {!isLoading && !loadError && !isPDF && !isImage && (
+          {!loadError && !isPDF && !isImage && (
             <div className="text-center space-y-4" data-testid="unsupported-format">
               <p className="text-gray-600">Preview not available for this file type</p>
               <Button onClick={downloadDocument} data-testid="button-download-unsupported">
@@ -229,25 +249,31 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
           )}
         </div>
 
-        {/* Bottom controls for images */}
-        {!isPDF && isImage && (
+        {/* Bottom controls for images and PDFs */}
+        {(isPDF || isImage) && (
           <div className="flex items-center justify-center space-x-2 mt-4 flex-shrink-0">
-            <Button variant="outline" size="sm" onClick={zoomOut} data-testid="button-zoom-out-image">
-              <ZoomOut className="w-4 h-4" />
-            </Button>
-            <span className="text-sm" data-testid="text-zoom-level-image">{Math.round(scale * 100)}%</span>
-            <Button variant="outline" size="sm" onClick={zoomIn} data-testid="button-zoom-in-image">
-              <ZoomIn className="w-4 h-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={rotate} data-testid="button-rotate-image">
-              <RotateCw className="w-4 h-4" />
-            </Button>
+            {!isPDF && (
+              <>
+                <Button variant="outline" size="sm" onClick={zoomOut} data-testid="button-zoom-out-image">
+                  <ZoomOut className="w-4 h-4" />
+                </Button>
+                <span className="text-sm" data-testid="text-zoom-level-image">{Math.round(scale * 100)}%</span>
+                <Button variant="outline" size="sm" onClick={zoomIn} data-testid="button-zoom-in-image">
+                  <ZoomIn className="w-4 h-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={rotate} data-testid="button-rotate-image">
+                  <RotateCw className="w-4 h-4" />
+                </Button>
+              </>
+            )}
             <Button variant="outline" size="sm" onClick={resetView} data-testid="button-reset-view">
               Reset View
             </Button>
-            <Button variant="outline" size="sm" onClick={downloadDocument} data-testid="button-download-image">
-              <Download className="w-4 h-4" />
-            </Button>
+            {!isPDF && (
+              <Button variant="outline" size="sm" onClick={downloadDocument} data-testid="button-download-image">
+                <Download className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         )}
       </DialogContent>

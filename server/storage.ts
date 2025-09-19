@@ -31,6 +31,7 @@ import {
   galleryItems,
   systemConfig,
   boardMembers,
+  noticeSubscriptions,
   type User,
   type UpsertUser,
   type Applicant,
@@ -53,6 +54,8 @@ import {
   type Payroll,
   type Jg,
   type CertificateLevel,
+  type NoticeSubscription,
+  type InsertNoticeSubscription,
   type ProfessionalQualification,
   type Faq,
   type GalleryItem,
@@ -109,6 +112,12 @@ export interface IStorage {
   getNotices(isPublished?: boolean): Promise<Notice[]>;
   createNotice(notice: Omit<Notice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notice>;
   updateNotice(id: number, notice: Partial<Notice>): Promise<Notice>;
+
+  // Subscription operations
+  createSubscription(subscription: InsertNoticeSubscription): Promise<NoticeSubscription>;
+  getSubscription(email: string): Promise<NoticeSubscription | undefined>;
+  unsubscribeEmail(token: string): Promise<boolean>;
+  getActiveSubscriptions(): Promise<NoticeSubscription[]>;
 
    // Employee operations
   verifyEmployee(personalNumber: string, idNumber: string): Promise<Payroll | undefined>;
@@ -692,6 +701,43 @@ async getFaq() {
       .where(eq(notices.id, id))
       .returning();
     return updatedNotice;
+  }
+
+  // Subscription operations
+  async createSubscription(subscription: InsertNoticeSubscription): Promise<NoticeSubscription> {
+    const [newSubscription] = await db
+      .insert(noticeSubscriptions)
+      .values(subscription)
+      .returning();
+    return newSubscription;
+  }
+
+  async getSubscription(email: string): Promise<NoticeSubscription | undefined> {
+    const [subscription] = await db
+      .select()
+      .from(noticeSubscriptions)
+      .where(eq(noticeSubscriptions.email, email))
+      .limit(1);
+    return subscription;
+  }
+
+  async unsubscribeEmail(token: string): Promise<boolean> {
+    const [unsubscribed] = await db
+      .update(noticeSubscriptions)
+      .set({ 
+        isActive: false, 
+        unsubscribedAt: new Date() 
+      })
+      .where(eq(noticeSubscriptions.subscriptionToken, token))
+      .returning();
+    return !!unsubscribed;
+  }
+
+  async getActiveSubscriptions(): Promise<NoticeSubscription[]> {
+    return await db
+      .select()
+      .from(noticeSubscriptions)
+      .where(eq(noticeSubscriptions.isActive, true));
   }
   // OTP operations
   async createOtp(phoneNumber: string, otp: string): Promise<OtpVerification> {

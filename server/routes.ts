@@ -10,6 +10,7 @@ import passport from "passport";
 import { sendOtpHandler, verifyOtpHandler } from "../client/src/lib/africastalking-sms";
 import { ApplicantService } from "./applicantService";
 import { log } from "util";
+import { z } from "zod";
 
 // OTP utility functions
 const applicantService = new ApplicantService(storage);
@@ -23,9 +24,19 @@ function sendSms(phoneNumber: string, message: string): Promise<boolean> {
   // In development, just log the OTP
   return Promise.resolve(true);
 }
+// Document upload storage configuration with extensions preserved
+const documentStorage = multer.diskStorage({
+  destination: 'uploads/',
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, uniqueName);
+  },
+});
+
 // File upload configuration
 const upload = multer({
-  dest: 'uploads/',
+  storage: documentStorage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -329,6 +340,89 @@ switch (req.user?.role) {
     } catch (error) {
       console.error('Error fetching notices:', error);
       res.status(500).json({ message: 'Failed to fetch notices' });
+    }
+  });
+
+  // Subscribe to notice notifications
+  app.post('/api/public/subscribe', async (req, res) => {
+    try {
+      // Validate request body using Zod
+      const subscriptionSchema = z.object({
+        email: z.string().email('Invalid email address'),
+        notificationTypes: z.string().default('all')
+      });
+      
+      const validatedData = subscriptionSchema.parse(req.body);
+      const { email, notificationTypes } = validatedData;
+      
+      if (!email) {
+        return res.status(400).json({ message: 'Email address is required' });
+      }
+
+      // Check if email is already subscribed
+      const existingSubscription = await storage.getSubscription(email);
+      if (existingSubscription && existingSubscription.isActive) {
+        return res.status(409).json({ message: 'Email is already subscribed' });
+      }
+
+      // Generate unique subscription token
+      const subscriptionToken = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      const subscriptionData = {
+        email,
+        subscriptionToken,
+        notificationTypes: typeof notificationTypes === 'string' ? notificationTypes : JSON.stringify(notificationTypes),
+        isActive: true,
+        lastNotifiedAt: null,
+        unsubscribedAt: null,
+      };
+
+      const subscription = await storage.createSubscription(subscriptionData);
+      res.status(201).json({ 
+        message: 'Successfully subscribed to notice notifications',
+        subscription: {
+          email: subscription.email,
+          subscribedAt: subscription.subscribedAt
+        }
+      });
+    } catch (error) {
+      console.error('Error creating subscription:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: 'Invalid request data',
+          errors: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        });
+      }
+      res.status(500).json({ message: 'Failed to subscribe' });
+    }
+  });
+
+  // Unsubscribe from notice notifications
+  app.post('/api/public/unsubscribe', async (req, res) => {
+    try {
+      // Validate request body using Zod
+      const unsubscribeSchema = z.object({
+        token: z.string().min(1, 'Subscription token is required')
+      });
+      
+      const validatedData = unsubscribeSchema.parse(req.body);
+      const { token } = validatedData;
+
+      const success = await storage.unsubscribeEmail(token);
+      if (success) {
+        res.json({ message: 'Successfully unsubscribed from notice notifications' });
+      } else {
+        res.status(404).json({ message: 'Subscription not found or already inactive' });
+      }
+    } catch (error) {
+      console.error('Error unsubscribing:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: 'Invalid request data',
+          errors: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        });
+      }
+      res.status(500).json({ message: 'Failed to unsubscribe' });
     }
   });
   
@@ -984,6 +1078,22 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     } catch (error) {
       console.error('Error creating notice:', error);
       res.status(500).json({ message: 'Failed to create notice' });
+    }
+  });
+
+  // Get active subscriptions (admin)
+  app.get('/api/admin/subscriptions', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const subscriptions = await storage.getActiveSubscriptions();
+      res.json(subscriptions);
+    } catch (error) {
+      console.error('Error fetching subscriptions:', error);
+      res.status(500).json({ message: 'Failed to fetch subscriptions' });
     }
   });
 
