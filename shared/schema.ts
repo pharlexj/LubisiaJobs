@@ -466,7 +466,7 @@ export const notifications = pgTable("notifications", {
 export const notificationRecipients = pgTable("notification_recipients", {
   id: serial("id").primaryKey(),
   notificationId: integer("notification_id").notNull().references(() => notifications.id, { onDelete: 'cascade' }),
-  userId: integer("user_id").references(() => users.id),
+  userId: varchar("user_id").references(() => users.id),
   channel: varchar("channel", { length: 20 }).notNull(), // 'email', 'sms', 'in_app'
   status: varchar("status", { length: 20 }).notNull().default('queued'), // 'queued', 'sending', 'sent', 'delivered', 'opened', 'failed', 'bounced'
   attempts: integer("attempts").default(0),
