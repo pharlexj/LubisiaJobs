@@ -42,6 +42,9 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
 
   const jobGroups = config?.jobGroups || [];
   const departments = config?.departments || [];
+  const studyAreas = config?.studyAreas || [];
+  const certificateLevels = config?.certificateLevels || [];
+  const courses = config?.courses || [];
 
   const applyMutation = useMutation({
     mutationFn: async () => {
@@ -87,6 +90,58 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
     if (diffDays <= 7) return { text: `${diffDays} days left`, color: 'text-yellow-600' };
     return { text: date.toLocaleDateString(), color: 'text-gray-600' };
   };
+
+  // Get required qualifications for display
+  const getRequiredQualifications = () => {
+    const qualifications = {
+      courses: [] as string[],
+      studyAreas: [] as string[],
+      certificateLevel: null as string | null,
+    };
+    
+    // Parse required courses from varchar field and extract study areas
+    if (job.requiredCourses) {
+      const courseStr = job.requiredCourses.toString().trim();
+      if (courseStr) {
+        const courseIds = courseStr.split(/[,\s]+/).map((id: string) => {
+          const parsed = parseInt(id.trim());
+          return !isNaN(parsed) ? parsed : null;
+        }).filter(Boolean);
+        
+        const studyAreaSet = new Set<string>();
+        
+        courseIds.forEach(courseId => {
+          const course = courses.find((c: any) => c.id === courseId);
+          if (course) {
+            qualifications.courses.push(course.name);
+            
+            // Find study area for this course
+            const studyArea = studyAreas.find((sa: any) => sa.id === course.studyAreaId || sa.id === course.studyArea);
+            if (studyArea) {
+              studyAreaSet.add(studyArea.name);
+            }
+          }
+        });
+        
+        qualifications.studyAreas = Array.from(studyAreaSet);
+      }
+    }
+    
+    // Add certificate level requirement
+    if (job.certificateLevel) {
+      const certLevel = certificateLevels.find((c: any) => c.id === job.certificateLevel);
+      if (certLevel) {
+        qualifications.certificateLevel = certLevel.name;
+      }
+    }
+    
+    return qualifications;
+  };
+  
+  const requiredQualifications = getRequiredQualifications();
+  const hasRequirements = requiredQualifications.studyAreas.length > 0 || 
+                          requiredQualifications.courses.length > 0 || 
+                          requiredQualifications.certificateLevel;
 
   // Check if applicant is eligible based on education requirements
   const isEligible = () => {
@@ -213,9 +268,57 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
             </p>
 
             <div className="space-y-2">
-              <div className="flex items-center text-sm text-gray-500">
-                <GraduationCap className="w-4 h-4 mr-2" />
-                <span>Qualifications as per job requirements</span>
+              <div className="flex items-start text-sm text-gray-600">
+                <GraduationCap className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="font-medium mb-1">Required Qualifications:</div>
+                  {hasRequirements ? (
+                    <div className="space-y-2">
+                      {/* Study Areas */}
+                      {requiredQualifications.studyAreas.length > 0 && (
+                        <div>
+                          <div className="text-xs font-medium text-gray-700 mb-1">Study Area(s):</div>
+                          <div className="space-y-1">
+                            {requiredQualifications.studyAreas.map((area, index) => (
+                              <div key={index} className="flex items-center">
+                                <CheckCircle className="w-3 h-3 mr-1 text-blue-500 flex-shrink-0" />
+                                <span className="text-xs font-medium text-blue-600">{area}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Certificate Level */}
+                      {requiredQualifications.certificateLevel && (
+                        <div>
+                          <div className="text-xs font-medium text-gray-700 mb-1">Certificate Level:</div>
+                          <div className="flex items-center">
+                            <CheckCircle className="w-3 h-3 mr-1 text-green-500 flex-shrink-0" />
+                            <span className="text-xs font-medium text-green-600">{requiredQualifications.certificateLevel}</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Specific Courses */}
+                      {requiredQualifications.courses.length > 0 && (
+                        <div>
+                          <div className="text-xs font-medium text-gray-700 mb-1">Required Courses:</div>
+                          <div className="space-y-1">
+                            {requiredQualifications.courses.map((course, index) => (
+                              <div key={index} className="flex items-center">
+                                <CheckCircle className="w-3 h-3 mr-1 text-purple-500 flex-shrink-0" />
+                                <span className="text-xs">{course}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-500">General qualifications apply</span>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center text-sm text-gray-500">
@@ -256,6 +359,71 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
                       <p className="text-gray-600">{jobGroups.find((j: any) => j.id === job.jg)?.name}</p>
                     </div>
                   </div>
+                  
+                  {/* Required Qualifications Section */}
+                  {hasRequirements && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-3">Required Qualifications</h4>
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <div className="flex items-center mb-3">
+                          <GraduationCap className="w-5 h-5 mr-2 text-blue-600" />
+                          <span className="font-medium text-blue-900">Education Requirements</span>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          {/* Study Areas */}
+                          {requiredQualifications.studyAreas.length > 0 && (
+                            <div>
+                              <div className="font-medium text-blue-800 mb-2">Study Area(s):</div>
+                              <div className="space-y-1 pl-3">
+                                {requiredQualifications.studyAreas.map((area, index) => (
+                                  <div key={index} className="flex items-center text-sm text-blue-700">
+                                    <CheckCircle className="w-4 h-4 mr-2 text-blue-500 flex-shrink-0" />
+                                    <span className="font-medium">{area}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Certificate Level */}
+                          {requiredQualifications.certificateLevel && (
+                            <div>
+                              <div className="font-medium text-green-800 mb-2">Certificate Level:</div>
+                              <div className="pl-3">
+                                <div className="flex items-center text-sm text-green-700">
+                                  <CheckCircle className="w-4 h-4 mr-2 text-green-500 flex-shrink-0" />
+                                  <span className="font-medium">{requiredQualifications.certificateLevel}</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Specific Courses */}
+                          {requiredQualifications.courses.length > 0 && (
+                            <div>
+                              <div className="font-medium text-purple-800 mb-2">Required Courses:</div>
+                              <div className="space-y-1 pl-3">
+                                {requiredQualifications.courses.map((course, index) => (
+                                  <div key={index} className="flex items-center text-sm text-purple-700">
+                                    <CheckCircle className="w-4 h-4 mr-2 text-purple-500 flex-shrink-0" />
+                                    <span>{course}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {isAuthenticated && !isEligible() && (
+                          <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded text-sm text-yellow-800">
+                            <AlertCircle className="w-4 h-4 inline mr-1" />
+                            Your current qualifications may not meet these requirements.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">Job Description</h4>
