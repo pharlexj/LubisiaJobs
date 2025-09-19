@@ -33,6 +33,7 @@ import {
   boardMembers,
   noticeSubscriptions,
   notifications,
+  notificationRecipients,
   type User,
   type UpsertUser,
   type Applicant,
@@ -72,7 +73,7 @@ import {
   type Ethnicity,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, like, sql,lt, PromiseOf, or } from "drizzle-orm";
+import { eq, desc, and, like, sql, lt, PromiseOf, or, ne } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -166,7 +167,7 @@ export interface IStorage {
   }>;
   // Enhanced recipient tracking
   createNotificationRecipients(notificationId: number, recipients: InsertNotificationRecipient[]): Promise<void>;
-  updateRecipientStatus(recipientId: number, status: string, metadata?: any): Promise<void>;
+  updateRecipientStatus(recipientId: number, status: string, lastError?: string): Promise<void>;
   getNotificationRecipients(notificationId: number, status?: string): Promise<NotificationRecipient[]>;
   retryFailedRecipients(notificationId: number): Promise<void>;
   trackNotificationOpen(trackingToken: string): Promise<boolean>;
@@ -767,6 +768,86 @@ async getFaq() {
       activeUsers,
       pending,
     };
+  }
+
+  // Enhanced recipient tracking methods
+  async createNotificationRecipients(notificationId: number, recipients: InsertNotificationRecipient[]): Promise<void> {
+    if (recipients.length > 0) {
+      // Ensure all recipients have the correct notificationId, trackingToken, and defaults
+      const recipientsWithDefaults = recipients.map(recipient => ({
+        ...recipient,
+        notificationId,
+        trackingToken: recipient.trackingToken || this.generateTrackingToken(),
+        status: recipient.status || 'queued',
+        attempts: recipient.attempts || 0,
+      }));
+      await db.insert(notificationRecipients).values(recipientsWithDefaults);
+    }
+  }
+
+  private generateTrackingToken(): string {
+    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  }
+
+  async updateRecipientStatus(recipientId: number, status: string, lastError?: string): Promise<void> {
+    const updates: any = { status };
+    
+    // Set appropriate timestamp based on status
+    if (status === 'sent') updates.sentAt = new Date();
+    if (status === 'delivered') updates.deliveredAt = new Date();
+    if (status === 'opened') updates.openedAt = new Date();
+    if (lastError) updates.lastError = lastError;
+
+    await db
+      .update(notificationRecipients)
+      .set(updates)
+      .where(eq(notificationRecipients.id, recipientId));
+  }
+
+  async getNotificationRecipients(notificationId: number, status?: string): Promise<NotificationRecipient[]> {
+    const conditions = [eq(notificationRecipients.notificationId, notificationId)];
+    
+    if (status) {
+      conditions.push(eq(notificationRecipients.status, status));
+    }
+
+    const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
+
+    return await db
+      .select()
+      .from(notificationRecipients)
+      .where(whereClause)
+      .orderBy(desc(notificationRecipients.queuedAt));
+  }
+
+  async retryFailedRecipients(notificationId: number): Promise<void> {
+    await db
+      .update(notificationRecipients)
+      .set({ 
+        status: 'queued',
+        attempts: sql`attempts + 1`,
+        lastError: null,
+      })
+      .where(and(
+        eq(notificationRecipients.notificationId, notificationId),
+        eq(notificationRecipients.status, 'failed')
+      ));
+  }
+
+  async trackNotificationOpen(trackingToken: string): Promise<boolean> {
+    const result = await db
+      .update(notificationRecipients)
+      .set({ 
+        status: 'opened',
+        openedAt: new Date(),
+      })
+      .where(and(
+        eq(notificationRecipients.trackingToken, trackingToken),
+        ne(notificationRecipients.status, 'opened') // Only update if not already opened
+      ))
+      .returning({ id: notificationRecipients.id });
+
+    return result.length > 0;
   }
   async createNotice(notice: Omit<Notice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notice> {
     const [newNotice] = await db.insert(notices).values(notice).returning();
