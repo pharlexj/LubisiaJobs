@@ -185,7 +185,7 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
         )}
 
         {/* Document content */}
-        <div className="flex-1 overflow-auto bg-gray-100 rounded-lg flex items-center justify-center p-1">
+        <div className="flex-1 overflow-auto bg-gray-100 rounded-lg p-1">
           {isLoading && (
             <div className="flex items-center space-x-2" data-testid="loading-indicator">
               <Loader2 className="w-6 h-6 animate-spin" />
@@ -203,22 +203,24 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
           )}
 
           {!loadError && isPDF && (
-            <div className="bg-white shadow-lg" data-testid="pdf-content">
-              <Document
-                file={document.filePath}
-                onLoadSuccess={onDocumentLoadSuccess}
-                onLoadError={onDocumentLoadError}
-                loading={<div className="p-4">Loading PDF...</div>}
-                error={<div className="p-4 text-red-600">Failed to load PDF</div>}
-              >
-                <Page
-                  pageNumber={pageNumber}
-                  scale={scale}
-                  rotate={rotation}
-                  renderTextLayer={true}
-                  renderAnnotationLayer={true}
-                />
-              </Document>
+            <div className="w-full flex justify-center" data-testid="pdf-content">
+              <div className="bg-white shadow-lg">
+                <Document
+                  file={document.filePath}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  onLoadError={onDocumentLoadError}
+                  loading={<div className="p-4">Loading PDF...</div>}
+                  error={<div className="p-4 text-red-600">Failed to load PDF</div>}
+                >
+                  <Page
+                    pageNumber={pageNumber}
+                    scale={scale}
+                    rotate={rotation}
+                    renderTextLayer={true}
+                    renderAnnotationLayer={true}
+                  />
+                </Document>
+              </div>
             </div>
           )}
 
