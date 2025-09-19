@@ -23,9 +23,19 @@ function sendSms(phoneNumber: string, message: string): Promise<boolean> {
   // In development, just log the OTP
   return Promise.resolve(true);
 }
+// Document upload storage configuration with extensions preserved
+const documentStorage = multer.diskStorage({
+  destination: 'uploads/',
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, uniqueName);
+  },
+});
+
 // File upload configuration
 const upload = multer({
-  dest: 'uploads/',
+  storage: documentStorage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
