@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { useFileUpload } from '@/hooks/useFileUpload';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -35,7 +36,10 @@ import {
   Building2,
   Info,
   Camera,
-  Globe
+  Globe,
+  Upload,
+  Link,
+  X
 } from 'lucide-react';
 
 // Form schemas
@@ -139,6 +143,11 @@ export default function AdminSettings() {
   const [selectedCounty, setSelectedCounty] = useState('');
   const [selectedConstituency, setSelectedConstituency] = useState('');
   const [selectedStudyArea, setSelectedStudyArea] = useState('');
+  
+  // Gallery upload states
+  const [galleryImageMode, setGalleryImageMode] = useState<'url' | 'upload'>('url');
+  const [uploadedImageFile, setUploadedImageFile] = useState<File | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string>('');
 
   // Fetch configuration data
   const { data: config } = useQuery({
@@ -191,6 +200,17 @@ export default function AdminSettings() {
   const aboutConfigForm = useForm<AboutConfigFormData>({ resolver: zodResolver(aboutConfigSchema) });
   const galleryItemForm = useForm<GalleryItemFormData>({ resolver: zodResolver(galleryItemSchema) });
 
+  // File upload configuration for gallery (aligned with server-side accepted types)
+  const galleryFileUpload = useFileUpload({
+    endpoint: '/api/upload',
+    fieldName: 'file',
+    acceptedTypes: ['image/jpeg', 'image/jpg', 'image/png'],
+    maxSizeInMB: 10,
+    successMessage: 'Image uploaded successfully!',
+    errorMessage: 'Failed to upload image',
+    invalidateQueries: ['/api/public/gallery']
+  });
+
   // Generic mutation handler
   const createMutation = useMutation({
     mutationFn: async ({ endpoint, data }: { endpoint: string; data: any }) => {
@@ -202,6 +222,12 @@ export default function AdminSettings() {
         description: 'Item created successfully.',
       });
       queryClient.invalidateQueries({ queryKey: ['/api/public/config'] });
+      
+      // Invalidate gallery cache when gallery items are added
+      if (variables.endpoint.includes('gallery')) {
+        queryClient.invalidateQueries({ queryKey: ['/api/public/gallery'] });
+      }
+      
       setIsModalOpen(false);
       // Reset appropriate form based on endpoint
       if (variables.endpoint.includes('notices')) noticeForm.reset();
@@ -359,12 +385,67 @@ export default function AdminSettings() {
     createMutation.mutate({ endpoint: '/api/admin/system-config', data });
   };
 
-  const handleCreateGalleryItem = (data: GalleryItemFormData) => {
-    const processedData = {
-      ...data,
-      eventDate: data.eventDate ? new Date(data.eventDate).toISOString() : null
-    };
-    createMutation.mutate({ endpoint: '/api/admin/gallery', data: processedData });
+  const handleCreateGalleryItem = async (data: GalleryItemFormData) => {
+    try {
+      // Validate that either URL or file is provided
+      if (galleryImageMode === 'url' && (!data.imageUrl || data.imageUrl.trim() === '')) {
+        toast({
+          title: 'Image Required',
+          description: 'Please provide an image URL.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (galleryImageMode === 'upload' && !uploadedImageFile) {
+        toast({
+          title: 'Image Required',
+          description: 'Please select an image file to upload.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      let imageUrl = data.imageUrl || '';
+
+      // Handle file upload if in upload mode
+      if (galleryImageMode === 'upload' && uploadedImageFile) {
+        toast({
+          title: 'Processing...',
+          description: 'Uploading image and creating gallery item...',
+        });
+
+        // Upload the file first
+        const uploadResult = await galleryFileUpload.uploadFile(uploadedImageFile, 'gallery-image', {
+          title: data.title,
+          category: data.category
+        });
+
+        // Use the uploaded file URL
+        imageUrl = uploadResult.fileUrl || uploadResult.url || uploadResult.path || '';
+      }
+
+      // Create the gallery item with the image URL (either from input or upload)
+      const processedData = {
+        ...data,
+        imageUrl,
+        eventDate: data.eventDate ? new Date(data.eventDate).toISOString() : null
+      };
+
+      createMutation.mutate({ endpoint: '/api/admin/gallery', data: processedData });
+
+      // Reset upload states after successful submission
+      setUploadedImageFile(null);
+      setPreviewImageUrl('');
+      setGalleryImageMode('url');
+
+    } catch (error: any) {
+      toast({
+        title: 'Upload Failed',
+        description: error.message || 'Failed to upload image',
+        variant: 'destructive',
+      });
+    }
   };
 
   const filteredConstituencies = selectedCounty 
@@ -1524,13 +1605,124 @@ export default function AdminSettings() {
                               </p>
                             )}
                           </div>
+                          {/* Dynamic Image Input */}
                           <div>
-                            <Label htmlFor="gallery-imageUrl">Image URL</Label>
-                            <Input 
-                              id="gallery-imageUrl" 
-                              {...galleryItemForm.register('imageUrl')} 
-                              placeholder="https://example.com/image.jpg"
-                            />
+                            <div className="flex items-center justify-between mb-2">
+                              <Label>Image</Label>
+                              <div className="flex rounded-lg bg-gray-100 p-1">
+                                <Button
+                                  type="button"
+                                  variant={galleryImageMode === 'url' ? 'default' : 'ghost'}
+                                  size="sm"
+                                  className="h-6 px-3"
+                                  onClick={() => {
+                                    setGalleryImageMode('url');
+                                    setUploadedImageFile(null);
+                                    setPreviewImageUrl('');
+                                  }}
+                                  data-testid="button-gallery-url-mode"
+                                >
+                                  <Link className="w-3 h-3 mr-1" />
+                                  URL
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant={galleryImageMode === 'upload' ? 'default' : 'ghost'}
+                                  size="sm"
+                                  className="h-6 px-3"
+                                  onClick={() => {
+                                    setGalleryImageMode('upload');
+                                    galleryItemForm.setValue('imageUrl', '');
+                                  }}
+                                  data-testid="button-gallery-upload-mode"
+                                >
+                                  <Upload className="w-3 h-3 mr-1" />
+                                  Upload
+                                </Button>
+                              </div>
+                            </div>
+
+                            {galleryImageMode === 'url' ? (
+                              <div>
+                                <Input 
+                                  id="gallery-imageUrl" 
+                                  {...galleryItemForm.register('imageUrl')} 
+                                  placeholder="https://example.com/image.jpg"
+                                  data-testid="input-gallery-url"
+                                />
+                                {galleryItemForm.formState.errors.imageUrl && (
+                                  <p className="text-sm text-red-600 mt-1">
+                                    {galleryItemForm.formState.errors.imageUrl.message}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <div>
+                                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                                  {uploadedImageFile ? (
+                                    <div className="space-y-3">
+                                      {previewImageUrl && (
+                                        <img 
+                                          src={previewImageUrl} 
+                                          alt="Preview" 
+                                          className="max-h-32 mx-auto rounded-lg"
+                                        />
+                                      )}
+                                      <div className="flex items-center justify-center space-x-2">
+                                        <span className="text-sm text-gray-600">
+                                          {uploadedImageFile.name}
+                                        </span>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setUploadedImageFile(null);
+                                            setPreviewImageUrl('');
+                                          }}
+                                          data-testid="button-remove-upload"
+                                        >
+                                          <X className="w-4 h-4" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-2">
+                                      <Camera className="w-8 h-8 text-gray-400 mx-auto" />
+                                      <div>
+                                        <label htmlFor="gallery-file-upload" className="cursor-pointer">
+                                          <span className="text-sm text-blue-600 hover:text-blue-500">
+                                            Choose an image file
+                                          </span>
+                                          <input
+                                            id="gallery-file-upload"
+                                            type="file"
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                              const file = e.target.files?.[0];
+                                              if (file) {
+                                                setUploadedImageFile(file);
+                                                setPreviewImageUrl(URL.createObjectURL(file));
+                                              }
+                                            }}
+                                            data-testid="input-gallery-file"
+                                          />
+                                        </label>
+                                      </div>
+                                      <p className="text-xs text-gray-500">
+                                        PNG, JPG up to 10MB
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                                {galleryFileUpload.state.isUploading && (
+                                  <div className="mt-2 text-sm text-blue-600">
+                                    Uploading image...
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                           <div>
                             <Label htmlFor="gallery-eventDate">Event Date</Label>
