@@ -148,6 +148,7 @@ export interface IStorage {
   getJobsReport(startDate?: string, endDate?: string): Promise<any>;
   getUsersReport(startDate?: string, endDate?: string): Promise<any>;
   getPerformanceReport(startDate?: string, endDate?: string): Promise<any>;
+  getAllUsersForRoleAssignment(): Promise<any[]>;
 }
 export class DatabaseStorage implements IStorage {
   // User operations
@@ -161,6 +162,19 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(or(eq(users.role, 'admin'), eq(users.role, "board")));
     return user;
+  }
+
+  async getAllUsersForRoleAssignment(): Promise<any[]> {
+    const allUsers = await db
+      .select({ 
+        id: users.id,
+        name: sql<string>`CONCAT(${users.firstName}, ' ', ${users.surname})`, 
+        email: users.email,
+        role: users.role
+      })
+      .from(users)
+      .orderBy(users.firstName);
+    return allUsers;
   }
   async upsertUser(userData: UpsertUser): Promise<User> {
     const [user] = await db

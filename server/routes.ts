@@ -1059,7 +1059,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
   res.json(progress);
 });
 
-  // Create notice (admin)
+  // Create notice (admin) - Default published to true
   app.post('/api/admin/notices', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -1071,6 +1071,8 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
         ...req.body,
         createdBy: user.id,
         type: req.body.type || null,
+        isPublished: req.body.isPublished !== undefined ? req.body.isPublished : true, // Default to true
+        publishedAt: req.body.isPublished !== false ? new Date() : null,
       };
 
       const notice = await storage.createNotice(noticeData);
@@ -1094,6 +1096,43 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     } catch (error) {
       console.error('Error fetching subscriptions:', error);
       res.status(500).json({ message: 'Failed to fetch subscriptions' });
+    }
+  });
+
+  // Get all users for role assignment (admin)
+  app.get('/api/admin/all-users', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const allUsers = await storage.getAllUsersForRoleAssignment();
+      res.json(allUsers);
+    } catch (error) {
+      console.error('Error fetching all users:', error);
+      res.status(500).json({ message: 'Failed to fetch users' });
+    }
+  });
+
+  // Create board member (admin)
+  app.post('/api/admin/board-members', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const boardMemberData = {
+        ...req.body,
+        order: req.body.order || 0,
+      };
+
+      const boardMember = await storage.createBoardMember(boardMemberData);
+      res.json(boardMember);
+    } catch (error) {
+      console.error('Error creating board member:', error);
+      res.status(500).json({ message: 'Failed to create board member' });
     }
   });
 

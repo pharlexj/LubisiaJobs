@@ -51,6 +51,14 @@ const noticeSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
+const boardMemberSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  position: z.string().min(2, "Position must be at least 2 characters"),
+  bio: z.string().optional(),
+  photoUrl: z.string().optional(),
+  order: z.number().optional().default(0),
+});
+
 const countySchema = z.object({
   name: z.string().min(2, "County name must be at least 2 characters"),
 });
@@ -131,6 +139,7 @@ type DeptFormData = z.infer<typeof deptSchema>;
 type RoleAssignmentFormData = z.infer<typeof roleAssignmentSchema>;
 type AboutConfigFormData = z.infer<typeof aboutConfigSchema>;
 type GalleryItemFormData = z.infer<typeof galleryItemSchema>;
+type BoardMemberFormData = z.infer<typeof boardMemberSchema>;
 
 export default function AdminSettings() {
   const { user } = useAuth();
@@ -143,6 +152,7 @@ export default function AdminSettings() {
   const [selectedCounty, setSelectedCounty] = useState('');
   const [selectedConstituency, setSelectedConstituency] = useState('');
   const [selectedStudyArea, setSelectedStudyArea] = useState('');
+  const [userSearchTerm, setUserSearchTerm] = useState('');
   
   // Gallery upload states
   const [galleryImageMode, setGalleryImageMode] = useState<'url' | 'upload'>('url');
@@ -152,6 +162,18 @@ export default function AdminSettings() {
   // Fetch configuration data
   const { data: config } = useQuery({
     queryKey: ['/api/public/config'],
+    enabled: !!user && user.role === 'admin',
+  });
+
+  // Fetch all users for role assignment
+  const { data: allUsers = [] } = useQuery<any[]>({
+    queryKey: ['/api/admin/all-users'],
+    enabled: !!user && user.role === 'admin',
+  });
+
+  // Fetch board members
+  const { data: boardMembers = [] } = useQuery<any[]>({
+    queryKey: ['/api/admin/board-members'],
     enabled: !!user && user.role === 'admin',
   });
 
@@ -199,6 +221,7 @@ export default function AdminSettings() {
   const roleAssignmentForm = useForm<RoleAssignmentFormData>({ resolver: zodResolver(roleAssignmentSchema) });
   const aboutConfigForm = useForm<AboutConfigFormData>({ resolver: zodResolver(aboutConfigSchema) });
   const galleryItemForm = useForm<GalleryItemFormData>({ resolver: zodResolver(galleryItemSchema) });
+  const boardMemberForm = useForm<BoardMemberFormData>({ resolver: zodResolver(boardMemberSchema) });
 
   // File upload configuration for gallery (aligned with server-side accepted types)
   const galleryFileUpload = useFileUpload({
@@ -243,6 +266,7 @@ export default function AdminSettings() {
       else if (variables.endpoint.includes('dept')) deptForm.reset();
       else if (variables.endpoint.includes('system-config')) aboutConfigForm.reset();
       else if (variables.endpoint.includes('gallery')) galleryItemForm.reset();
+      else if (variables.endpoint.includes('board-members')) boardMemberForm.reset();
     },
     onError: (error: any) => {
       toast({
@@ -315,6 +339,12 @@ export default function AdminSettings() {
       description: 'Manage about page content'
     },
     {
+      id: 'board-leadership',
+      label: 'Board Leadership',
+      icon: Users,
+      description: 'Manage board members and leadership'
+    },
+    {
       id: 'gallery',
       label: 'Gallery',
       icon: Camera,
@@ -383,6 +413,10 @@ export default function AdminSettings() {
 
   const handleCreateAboutConfig = (data: AboutConfigFormData) => {
     createMutation.mutate({ endpoint: '/api/admin/system-config', data });
+  };
+
+  const handleCreateBoardMember = (data: BoardMemberFormData) => {
+    createMutation.mutate({ endpoint: '/api/admin/board-members', data });
   };
 
   const handleCreateGalleryItem = async (data: GalleryItemFormData) => {
@@ -1350,17 +1384,37 @@ export default function AdminSettings() {
                         <form onSubmit={roleAssignmentForm.handleSubmit(handleCreateRoleAssignment)} className="space-y-4">
                           <div>
                             <Label htmlFor="role-user">User</Label>
-                            <Select onValueChange={(value) => roleAssignmentForm.setValue('userId', value)}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select user" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="1">John Doe (john@example.com)</SelectItem>
-                                {admins.map((a: any) => {( 
-                                    <SelectItem key={a.email} value={a.email}>{ a.name}</SelectItem>
-                                )})}
-                              </SelectContent>
-                            </Select>
+                            <div className="space-y-2">
+                              <Input
+                                placeholder="Search users..."
+                                value={userSearchTerm}
+                                onChange={(e) => setUserSearchTerm(e.target.value)}
+                                className="mb-2"
+                              />
+                              <Select onValueChange={(value) => roleAssignmentForm.setValue('userId', value)}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select user" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(allUsers as any[])
+                                    .filter((user: any) => 
+                                      user.name?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                                      user.email?.toLowerCase().includes(userSearchTerm.toLowerCase())
+                                    )
+                                    .slice(0, 50) // Limit to 50 results for performance
+                                    .map((user: any) => (
+                                      <SelectItem key={user.id} value={user.id}>
+                                        {user.name} ({user.email})
+                                      </SelectItem>
+                                    ))}
+                                  {allUsers.length === 0 && (
+                                    <SelectItem value="" disabled>
+                                      No users found
+                                    </SelectItem>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            </div>
                             {roleAssignmentForm.formState.errors.userId && (
                               <p className="text-sm text-red-600 mt-1">
                                 {roleAssignmentForm.formState.errors.userId.message}
@@ -1394,19 +1448,147 @@ export default function AdminSettings() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {admins.length===0 ?( <div className="text-center py-8 text-gray-500">
-                      <SettingsIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                      <p>Click "Assign Role" to manage user permissions</p>
-                      </div>) : admins.map((a:any) => {
-                        (
-                        <Card>
-                          <CardContent>
-                            <h4>{a.name }</h4>
-                          </CardContent>
-                    </Card>
-                      )})}
+                      {(allUsers as any[]).filter((user: any) => user.role !== 'applicant').length === 0 ? (
+                        <div className="col-span-3 text-center py-8 text-gray-500">
+                          <SettingsIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                          <p>Click "Assign Role" to manage user permissions</p>
+                        </div>
+                      ) : (
+                        (allUsers as any[])
+                          .filter((user: any) => user.role !== 'applicant')
+                          .map((user: any) => (
+                            <Card key={user.id}>
+                              <CardContent className="p-4">
+                                <h4 className="font-semibold">{user.name}</h4>
+                                <p className="text-sm text-gray-600">{user.email}</p>
+                                <Badge className="mt-2" variant="secondary">
+                                  {user.role === 'admin' ? 'Administrator' : 
+                                   user.role === 'board' ? 'Board Member' : user.role}
+                                </Badge>
+                              </CardContent>
+                            </Card>
+                          ))
+                      )}
                     </div>
                     
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Board Leadership Tab */}
+              <TabsContent value="board-leadership">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Board Leadership Management</CardTitle>
+                      <p className="text-sm text-gray-600 mt-1">Manage board members and leadership team</p>
+                    </div>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Board Member
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add Board Member</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={boardMemberForm.handleSubmit(handleCreateBoardMember)} className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="board-name">Full Name</Label>
+                              <Input 
+                                id="board-name" 
+                                {...boardMemberForm.register('name')} 
+                                placeholder="e.g., Dr. John Smith"
+                              />
+                              {boardMemberForm.formState.errors.name && (
+                                <p className="text-sm text-red-600 mt-1">
+                                  {boardMemberForm.formState.errors.name.message}
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <Label htmlFor="board-position">Position/Title</Label>
+                              <Input 
+                                id="board-position" 
+                                {...boardMemberForm.register('position')} 
+                                placeholder="e.g., Chairman, CEO"
+                              />
+                              {boardMemberForm.formState.errors.position && (
+                                <p className="text-sm text-red-600 mt-1">
+                                  {boardMemberForm.formState.errors.position.message}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <Label htmlFor="board-bio">Biography</Label>
+                            <Textarea 
+                              id="board-bio" 
+                              {...boardMemberForm.register('bio')} 
+                              placeholder="Brief biography of the board member..."
+                              rows={3}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="board-photo">Photo URL</Label>
+                            <Input 
+                              id="board-photo" 
+                              {...boardMemberForm.register('photoUrl')} 
+                              placeholder="https://example.com/photo.jpg"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="board-order">Display Order</Label>
+                            <Input 
+                              id="board-order" 
+                              type="number"
+                              {...boardMemberForm.register('order', { valueAsNumber: true })} 
+                              placeholder="0"
+                            />
+                          </div>
+                          <div className="flex justify-end space-x-2">
+                            <Button type="submit">Add Board Member</Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {(boardMembers as any[]).length === 0 ? (
+                        <div className="col-span-3 text-center py-8 text-gray-500">
+                          <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                          <p>No board members yet. Click "Add Board Member" to get started.</p>
+                        </div>
+                      ) : (
+                        (boardMembers as any[]).map((member: any) => (
+                          <Card key={member.id}>
+                            <CardContent className="p-4 text-center">
+                              {member.photoUrl && (
+                                <div className="w-20 h-20 mx-auto mb-4 rounded-full overflow-hidden bg-gray-200">
+                                  <img 
+                                    src={member.photoUrl} 
+                                    alt={member.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              )}
+                              <h4 className="font-semibold text-lg">{member.name}</h4>
+                              <p className="text-primary font-medium">{member.position}</p>
+                              {member.bio && (
+                                <p className="text-sm text-gray-600 mt-2 line-clamp-3">{member.bio}</p>
+                              )}
+                              <Badge className="mt-2" variant="outline">
+                                Order: {member.order || 0}
+                              </Badge>
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
