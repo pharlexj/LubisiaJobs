@@ -522,7 +522,7 @@ switch (req.user?.role) {
         return res.status(403).json({ message: 'Access denied' });
       }
 
-      const galleryItem = await storage.createGalleryItem(req.body);
+      const galleryItem = await storage.createGalleryItem({...req.body, createdBy:user.id});
       res.json(galleryItem);
     } catch (error) {
       console.error('Error creating gallery item:', error);
@@ -791,9 +791,7 @@ switch (req.user?.role) {
       }
       
       // Check if profile already exists
-      const existingProfile = await storage.getApplicant(userId);
-      console.log("Existing Data",existingProfile);
-      
+      const existingProfile = await storage.getApplicant(userId);      
       if (existingProfile.applicantId) {
            const updateProfile = await applicantService.updateBasicInfo(applicantId, data);
         return res.json(updateProfile);
@@ -818,8 +816,6 @@ switch (req.user?.role) {
     if (!applicantId) {
       return res.status(400).json({ error: "Applicant ID missing" });
     }
-console.log("Update Data", data);
-
     const updatedProfile = await storage.updateApplicant(applicantId, data, step);
     res.json(updatedProfile);
   } catch (err) {
@@ -945,9 +941,14 @@ console.log("Update Data", data);
       }
       
       // ✅ Eligibility Check 3: Study area requirement (if job has one)
+      console.log(`job`, job);
+      console.log(`appliacant`, applicant.education);
+
+
+      
       if (job.jobs?.requiredStudyAreaId) {
         const hasMatchingStudyArea = applicant.education?.some(
-          (edu: any) => edu.studyArea === job.jobs.requiredStudyAreaId
+          (edu: any) => parseInt(edu.studyArea) === job.jobs.requiredStudyAreaId
         );
         if (!hasMatchingStudyArea) {
           return res.status(400).json({ 

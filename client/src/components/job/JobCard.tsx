@@ -44,7 +44,6 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
   const departments = config?.departments || [];
   const studyAreas = config?.studyAreas || [];
   const certificateLevels = config?.certificateLevels || [];
-  const courses = config?.courses || [];
 
   const applyMutation = useMutation({
     mutationFn: async () => {
@@ -94,36 +93,15 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
   // Get required qualifications for display
   const getRequiredQualifications = () => {
     const qualifications = {
-      courses: [] as string[],
-      studyAreas: [] as string[],
+      studyAreas: null as string |null,
       certificateLevel: null as string | null,
     };
     
-    // Parse required courses from varchar field and extract study areas
-    if (job.requiredCourses) {
-      const courseStr = job.requiredCourses.toString().trim();
-      if (courseStr) {
-        const courseIds = courseStr.split(/[,\s]+/).map((id: string) => {
-          const parsed = parseInt(id.trim());
-          return !isNaN(parsed) ? parsed : null;
-        }).filter(Boolean);
-        
-        const studyAreaSet = new Set<string>();
-        
-        courseIds.forEach(courseId => {
-          const course = courses.find((c: any) => c.id === courseId);
-          if (course) {
-            qualifications.courses.push(course.name);
-            
-            // Find study area for this course
-            const studyArea = studyAreas.find((sa: any) => sa.id === course.studyAreaId || sa.id === course.studyArea);
-            if (studyArea) {
-              studyAreaSet.add(studyArea.name);
-            }
-          }
-        });
-        
-        qualifications.studyAreas = Array.from(studyAreaSet);
+    // Parse required courses from varchar 
+    if (job.requiredStudyAreaId) {
+      const sAreaId = studyAreas.find((sa: any) => sa.id === job.requiredStudyAreaId);
+      if (sAreaId) {
+        qualifications.studyAreas = sAreaId.name;
       }
     }
     
@@ -139,54 +117,31 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
   };
   
   const requiredQualifications = getRequiredQualifications();
-  const hasRequirements = requiredQualifications.studyAreas.length > 0 || 
-                          requiredQualifications.courses.length > 0 || 
+  const hasRequirements = requiredQualifications.studyAreas || 
                           requiredQualifications.certificateLevel;
 
   // Check if applicant is eligible based on education requirements
   const isEligible = () => {
+    const sAreaId = studyAreas.find((sa: any) => sa.id === job.requiredStudyAreaId);
+    const certLevel = certificateLevels.find((c: any) => c.id === job.certificateLevel);
     if (!isAuthenticated) {
       return false; // Must be authenticated
     }
     
     // If no specific requirements, allow application for authenticated users
-    if (!job.requiredCourses && !job.certificateLevel) {
+    if (!job.requiredStudyAreaId && !job.certificateLevel) {
       return true;
     }
     
     // If requirements exist but no education records, not eligible
     if (!applicantProfile?.education || applicantProfile.education.length === 0) {
       return false;
+    } 
+    // If requirements exist and education records, eligible
+    if (sAreaId && certLevel) {      
+      return true;      
     }
     
-    // Parse required courses from varchar field (could be comma/space separated)
-    const requiredCourseIds = new Set<number>();
-    if (job.requiredCourses) {
-      const courseStr = job.requiredCourses.toString().trim();
-      if (courseStr) {
-        courseStr.split(/[,\s]+/).forEach((id: string) => {
-          const parsed = parseInt(id.trim());
-          if (!isNaN(parsed)) requiredCourseIds.add(parsed);
-        });
-      }
-    }
-    
-    // Check if applicant has matching education qualifications
-    const hasMatchingEducation = applicantProfile.education.some((education: any) => {
-      // Check course match if required courses are specified
-      const courseMatch = requiredCourseIds.size === 0 || 
-        (education.courseId && requiredCourseIds.has(education.courseId));
-      
-      // For certificate level, we'll be more lenient since there may be schema mismatch
-      // TODO: This needs proper mapping between certificate_level and awards tables
-      const levelMatch = !job.certificateLevel || 
-        education.certificateLevelId === job.certificateLevel ||
-        education.awardId === job.certificateLevel; // Try both possible fields
-      
-      return courseMatch && levelMatch;
-    });
-    
-    return hasMatchingEducation;
   };
   
   const handleApply = () => {
@@ -274,43 +229,23 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
                   <div className="font-medium mb-1">Required Qualifications:</div>
                   {hasRequirements ? (
                     <div className="space-y-2">
-                      {/* Study Areas */}
-                      {requiredQualifications.studyAreas.length > 0 && (
+                      {/* Study Areas */}                      
+                      {requiredQualifications.studyAreas && (
                         <div>
-                          <div className="text-xs font-medium text-gray-700 mb-1">Study Area(s):</div>
-                          <div className="space-y-1">
-                            {requiredQualifications.studyAreas.map((area, index) => (
-                              <div key={index} className="flex items-center">
-                                <CheckCircle className="w-3 h-3 mr-1 text-blue-500 flex-shrink-0" />
-                                <span className="text-xs font-medium text-blue-600">{area}</span>
-                              </div>
-                            ))}
+                          <div className="text-xs font-medium text-gray-700 mb-1">Courses:</div>
+                          <div className="flex items-center">
+                            <CheckCircle className="w-3 h-3 mr-1 text-green-500 flex-shrink-0" />
+                            <span className="text-xs font-medium text-green-600">{requiredQualifications.studyAreas}</span>
                           </div>
                         </div>
                       )}
-                      
-                      {/* Certificate Level */}
+                      {/* Certificate Level  */}
                       {requiredQualifications.certificateLevel && (
                         <div>
-                          <div className="text-xs font-medium text-gray-700 mb-1">Certificate Level:</div>
+                          <div className="text-xs font-medium text-gray-700 mb-1">Education:</div>
                           <div className="flex items-center">
                             <CheckCircle className="w-3 h-3 mr-1 text-green-500 flex-shrink-0" />
                             <span className="text-xs font-medium text-green-600">{requiredQualifications.certificateLevel}</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Specific Courses */}
-                      {requiredQualifications.courses.length > 0 && (
-                        <div>
-                          <div className="text-xs font-medium text-gray-700 mb-1">Required Courses:</div>
-                          <div className="space-y-1">
-                            {requiredQualifications.courses.map((course, index) => (
-                              <div key={index} className="flex items-center">
-                                <CheckCircle className="w-3 h-3 mr-1 text-purple-500 flex-shrink-0" />
-                                <span className="text-xs">{course}</span>
-                              </div>
-                            ))}
                           </div>
                         </div>
                       )}
@@ -370,46 +305,28 @@ export default function JobCard({ job, isAuthenticated }: JobCardProps) {
                           <span className="font-medium text-blue-900">Education Requirements</span>
                         </div>
                         
-                        <div className="space-y-4">
-                          {/* Study Areas */}
-                          {requiredQualifications.studyAreas.length > 0 && (
+                        <div className="space-y-4">                          
+                          {/* Certificate Level */}
+                          {requiredQualifications.studyAreas && (
                             <div>
-                              <div className="font-medium text-blue-800 mb-2">Study Area(s):</div>
-                              <div className="space-y-1 pl-3">
-                                {requiredQualifications.studyAreas.map((area, index) => (
-                                  <div key={index} className="flex items-center text-sm text-blue-700">
-                                    <CheckCircle className="w-4 h-4 mr-2 text-blue-500 flex-shrink-0" />
-                                    <span className="font-medium">{area}</span>
-                                  </div>
-                                ))}
+                              <div className="font-medium text-green-800 mb-2">Course:</div>
+                              <div className="pl-3">
+                                <div className="flex items-center text-sm text-green-700">
+                                  <CheckCircle className="w-4 h-4 mr-2 text-green-500 flex-shrink-0" />
+                                  <span className="font-medium">{requiredQualifications.studyAreas}</span>
+                                </div>
                               </div>
                             </div>
                           )}
-                          
                           {/* Certificate Level */}
                           {requiredQualifications.certificateLevel && (
                             <div>
-                              <div className="font-medium text-green-800 mb-2">Certificate Level:</div>
+                              <div className="font-medium text-green-800 mb-2">Education:</div>
                               <div className="pl-3">
                                 <div className="flex items-center text-sm text-green-700">
                                   <CheckCircle className="w-4 h-4 mr-2 text-green-500 flex-shrink-0" />
                                   <span className="font-medium">{requiredQualifications.certificateLevel}</span>
                                 </div>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Specific Courses */}
-                          {requiredQualifications.courses.length > 0 && (
-                            <div>
-                              <div className="font-medium text-purple-800 mb-2">Required Courses:</div>
-                              <div className="space-y-1 pl-3">
-                                {requiredQualifications.courses.map((course, index) => (
-                                  <div key={index} className="flex items-center text-sm text-purple-700">
-                                    <CheckCircle className="w-4 h-4 mr-2 text-purple-500 flex-shrink-0" />
-                                    <span>{course}</span>
-                                  </div>
-                                ))}
                               </div>
                             </div>
                           )}
