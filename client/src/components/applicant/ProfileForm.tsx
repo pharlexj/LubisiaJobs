@@ -122,7 +122,7 @@ export default function ProfileForm({
   // ✅ Get document status (existing from DB or newly uploaded)
   const getDocumentStatus = (type: string) => {
     // Check existing documents from profile first
-    const existingDoc = profile?.documents?.find((doc: any) => doc.type === type);  
+    const existingDoc = profile?.applicantProfile?.documents?.find((doc: any) => doc.type === type);  
     if (existingDoc) {
       return {
         isUploading: uploadState.uploadProgress[type] || false,
@@ -1185,9 +1185,8 @@ case 1.5: // Employee Details
                             <Label>End Date</Label>
                             <Input
                               type="date"
-                              // value={field.endDate}
-                                {...form.register(`employmentHistory.${index}.endDate`)}
-                              // disabled={field.isCurrent}
+                              {...form.register(`employmentHistory.${index}.endDate`)}
+                              disabled={form.watch(`employmentHistory.${index}.isCurrent`)}
                             />
                           </div>
                         </div>
@@ -1195,7 +1194,10 @@ case 1.5: // Employee Details
                         <div className="mt-4">
                           <div className="flex items-center space-x-2 mb-3">
                             <Checkbox
-                              {...form.register(`employmentHistory.${index}.isCurrent`)}
+                              checked={form.watch(`employmentHistory.${index}.isCurrent`) || false}
+                              onCheckedChange={(checked) =>
+                                form.setValue(`employmentHistory.${index}.isCurrent`, checked === true, { shouldDirty: true, shouldValidate: true })
+                              }
                             />
                             <Label>This is my current position</Label>
                           </div>
