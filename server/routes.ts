@@ -1596,12 +1596,8 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
         return res.status(403).json({ message: 'Access denied' });
       }
        
-      // For now, return success - ethnicity table may need to be created
-      res.json({ 
-        id: Date.now(), 
-        ...req.body, 
-        createdAt: new Date().toISOString()
-      });
+      const ethnicity = await storage.seedEthnicity(req.body);
+      res.json(ethnicity);
     } catch (error) {
       console.error('Error creating ethnicity:', error);
       res.status(500).json({ message: 'Failed to create ethnicity' });
@@ -1634,10 +1630,19 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
         return res.status(403).json({ message: 'Access denied' });
       }
 
-      // For now, return success - role assignment logic can be implemented
+      // Update user role in the database
+      const { userId, role } = req.body;
+      const updatedUser = await storage.updateUserRole(userId, role);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
       res.json({ 
-        id: Date.now(), 
-        ...req.body, 
+        id: updatedUser.id,
+        userId: updatedUser.id,
+        role: updatedUser.role,
+        assignedBy: user.id,
         assignedAt: new Date().toISOString()
       });
     } catch (error) {
