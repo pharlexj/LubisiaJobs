@@ -149,6 +149,8 @@ export default function AdminSettings() {
   // Modal states
   const [activeTab, setActiveTab] = useState('notices');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editingType, setEditingType] = useState<string>('');
   const [selectedCounty, setSelectedCounty] = useState('');
   const [selectedConstituency, setSelectedConstituency] = useState('');
   const [selectedStudyArea, setSelectedStudyArea] = useState('');
@@ -293,6 +295,65 @@ export default function AdminSettings() {
       });
     },
   });
+
+  // Generic update mutation handler
+  const updateMutation = useMutation({
+    mutationFn: async ({ endpoint, id, data }: { endpoint: string; id: number; data: any }) => {
+      return await apiRequest('PUT', `${endpoint}/${id}`, data);
+    },
+    onSuccess: (_, variables) => {
+      toast({
+        title: 'Success',
+        description: 'Item updated successfully.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/public/config'] });
+      
+      // Invalidate gallery cache when gallery items are updated
+      if (variables.endpoint.includes('gallery')) {
+        queryClient.invalidateQueries({ queryKey: ['/api/public/gallery'] });
+      }
+      
+      setIsModalOpen(false);
+      setEditingItem(null);
+      // Reset appropriate form based on endpoint
+      if (variables.endpoint.includes('notices')) noticeForm.reset();
+      else if (variables.endpoint.includes('faqs')) faqForm.reset();
+      else if (variables.endpoint.includes('gallery')) galleryItemForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update item',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Generic delete mutation handler
+  const deleteMutation = useMutation({
+    mutationFn: async ({ endpoint, id }: { endpoint: string; id: number }) => {
+      return await apiRequest('DELETE', `${endpoint}/${id}`);
+    },
+    onSuccess: (_, variables) => {
+      toast({
+        title: 'Success',
+        description: 'Item deleted successfully.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/public/config'] });
+      
+      // Invalidate gallery cache when gallery items are deleted
+      if (variables.endpoint.includes('gallery')) {
+        queryClient.invalidateQueries({ queryKey: ['/api/public/gallery'] });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete item',
+        variant: 'destructive',
+      });
+    },
+  });
   // Tab configurations
   const tabs = [
     { 
@@ -370,7 +431,15 @@ export default function AdminSettings() {
   ];
 
   const handleCreateNotice = (data: NoticeFormData) => {
-    createMutation.mutate({ endpoint: '/api/admin/notices', data });
+    if (editingItem) {
+      updateMutation.mutate({ 
+        endpoint: '/api/admin/notices', 
+        id: editingItem.id, 
+        data 
+      });
+    } else {
+      createMutation.mutate({ endpoint: '/api/admin/notices', data });
+    }
   };
 
   const handleCreateCounty = (data: CountyFormData) => {
@@ -420,7 +489,15 @@ export default function AdminSettings() {
   };
 
   const handleCreateFaq = (data: FaqFormData) => {
-    createMutation.mutate({ endpoint: '/api/admin/faqs', data });
+    if (editingItem) {
+      updateMutation.mutate({ 
+        endpoint: '/api/admin/faqs', 
+        id: editingItem.id, 
+        data 
+      });
+    } else {
+      createMutation.mutate({ endpoint: '/api/admin/faqs', data });
+    }
   };
 
   const handleCreateRoleAssignment = (data: RoleAssignmentFormData) => {
@@ -625,6 +702,47 @@ export default function AdminSettings() {
       }
     }
   };
+
+  // Generic item edit handler
+  const handleEditItem = (item: any, type: string, endpoint: string) => {
+    setEditingItem(item);
+    setEditingType(type);
+    setIsModalOpen(true);
+    
+    // Pre-populate the appropriate form based on type
+    if (type === 'notice') {
+      noticeForm.reset({
+        title: item.title,
+        content: item.content,
+        type: item.type || '',
+        priority: item.priority || 'medium',
+        isActive: item.isActive !== false
+      });
+    } else if (type === 'faq') {
+      faqForm.reset({
+        question: item.question,
+        answer: item.answer,
+        category: item.category,
+        order: item.order || 0
+      });
+    } else if (type === 'gallery') {
+      galleryItemForm.reset({
+        title: item.title,
+        description: item.description || '',
+        category: item.category,
+        imageUrl: item.imageUrl || '',
+        eventDate: item.eventDate || ''
+      });
+    }
+  };
+
+  // Generic item delete handler
+  const handleDeleteItem = async (id: number, endpoint: string, itemType: string) => {
+    if (confirm(`Are you sure you want to delete this ${itemType}?`)) {
+      deleteMutation.mutate({ endpoint, id });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-neutral-50">
       <Navigation />
@@ -791,10 +909,17 @@ export default function AdminSettings() {
                             </div>
                           </div>
                           <div className="flex justify-end space-x-2">
-                            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+                            <Button type="button" variant="outline" onClick={() => {
+                              setIsModalOpen(false);
+                              setEditingItem(null);
+                              setEditingType('');
+                              noticeForm.reset();
+                            }}>
                               Cancel
                             </Button>
-                            <Button type="submit">Create Notice</Button>
+                            <Button type="submit">
+                              {editingItem ? 'Update Notice' : 'Create Notice'}
+                            </Button>
                           </div>
                         </form>
                       </DialogContent>
@@ -811,7 +936,25 @@ export default function AdminSettings() {
                         notices.map((notice: any) => (
                           <Card key={notice.id}>
                             <CardContent className="p-4">
-                              <h4 className="font-semibold mb-2">{notice.title}</h4>
+                              <div className="flex justify-between items-start mb-2">
+                                <h4 className="font-semibold">{notice.title}</h4>
+                                <div className="flex space-x-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditItem(notice, 'notice', '/api/admin/notices')}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteItem(notice.id, '/api/admin/notices', 'notice')}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
                               {notice.content && (
                                 <p className="text-sm text-gray-600">{notice.content}</p>
                               )}
@@ -1465,7 +1608,17 @@ export default function AdminSettings() {
                             )}
                           </div>
                           <div className="flex justify-end space-x-2">
-                            <Button type="submit">Add FAQ</Button>
+                            <Button type="button" variant="outline" onClick={() => {
+                              setIsModalOpen(false);
+                              setEditingItem(null);
+                              setEditingType('');
+                              faqForm.reset();
+                            }}>
+                              Cancel
+                            </Button>
+                            <Button type="submit">
+                              {editingItem ? 'Update FAQ' : 'Add FAQ'}
+                            </Button>
                           </div>
                         </form>
                       </DialogContent>
@@ -1482,7 +1635,25 @@ export default function AdminSettings() {
                         faqs.map((faq: any) => (
                           <Card key={faq.id}>
                             <CardContent className="p-4">
-                              <h4 className="font-semibold mb-2">{faq.question}</h4>
+                              <div className="flex justify-between items-start mb-2">
+                                <h4 className="font-semibold">{faq.question}</h4>
+                                <div className="flex space-x-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditItem(faq, 'faq', '/api/admin/faqs')}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteItem(faq.id, '/api/admin/faqs', 'FAQ')}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
                               {faq.answer && (
                                 <p className="text-sm text-gray-600">{faq.answer}</p>
                               )}

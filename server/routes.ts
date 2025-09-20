@@ -1222,6 +1222,144 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     }
   });
 
+  // Update gallery item (admin)
+  app.put('/api/admin/gallery/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const galleryId = parseInt(req.params.id);
+      if (isNaN(galleryId)) {
+        return res.status(400).json({ message: 'Invalid gallery item ID' });
+      }
+
+      const galleryItem = await storage.updateGalleryItem(galleryId, req.body);
+      if (!galleryItem) {
+        return res.status(404).json({ message: 'Gallery item not found' });
+      }
+
+      res.json(galleryItem);
+    } catch (error) {
+      console.error('Error updating gallery item:', error);
+      res.status(500).json({ message: 'Failed to update gallery item' });
+    }
+  });
+
+  // Delete gallery item (admin)
+  app.delete('/api/admin/gallery/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const galleryId = parseInt(req.params.id);
+      if (isNaN(galleryId)) {
+        return res.status(400).json({ message: 'Invalid gallery item ID' });
+      }
+
+      const galleryItem = await storage.deleteGalleryItem(galleryId);
+      res.json(galleryItem);
+    } catch (error) {
+      console.error('Error deleting gallery item:', error);
+      res.status(500).json({ message: 'Failed to delete gallery item' });
+    }
+  });
+
+  // Update notice (admin)
+  app.put('/api/admin/notices/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const noticeId = parseInt(req.params.id);
+      if (isNaN(noticeId)) {
+        return res.status(400).json({ message: 'Invalid notice ID' });
+      }
+
+      const notice = await storage.updateNotice(noticeId, req.body);
+      if (!notice) {
+        return res.status(404).json({ message: 'Notice not found' });
+      }
+
+      res.json(notice);
+    } catch (error) {
+      console.error('Error updating notice:', error);
+      res.status(500).json({ message: 'Failed to update notice' });
+    }
+  });
+
+  // Delete notice (admin)
+  app.delete('/api/admin/notices/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const noticeId = parseInt(req.params.id);
+      if (isNaN(noticeId)) {
+        return res.status(400).json({ message: 'Invalid notice ID' });
+      }
+
+      const notice = await storage.deleteNotice(noticeId);
+      res.json(notice);
+    } catch (error) {
+      console.error('Error deleting notice:', error);
+      res.status(500).json({ message: 'Failed to delete notice' });
+    }
+  });
+
+  // Update FAQ (admin)
+  app.put('/api/admin/faqs/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const faqId = parseInt(req.params.id);
+      if (isNaN(faqId)) {
+        return res.status(400).json({ message: 'Invalid FAQ ID' });
+      }
+
+      const faq = await storage.updateFaq(faqId, req.body);
+      if (!faq) {
+        return res.status(404).json({ message: 'FAQ not found' });
+      }
+
+      res.json(faq);
+    } catch (error) {
+      console.error('Error updating FAQ:', error);
+      res.status(500).json({ message: 'Failed to update FAQ' });
+    }
+  });
+
+  // Delete FAQ (admin)
+  app.delete('/api/admin/faqs/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const faqId = parseInt(req.params.id);
+      if (isNaN(faqId)) {
+        return res.status(400).json({ message: 'Invalid FAQ ID' });
+      }
+
+      const faq = await storage.deleteFaq(faqId);
+      res.json(faq);
+    } catch (error) {
+      console.error('Error deleting FAQ:', error);
+      res.status(500).json({ message: 'Failed to delete FAQ' });
+    }
+  });
+
   // Get notifications (admin)
   app.get('/api/admin/notifications', isAuthenticated, async (req: any, res) => {
     try {

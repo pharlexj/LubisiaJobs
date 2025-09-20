@@ -656,6 +656,23 @@ async getFaq() {
   .orderBy(desc(faq.category))
   }
 
+  async updateFaq(id: number, faqData: Partial<any>) {
+    const [updatedFaq] = await db
+      .update(faq)
+      .set({ ...faqData })
+      .where(eq(faq.id, id))
+      .returning();
+    return updatedFaq;
+  }
+
+  async deleteFaq(id: number) {
+    const [deletedFaq] = await db
+      .delete(faq)
+      .where(eq(faq.id, id))
+      .returning();
+    return deletedFaq;
+  }
+
   // Gallery operations
   async getGalleryItems() {
     return await db
@@ -669,6 +686,24 @@ async getFaq() {
     const [galleryItem] = await db
       .insert(galleryItems)
       .values(item)
+      .returning();
+    return galleryItem;
+  }
+
+  async updateGalleryItem(id: number, item: Partial<InsertGalleryItem>) {
+    const [galleryItem] = await db
+      .update(galleryItems)
+      .set({ ...item, updatedAt: sql`now()` })
+      .where(eq(galleryItems.id, id))
+      .returning();
+    return galleryItem;
+  }
+
+  async deleteGalleryItem(id: number) {
+    const [galleryItem] = await db
+      .update(galleryItems)
+      .set({ isPublished: false, updatedAt: sql`now()` })
+      .where(eq(galleryItems.id, id))
       .returning();
     return galleryItem;
   }
@@ -890,6 +925,15 @@ async getFaq() {
       .where(eq(notices.id, id))
       .returning();
     return updatedNotice;
+  }
+
+  async deleteNotice(id: number) {
+    const [deletedNotice] = await db
+      .update(notices)
+      .set({ isPublished: false, updatedAt: new Date() })
+      .where(eq(notices.id, id))
+      .returning();
+    return deletedNotice;
   }
 
   // Subscription operations
@@ -1226,6 +1270,23 @@ async getFaq() {
     .returning();
   return newCounties;
   }
+
+  async updateCounty(id: number, countyData: Partial<any>) {
+    const [updatedCounty] = await db
+      .update(counties)
+      .set({ ...countyData })
+      .where(eq(counties.id, id))
+      .returning();
+    return updatedCounty;
+  }
+
+  async deleteCounty(id: number) {
+    const [deletedCounty] = await db
+      .delete(counties)
+      .where(eq(counties.id, id))
+      .returning();
+    return deletedCounty;
+  }
 // Seed a single ward
 async seedWard(ward: Omit<Ward, 'id'>): Promise<Ward> {
   const [newWard] = await db
@@ -1275,6 +1336,23 @@ async seedStudy(studyA: Omit<StudyArea, 'id'>): Promise<StudyArea> {
       .values(subCounty)
       .returning();
     return newSub;
+  }
+
+  async updateConstituency(id: number, constituencyData: Partial<any>) {
+    const [updatedConstituency] = await db
+      .update(constituencies)
+      .set({ ...constituencyData })
+      .where(eq(constituencies.id, id))
+      .returning();
+    return updatedConstituency;
+  }
+
+  async deleteConstituency(id: number) {
+    const [deletedConstituency] = await db
+      .delete(constituencies)
+      .where(eq(constituencies.id, id))
+      .returning();
+    return deletedConstituency;
   }
 
   async seedInstitutions(institute: Omit<Institution, 'id'>): Promise<Institution> {
