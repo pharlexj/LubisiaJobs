@@ -17,9 +17,14 @@ export default function About() {
   const { data: contactConfig = {}, isError: contactError, refetch: refetchContact } = useQuery<Record<string, any>>({
     queryKey: ['/api/public/system-config?section=contact'],
   });
+
+  // Fetch board members
+  const { data: boardMembers = [], isError: boardError, refetch: refetchBoard } = useQuery<any[]>({
+    queryKey: ['/api/public/board-members'],
+  });
   
   const isLoading = aboutLoading;
-  const isError = aboutError || contactError;
+  const isError = aboutError || contactError || boardError;
   
   // Default values for configuration
   const config = useMemo(() => ({
@@ -40,10 +45,21 @@ export default function About() {
     contactWebsite: contactConfig.contactWebsite || 'www.cpsbtransnzoia.co.ke',
     officeHours: contactConfig.officeHours || 'Monday - Friday: 8:00 AM - 5:00 PM\nSaturday & Sunday: Closed'
   }), [aboutConfig, contactConfig]);
+
+  // Transform board members data to match carousel interface
+  const leaders = useMemo(() => {
+    return boardMembers.map((member: any) => ({
+      id: member.id,
+      name: member.name,
+      position: member.position,
+      image: member.photoUrl || '/api/placeholder/150/150'
+    }));
+  }, [boardMembers]);
   
   const handleRetry = () => {
     refetchAbout();
     refetchContact();
+    refetchBoard();
   };
 
   if (isError) {
@@ -151,7 +167,7 @@ export default function About() {
           <div>
             <h2 className="text-3xl font-bold text-gray-900 mb-6">Who We Are</h2>
             <div className="space-y-4 text-gray-600" data-testid="text-about-who-we-are">
-              {config.whoWeAre.split('\n\n').map((paragraph, index) => (
+              {config.whoWeAre.split('\n\n').map((paragraph: string, index: number) => (
                 <p key={index}>{paragraph}</p>
               ))}
             </div>
@@ -201,7 +217,7 @@ export default function About() {
           <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
             Board Leadership
           </h2>
-          <BoardLeadershipCarousel />
+          <BoardLeadershipCarousel leaders={leaders} />
         </div>
 
         {/* Contact Information */}
@@ -214,7 +230,7 @@ export default function About() {
               <div>
                 <h4 className="font-semibold text-gray-900 mb-2">Office Location</h4>
                 <p className="text-gray-600" data-testid="text-contact-location">
-                  {config.officeLocation.split('\n').map((line, index) => (
+                  {config.officeLocation.split('\n').map((line: string, index: number) => (
                     <span key={index}>
                       {line}
                       {index < config.officeLocation.split('\n').length - 1 && <br />}
@@ -233,7 +249,7 @@ export default function About() {
               <div>
                 <h4 className="font-semibold text-gray-900 mb-2">Office Hours</h4>
                 <p className="text-gray-600" data-testid="text-office-hours">
-                  {config.officeHours.split('\n').map((line, index) => (
+                  {config.officeHours.split('\n').map((line: string, index: number) => (
                     <span key={index}>
                       {line}
                       {index < config.officeHours.split('\n').length - 1 && <br />}
