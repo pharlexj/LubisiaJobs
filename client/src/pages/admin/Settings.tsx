@@ -355,6 +355,12 @@ export default function AdminSettings() {
         queryClient.invalidateQueries({ queryKey: ['/api/public/gallery'] });
       }
       
+      // Invalidate system config cache when config items are updated
+      if (variables.endpoint.includes('system-config')) {
+        queryClient.invalidateQueries({ queryKey: ['/api/public/system-config?section=about'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/public/system-config?section=contact'] });
+      }
+      
       setIsModalOpen(false);
       setEditingItem(null);
       // Reset appropriate form based on endpoint
@@ -562,7 +568,18 @@ export default function AdminSettings() {
   };
 
   const handleCreateAboutConfig = (data: AboutConfigFormData) => {
-    createMutation.mutate({ endpoint: '/api/admin/system-config', data });
+    if (editingItem && editingType === 'about-config') {
+      // Update existing about config item
+      updateMutation.mutate({ 
+        endpoint: '/api/admin/system-config', 
+        id: 0, // Special handling for config items - use query params
+        data: data
+      });
+      setEditingItem(null);
+      setEditingType('');
+    } else {
+      createMutation.mutate({ endpoint: '/api/admin/system-config', data });
+    }
   };
 
   const handleCreateBoardMember = async (data: BoardMemberFormData) => {
@@ -676,11 +693,11 @@ export default function AdminSettings() {
       };
 
       if (editingItem && editingType === 'gallery') {
-        // Update existing gallery item
-        await apiRequest('PUT', `/api/admin/gallery/${editingItem.id}`, processedData);
-        toast({
-          title: 'Success',
-          description: 'Gallery item updated successfully.',
+        // Update existing gallery item using consistent mutation pattern
+        updateMutation.mutate({ 
+          endpoint: '/api/admin/gallery', 
+          id: editingItem.id, 
+          data: processedData 
         });
         setEditingItem(null);
         setEditingType('');
@@ -2199,7 +2216,7 @@ export default function AdminSettings() {
                         </DialogTrigger>
                         <DialogContent className='max-w-3xl max-h-[80vh] overflow-y-auto'>
                           <DialogHeader>
-                            <DialogTitle>Add About Page Configuration</DialogTitle>
+                            <DialogTitle>{editingItem && editingType === 'about-config' ? 'Edit About Page Configuration' : 'Add About Page Configuration'}</DialogTitle>
                           </DialogHeader>
                           <form onSubmit={aboutConfigForm.handleSubmit(handleCreateAboutConfig)} className="space-y-4">
                             <div>

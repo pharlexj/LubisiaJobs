@@ -7,7 +7,7 @@ import multer from "multer";
 import path from "path";
 import bcrypt from "bcrypt";
 import passport from "passport";
-import { sendOtpHandler, verifyOtpHandler } from "../client/src/lib/africastalking-sms";
+import { sendOtp, verifyOtp } from "./lib/africastalking-sms";
 import { ApplicantService } from "./applicantService";
 import { log } from "util";
 import { z } from "zod";
@@ -273,8 +273,103 @@ switch (req.user?.role) {
     }
   });
   // OTP routes using AfricaTalking SMS service
-  app.post("/api/auth/send-otp", sendOtpHandler);
-  app.post("/api/auth/verify-otp", verifyOtpHandler);
+  // Server-side OTP routes with proper validation and security
+  app.post("/api/auth/send-otp", async (req: any, res) => {
+    try {
+      const { phoneNumber, purpose = 'authentication' } = req.body;
+      
+      // Validate input
+      if (!phoneNumber || typeof phoneNumber !== 'string') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Phone number is required' 
+        });
+      }
+
+      // Additional validation can be added here (e.g., purpose validation)
+      const validPurposes = ['authentication', 'password-reset', 'phone-verification'];
+      if (!validPurposes.includes(purpose)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid purpose specified'
+        });
+      }
+
+      // Rate limiting by IP could be added here
+      const clientIP = req.ip || req.connection.remoteAddress;
+      
+      await sendOtp({ 
+        to: phoneNumber,
+        template: `Your ${purpose} code is {{CODE}}. Valid for 10 minutes. Do not share this code with anyone.`
+      });
+      
+      // Log OTP send attempt (without the actual code)
+      console.log(`OTP sent to ${phoneNumber} for ${purpose} from IP ${clientIP}`);
+      
+      res.json({ 
+        success: true, 
+        message: 'Verification code sent successfully' 
+      });
+    } catch (error: any) {
+      console.error('Send OTP error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message || 'Failed to send verification code' 
+      });
+    }
+  });
+
+  app.post("/api/auth/verify-otp", async (req: any, res) => {
+    try {
+      const { phoneNumber, code } = req.body;
+      
+      // Validate input
+      if (!phoneNumber || typeof phoneNumber !== 'string') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Phone number is required' 
+        });
+      }
+      
+      if (!code || typeof code !== 'string') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Verification code is required' 
+        });
+      }
+
+      // Verify OTP
+      const isValid = verifyOtp({ 
+        to: phoneNumber, 
+        otp: code.trim() 
+      });
+
+      if (!isValid) {
+        // Log failed verification attempt
+        const clientIP = req.ip || req.connection.remoteAddress;
+        console.log(`Failed OTP verification for ${phoneNumber} from IP ${clientIP}`);
+        
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid or expired verification code' 
+        });
+      }
+
+      // Log successful verification
+      console.log(`Successful OTP verification for ${phoneNumber}`);
+      
+      res.json({ 
+        success: true, 
+        message: 'Code verified successfully' 
+      });
+    } catch (error: any) {
+      console.error('Verify OTP error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message || 'Failed to verify code' 
+      });
+    }
+  });
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -531,6 +626,43 @@ switch (req.user?.role) {
     } catch (error) {
       console.error('Error creating system config:', error);
       res.status(500).json({ message: 'Failed to create system config' });
+    }
+  });
+
+  // Update system configuration (admin)
+  app.put('/api/admin/system-config/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const config = await storage.upsertSystemConfig(req.body);
+      res.json(config);
+    } catch (error) {
+      console.error('Error updating system config:', error);
+      res.status(500).json({ message: 'Failed to update system config' });
+    }
+  });
+
+  // Delete system configuration (admin)
+  app.delete('/api/admin/system-config', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { section, key } = req.query;
+      if (!section || !key) {
+        return res.status(400).json({ message: 'Section and key are required' });
+      }
+
+      const result = await storage.deleteSystemConfig(section as string, key as string);
+      res.json({ message: 'System configuration deleted successfully', result });
+    } catch (error) {
+      console.error('Error deleting system config:', error);
+      res.status(500).json({ message: 'Failed to delete system config' });
     }
   });
 

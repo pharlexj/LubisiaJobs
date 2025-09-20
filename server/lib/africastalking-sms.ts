@@ -97,3 +97,122 @@ export const smsClient = new AfricasTalkingSMS({
 });
 
 export const sendSms = (input: SendSmsInput) => smsClient.sendSms(input);
+
+// OTP functionality for server-side use
+export interface SendOtpInput {
+  to: string;
+  /** fixed length OTP; default 6 */
+  length?: number;
+  /** custom message template; use {{CODE}} placeholder */
+  template?: string;
+}
+
+export interface VerifyOtpInput {
+  to: string;
+  otp: string;
+}
+
+export interface OtpRecord {
+  code: string;
+  expiresAt: number; // epoch ms
+  lastSentAt: number; // epoch ms
+}
+
+// Simple in-memory OTP store (should use Redis/Database in production)
+class ServerOtpStore {
+  private map = new Map<string, OtpRecord>();
+
+  get(to: string): OtpRecord | null {
+    const record = this.map.get(to);
+    if (!record) return null;
+    
+    // Check if expired
+    if (Date.now() > record.expiresAt) {
+      this.map.delete(to);
+      return null;
+    }
+    
+    return record;
+  }
+
+  set(to: string, record: OtpRecord): void {
+    this.map.set(to, record);
+  }
+
+  delete(to: string): void {
+    this.map.delete(to);
+  }
+
+  // Clean expired records
+  cleanup(): void {
+    const now = Date.now();
+    for (const [key, record] of this.map.entries()) {
+      if (now > record.expiresAt) {
+        this.map.delete(key);
+      }
+    }
+  }
+}
+
+// Singleton OTP store
+const otpStore = new ServerOtpStore();
+
+// Cleanup expired OTPs every 5 minutes
+setInterval(() => otpStore.cleanup(), 5 * 60 * 1000);
+
+/** Generate random numeric OTP */
+const generateOtp = (len = 6): string => {
+  const min = Math.pow(10, len - 1);
+  const max = Math.pow(10, len) - 1;
+  return String(Math.floor(Math.random() * (max - min + 1)) + min);
+};
+
+/** Send OTP via SMS */
+export const sendOtp = async (input: SendOtpInput): Promise<string> => {
+  const { to, length = 6, template = "Your verification code is {{CODE}}. Valid for 10 minutes." } = input;
+  const normalizedPhone = normalizePhone(to);
+  
+  // Check rate limiting (don't send OTP more than once per minute)
+  const existing = otpStore.get(normalizedPhone);
+  if (existing && (Date.now() - existing.lastSentAt) < 60000) {
+    throw new Error('Please wait before requesting another code');
+  }
+
+  const code = generateOtp(length);
+  const message = template.replace('{{CODE}}', code);
+  const expiresAt = Date.now() + (10 * 60 * 1000); // 10 minutes
+
+  // Store OTP
+  otpStore.set(normalizedPhone, {
+    code,
+    expiresAt,
+    lastSentAt: Date.now()
+  });
+
+  try {
+    // Send SMS
+    await sendSms({ to: normalizedPhone, message });
+    return code; // In production, don't return the code
+  } catch (error) {
+    // Remove OTP if SMS failed
+    otpStore.delete(normalizedPhone);
+    throw error;
+  }
+};
+
+/** Verify OTP */
+export const verifyOtp = (input: VerifyOtpInput): boolean => {
+  const { to, otp } = input;
+  const normalizedPhone = normalizePhone(to);
+  
+  const stored = otpStore.get(normalizedPhone);
+  if (!stored) return false;
+  
+  const isValid = stored.code === otp && Date.now() <= stored.expiresAt;
+  
+  if (isValid) {
+    otpStore.delete(normalizedPhone); // Remove used OTP
+  }
+  
+  return isValid;
+};

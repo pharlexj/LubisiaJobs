@@ -762,6 +762,17 @@ async getFaq() {
     return configItem;
   }
 
+  async deleteSystemConfig(section: string, key: string): Promise<SystemConfig> {
+    const [configItem] = await db
+      .delete(systemConfig)
+      .where(and(
+        eq(systemConfig.section, section),
+        eq(systemConfig.key, key)
+      ))
+      .returning();
+    return configItem;
+  }
+
   // Board members operations
   async getBoardMembers() {
     return await db
