@@ -1365,6 +1365,17 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
 
   // ===== CAROUSEL SLIDES MANAGEMENT =====
   
+  // Get active carousel slides (public)
+  app.get('/api/carousel-slides', async (req: any, res) => {
+    try {
+      const slides = await storage.getCarouselSlides();
+      res.json(slides);
+    } catch (error) {
+      console.error('Error fetching public carousel slides:', error);
+      res.status(500).json({ message: 'Failed to fetch carousel slides' });
+    }
+  });
+
   // Get all carousel slides (admin)
   app.get('/api/admin/carousel-slides', isAuthenticated, async (req: any, res) => {
     try {

@@ -1,42 +1,81 @@
 import { useState, useEffect, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { Button } from '@/components/ui/button';
-import { Search, UserPlus, ChevronLeft, ChevronRight, Building, GraduationCap, Users, Award } from 'lucide-react';
+import { Search, UserPlus, ChevronLeft, ChevronRight, Building, GraduationCap, Users, Award, Briefcase, MapPin, Clock, Target, Shield, Heart } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
 
-const slides = [
+// Icon mapping from string names to components
+const iconMap = {
+  Building,
+  GraduationCap,
+  Users,
+  Award,
+  Briefcase,
+  MapPin,
+  Clock,
+  Target,
+  Shield,
+  Heart,
+} as const;
+
+interface CarouselSlide {
+  id: number;
+  title: string;
+  subtitle: string;
+  bgGradient?: string;
+  iconName: keyof typeof iconMap;
+  accentColor?: string;
+  imageUrl?: string;
+  mobileImageUrl?: string;
+  altText?: string;
+  linkHref?: string;
+  ctaLabel?: string;
+  displayOrder: number;
+  isActive: boolean;
+}
+
+// Fallback slides if database is empty or API fails
+const fallbackSlides: CarouselSlide[] = [
   {
     id: 1,
     title: "Build Your Career in Public Service",
     subtitle: "Join Trans Nzoia County Public Service Board - Where dedication meets opportunity in serving our community",
     bgGradient: "from-[#1D523A] to-[#09CDE3]",
-    icon: Building,
-    accent: "#EEF200"
+    iconName: "Building",
+    accentColor: "#EEF200",
+    displayOrder: 1,
+    isActive: true
   },
   {
     id: 2,
     title: "Professional Development Excellence",
     subtitle: "Advance your skills and expertise while making a meaningful impact in public administration and community service",
     bgGradient: "from-[#09CDE3] to-[#1D523A]",
-    icon: GraduationCap,
-    accent: "#EEF200"
+    iconName: "GraduationCap",
+    accentColor: "#EEF200",
+    displayOrder: 2,
+    isActive: true
   },
   {
     id: 3,
     title: "Community-Centered Employment",
     subtitle: "Be part of a team dedicated to improving lives and building stronger communities across Trans Nzoia County",
     bgGradient: "from-[#EEF200]/80 via-[#09CDE3] to-[#1D523A]",
-    icon: Users,
-    accent: "#1D523A"
+    iconName: "Users",
+    accentColor: "#1D523A",
+    displayOrder: 3,
+    isActive: true
   },
   {
     id: 4,
     title: "Recognition & Growth Opportunities",
     subtitle: "Pursue excellence in public service with clear career progression paths and recognition for outstanding performance",
     bgGradient: "from-[#1D523A] via-[#09CDE3] to-[#EEF200]/80",
-    icon: Award,
-    accent: "#1D523A"
+    iconName: "Award",
+    accentColor: "#1D523A",
+    displayOrder: 4,
+    isActive: true
   }
 ];
 
@@ -47,6 +86,8 @@ export default function HeroCarousel() {
     loop: true 
   });
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [slides, setSlides] = useState<CarouselSlide[]>(fallbackSlides);
+  const [isLoading, setIsLoading] = useState(true);
 
   const scrollPrev = useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev();
@@ -64,6 +105,31 @@ export default function HeroCarousel() {
     if (!emblaApi) return;
     setSelectedIndex(emblaApi.selectedScrollSnap());
   }, [emblaApi]);
+
+  // Fetch carousel slides from API
+  useEffect(() => {
+    const fetchCarouselSlides = async () => {
+      try {
+        const response = await fetch('/api/carousel-slides', {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const apiSlides = await response.json();
+          if (apiSlides && apiSlides.length > 0) {
+            setSlides(apiSlides);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to fetch carousel slides, using fallback:', error);
+        // Keep fallback slides
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCarouselSlides();
+  }, []);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -88,16 +154,18 @@ export default function HeroCarousel() {
       <div className="embla" ref={emblaRef} data-testid="hero-carousel">
         <div className="embla__container flex">
           {slides.map((slide, index) => {
-            const IconComponent = slide.icon;
+            const IconComponent = iconMap[slide.iconName as keyof typeof iconMap] || Building;
+            const bgGradient = slide.bgGradient || "from-[#1D523A] to-[#09CDE3]";
+            const accentColor = slide.accentColor || "#EEF200";
             return (
               <div key={slide.id} className="embla__slide flex-[0_0_100%] min-w-0">
-                <div className={`relative bg-gradient-to-r ${slide.bgGradient} text-white min-h-[600px] flex items-center`}>
+                <div className={`relative bg-gradient-to-r ${bgGradient} text-white min-h-[600px] flex items-center`}>
                   {/* Background Pattern Overlay */}
                   <div className="absolute inset-0 opacity-10">
                     <div className="absolute inset-0" style={{
-                      backgroundImage: `radial-gradient(circle at 20% 80%, ${slide.accent}22 0%, transparent 50%), 
-                                       radial-gradient(circle at 80% 20%, ${slide.accent}22 0%, transparent 50%),
-                                       radial-gradient(circle at 40% 40%, ${slide.accent}22 0%, transparent 50%)`,
+                      backgroundImage: `radial-gradient(circle at 20% 80%, ${accentColor}22 0%, transparent 50%), 
+                                       radial-gradient(circle at 80% 20%, ${accentColor}22 0%, transparent 50%),
+                                       radial-gradient(circle at 40% 40%, ${accentColor}22 0%, transparent 50%)`,
                     }}></div>
                   </div>
 
@@ -109,9 +177,9 @@ export default function HeroCarousel() {
                         <div className="flex justify-center lg:justify-start mb-6">
                           <div 
                             className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg"
-                            style={{ backgroundColor: slide.accent }}
+                            style={{ backgroundColor: accentColor }}
                           >
-                            <IconComponent className="w-10 h-10" style={{ color: slide.id === 3 || slide.id === 4 ? '#1D523A' : '#FFFFFF' }} />
+                            <IconComponent className="w-10 h-10" style={{ color: accentColor === '#1D523A' ? '#FFFFFF' : '#1D523A' }} />
                           </div>
                         </div>
                         
@@ -127,8 +195,8 @@ export default function HeroCarousel() {
                             size="lg"
                             className="text-white shadow-lg hover:shadow-xl transition-all duration-300"
                             style={{ 
-                              backgroundColor: slide.accent,
-                              color: slide.id === 3 || slide.id === 4 ? '#1D523A' : '#FFFFFF'
+                              backgroundColor: accentColor,
+                              color: accentColor === '#1D523A' ? '#FFFFFF' : '#1D523A'
                             }}
                             onClick={() => setLocation('/jobs')}
                             data-testid="button-browse-jobs"
@@ -141,7 +209,7 @@ export default function HeroCarousel() {
                             variant="outline"
                             className="border-2 text-white hover:text-current shadow-lg hover:shadow-xl transition-all duration-300"
                             style={{ 
-                              borderColor: slide.accent
+                              borderColor: accentColor
                             }}
                             onClick={() => {
                               if (user) {
@@ -170,21 +238,21 @@ export default function HeroCarousel() {
                           {/* Decorative circles */}
                           <div 
                             className="absolute -top-4 -left-4 w-24 h-24 rounded-full opacity-20"
-                            style={{ backgroundColor: slide.accent }}
+                            style={{ backgroundColor: accentColor }}
                           ></div>
                           <div 
                             className="absolute -bottom-4 -right-4 w-32 h-32 rounded-full opacity-15"
-                            style={{ backgroundColor: slide.accent }}
+                            style={{ backgroundColor: accentColor }}
                           ></div>
                           
                           {/* Main icon display */}
                           <div 
                             className="w-64 h-64 rounded-3xl flex items-center justify-center shadow-2xl backdrop-blur-sm border border-white/20"
-                            style={{ backgroundColor: `${slide.accent}20` }}
+                            style={{ backgroundColor: `${accentColor}20` }}
                           >
                             <IconComponent 
                               className="w-32 h-32" 
-                              style={{ color: slide.accent === '#a4a70fff' ? '#1D523A' : slide.accent }}
+                              style={{ color: accentColor === '#1D523A' ? '#FFFFFF' : accentColor }}
                             />
                           </div>
                         </div>
