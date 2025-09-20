@@ -4,14 +4,11 @@ import HeroCarousel from '@/components/home/HeroCarousel';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Building, Search, UserPlus, Calendar, GraduationCap, MapPin } from 'lucide-react';
-import { datetime } from 'drizzle-orm/mysql-core';
+import { Building, Search, Calendar, GraduationCap, MapPin } from 'lucide-react';
 import { useLocation } from 'wouter';
-import { useAuth } from '@/hooks/useAuth';
 
 export default function Home() {
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
   
   const { data: jobs = [] } = useQuery({
     queryKey: ['/api/public/jobs'],
@@ -101,12 +98,10 @@ export default function Home() {
                   <Button 
                     className="w-full"
                     onClick={() => {
-                      if (user) {
-                        setLocation(`/jobs`);
-                      } else {
-                        setLocation('/jobs');
-                      }
+                      // Pass job ID as query parameter for context
+                      setLocation(`/jobs?jobId=${job.id}`);
                     }}
+                    data-testid={`apply-job-${job.id}`}
                   >
                     Apply Now
                   </Button>
@@ -120,6 +115,7 @@ export default function Home() {
               variant="outline" 
               size="lg"
               onClick={() => setLocation('/jobs')}
+              data-testid="view-all-jobs"
             >
               View All Jobs
               <Search className="w-4 h-4 ml-2" />
@@ -136,6 +132,7 @@ export default function Home() {
             <Button 
               variant="link"
               onClick={() => setLocation('/notices')}
+              data-testid="view-all-notices"
             >
               View All
             </Button>
@@ -158,7 +155,8 @@ export default function Home() {
                   <Button 
                     variant="link" 
                     className="text-primary p-0 mt-3"
-                    onClick={() => setLocation('/notices')}
+                    onClick={() => setLocation(`/notices?noticeId=${notice.id}`)}
+                    data-testid={`read-notice-${notice.id}`}
                   >
                     Read More
                   </Button>

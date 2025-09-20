@@ -402,6 +402,34 @@ export const galleryItems = pgTable("gallery_items", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Icon name enum for carousel slides
+export const carouselIconEnum = pgEnum("carousel_icon", ["Building", "GraduationCap", "Users", "Award"]);
+
+// Carousel slides for home page hero carousel
+export const carouselSlides = pgTable("carousel_slides", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 250 }).notNull(),
+  subtitle: text("subtitle").notNull(),
+  bgGradient: varchar("bg_gradient", { length: 300 }), // Tailwind gradient classes (optional if using images)
+  iconName: carouselIconEnum("icon_name").notNull(), // Enum for type safety
+  accentColor: varchar("accent_color", { length: 9 }), // Hex color with optional alpha (#RRGGBBAA)
+  // Image support for picture-based carousels
+  imageUrl: varchar("image_url", { length: 500 }), // Desktop/main image
+  mobileImageUrl: varchar("mobile_image_url", { length: 500 }), // Mobile-optimized image
+  altText: varchar("alt_text", { length: 200 }), // Accessibility text
+  // Navigation/CTA support
+  linkHref: varchar("link_href", { length: 500 }), // Optional link destination
+  ctaLabel: varchar("cta_label", { length: 100 }), // Call-to-action button text
+  // Display control
+  displayOrder: integer("display_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  activeOrderIdx: index("carousel_active_order_idx").on(table.isActive, table.displayOrder),
+}));
+
 // System configuration for admin customizable content
 export const systemConfig = pgTable("system_config", {
   id: serial("id").primaryKey(),
@@ -709,6 +737,7 @@ export type Faq = typeof faq.$inferSelect;
 export type GalleryItem = typeof galleryItems.$inferSelect;
 export type SystemConfig = typeof systemConfig.$inferSelect;
 export type BoardMember = typeof boardMembers.$inferSelect;
+export type CarouselSlide = typeof carouselSlides.$inferSelect;
 export type Ethnicity = typeof ethnicity.$inferInsert;
 
 // Insert schemas for forms
@@ -720,6 +749,9 @@ export type InsertSystemConfig = z.infer<typeof insertSystemConfig>;
 
 export const insertBoardMember = createInsertSchema(boardMembers).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertBoardMember = z.infer<typeof insertBoardMember>;
+
+export const insertCarouselSlide = createInsertSchema(carouselSlides).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCarouselSlide = z.infer<typeof insertCarouselSlide>;
 
 export const insertNoticeSubscription = createInsertSchema(noticeSubscriptions).omit({ id: true, subscribedAt: true });
 export type InsertNoticeSubscription = z.infer<typeof insertNoticeSubscription>;
