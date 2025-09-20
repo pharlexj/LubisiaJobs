@@ -179,7 +179,7 @@ export default function AdminSettings() {
 
   // Fetch board members
   const { data: boardMembers = [] } = useQuery<any[]>({
-    queryKey: ['/api/admin/board-members'],
+    queryKey: ['/api/public/board-members'],
     enabled: !!user && user.role === 'admin',
   });
 
@@ -396,6 +396,8 @@ export default function AdminSettings() {
   };
 
   const handleCreateSpecialization = (data: SpecializationFormData) => {
+    console.log(data);
+    
     createMutation.mutate({ 
       endpoint: '/api/admin/specializations', 
       data: { ...data, studyArea: parseInt(data.studyArea) }
@@ -1560,7 +1562,10 @@ export default function AdminSettings() {
                               <SelectContent>
                                 <SelectItem value="admin">Administrator</SelectItem>
                                 <SelectItem value="board">Board Member</SelectItem>
-                                <SelectItem value="applicant">Applicant</SelectItem>
+                                <SelectItem value="accountant">Accountant</SelectItem>
+                                <SelectItem value="aie">A.i.E Holder</SelectItem>
+                                <SelectItem value="records">Records</SelectItem>
+                                <SelectItem value="procurement">Procurement</SelectItem>
                               </SelectContent>
                             </Select>
                             {roleAssignmentForm.formState.errors.role && (
@@ -1626,7 +1631,7 @@ export default function AdminSettings() {
                           Add Board Member
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
+                      <DialogContent className='max-w-2xl max-h-[80vh] overflow-y-auto'>
                         <DialogHeader>
                           <DialogTitle>
                             {editingBoardMember ? 'Edit Board Member' : 'Add Board Member'}
@@ -1888,7 +1893,7 @@ export default function AdminSettings() {
                             Add Config
                           </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className='max-w-3xl max-h-[80vh] overflow-y-auto'>
                           <DialogHeader>
                             <DialogTitle>Add About Page Configuration</DialogTitle>
                           </DialogHeader>

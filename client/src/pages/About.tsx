@@ -137,9 +137,9 @@ export default function About() {
             <CardContent className="p-8 text-center">
               <Heart className="w-12 h-12 text-accent mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-4">Our Values</h3>
-              <ul className="text-gray-600 text-left space-y-2" data-testid="list-about-values">
+              <ul className="text-gray-600 text-center space-y-2" data-testid="list-about-values">
                 {config.values.map((value, index) => (
-                  <li key={index}>• {value}</li>
+                  <li key={index}> {value}</li>
                 ))}
               </ul>
             </CardContent>

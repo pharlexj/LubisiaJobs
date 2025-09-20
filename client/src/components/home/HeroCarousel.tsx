@@ -185,7 +185,7 @@ export default function HeroCarousel() {
         className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-200 z-10"
         onClick={scrollPrev}
         data-testid="carousel-prev"
-        style={{ color: '#762364ff' }}
+        style={{ color: '#1d0f1aff' }}
       >
         <ChevronLeft className="w-6 h-6" />
       </button>

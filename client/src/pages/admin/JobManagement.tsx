@@ -32,7 +32,7 @@ const jobSchema = z
     category: z.string().min(1, "Please select category"),
     certificateLevel: z.string().min(1, "Please select certificate level"),
     requirements: z.string().optional(),
-    requiredCourses: z.string().optional(),
+    requiredStudyAreaId: z.string().optional(),
     advertType: z.string().min(1, "Please specify advert type"),
     startDate: z.string().min(1, "Please select an application Start Date"),
     endDate: z.string().min(1, "Please select an application deadline"),
@@ -66,9 +66,9 @@ const jobSchema = z
         });
       }
 
-      if (!data.requiredCourses) {
+      if (!data.requiredStudyAreaId) {
         ctx.addIssue({
-          path: ["requiredCourses"],
+          path: ["requiredStudyAreaId"],
           code: z.ZodIssueCode.custom,
           message: "Required Courses must be selected when category is Internal",
         });
@@ -116,7 +116,7 @@ export default function AdminJobManagement() {
       designationId: '',
       jg: '',
       certificateLevel: '',
-      requiredCourses: '',
+      requiredStudyAreaId: '',
       posts: '',
       experience: '',
       category: '',
@@ -138,7 +138,7 @@ export default function AdminJobManagement() {
         jg: parseInt(data.jg),
         designationId: data.designationId ? parseInt(data.designationId) : null,
         certificateLevel: parseInt(data.certificateLevel),
-        requiredCourses: data.requiredCourses,
+        requiredStudyAreaId: data.requiredStudyAreaId,
         experience: data.experience,
         advertType: data.advertType,
         requirements: data.requirements || null,
@@ -243,7 +243,7 @@ export default function AdminJobManagement() {
       designationId: job.designationId?.toString() || '',
       jg: job.jg?.toString() || '',
       certificateLevel: job.certificateLevel || '',
-      requiredCourses: job.requiredCourses || '',
+      requiredStudyAreaId: job.requiredStudyAreaId || '',
       posts: job.posts?.toString() || '',
       experience: job.experience || '',
       category: job.category || '',
@@ -300,7 +300,7 @@ export default function AdminJobManagement() {
       designationId: '',
       jg: '',
       certificateLevel: '',
-      requiredCourses: '',
+      requiredStudyAreaId: '',
       posts: '',
       experience: '',
       category: '',
@@ -524,8 +524,8 @@ export default function AdminJobManagement() {
                             <SelectValue placeholder="Select Advert type" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="First Time">First Time</SelectItem>
-                            <SelectItem value="Readvertisement">Readvertisement</SelectItem>
+                            <SelectItem value="firstTime">First Time</SelectItem>
+                            <SelectItem value="reAdvertisement">Readvertisement</SelectItem>
                           </SelectContent>
                         </Select>
                         {form.formState.errors.category && (
@@ -537,8 +537,8 @@ export default function AdminJobManagement() {
                     </div>                    
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="requiredCourses">Required Courses/Fields</Label>
-                        <Select onValueChange={(value) => form.setValue('requiredCourses', value)}>                          
+                        <Label htmlFor="requiredStudyAreaId">Required Courses/Fields</Label>
+                        <Select onValueChange={(value) => form.setValue('requiredStudyAreaId', value)}>                          
                           <SelectTrigger>
                             <SelectValue placeholder="Select Required Courses" />
                           </SelectTrigger>
@@ -549,15 +549,15 @@ export default function AdminJobManagement() {
                               </SelectItem>))}
                           </SelectContent>
                         </Select>
-                        {form.formState.errors.requiredCourses && (
+                        {form.formState.errors.requiredStudyAreaId && (
                           <p className="text-sm text-red-600 mt-1">
-                            {form.formState.errors.requiredCourses.message}
+                            {form.formState.errors.requiredStudyAreaId.message}
                           </p>
                         )}
                       </div>
                       <div>
                         <Label htmlFor="certificateLevel">Required Certificate Level</Label>
-                        <Select onValueChange={(value) => form.setValue('certificateLevel', value)} disabled={!form.watch("requiredCourses")}>
+                        <Select onValueChange={(value) => form.setValue('certificateLevel', value)} disabled={!form.watch("requiredStudyAreaId")}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select Certificate Level"/>                            
                           </SelectTrigger>

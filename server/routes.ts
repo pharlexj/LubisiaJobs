@@ -1387,6 +1387,8 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
   app.post('/api/admin/specializations', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
+      console.log("Specialized", req.body);
+      
       if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
       }
