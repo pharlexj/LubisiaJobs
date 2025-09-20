@@ -35,9 +35,30 @@ import { useEffect } from "react";
 
 function Router() {
   useEffect(() => {
-      document.title = "County Website";
-      <link rel="icon" type="image/svg+xml" href="/uploads/myICON.ico" />
-    }, []);
+    document.title = "County Website";
+    
+    // Set favicon dynamically from uploads
+    const setFavicon = () => {
+      // Remove any existing favicon links
+      const existingLinks = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
+      existingLinks.forEach(link => link.remove());
+      
+      // Create new favicon link
+      const link = document.createElement('link');
+      link.rel = 'icon';
+      link.type = 'image/x-icon';
+      link.href = '/uploads/favicon.ico';
+      
+      // Add fallback if favicon doesn't exist
+      link.onerror = () => {
+        link.href = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🏛️</text></svg>';
+      };
+      
+      document.head.appendChild(link);
+    };
+    
+    setFavicon();
+  }, []);
   return (
     <Switch>
       {/* Public routes */}
