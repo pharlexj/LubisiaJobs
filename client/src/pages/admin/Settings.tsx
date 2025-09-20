@@ -2507,8 +2507,8 @@ export default function AdminSettings() {
                                 alt="Current favicon"
                                 className="w-4 h-4"
                                 onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                  e.currentTarget.nextElementSibling!.style.display = 'block';
+                                  (e.currentTarget as HTMLElement).style.display = 'none';
+                                  ((e.currentTarget.nextElementSibling) as HTMLElement).style.display = 'block';
                                 }}
                               />
                               <div style={{display: 'none'}} className="text-xs text-gray-400">🏛️</div>

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { Button } from '@/components/ui/button';
 import { Search, UserPlus, ChevronLeft, ChevronRight, Building, GraduationCap, Users, Award } from 'lucide-react';
+import { useLocation } from 'wouter';
+import { useAuth } from '@/hooks/useAuth';
 
 const slides = [
   {
@@ -39,6 +41,8 @@ const slides = [
 ];
 
 export default function HeroCarousel() {
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const [emblaRef, emblaApi] = useEmblaCarousel({ 
     loop: true 
   });
@@ -126,6 +130,7 @@ export default function HeroCarousel() {
                               backgroundColor: slide.accent,
                               color: slide.id === 3 || slide.id === 4 ? '#1D523A' : '#FFFFFF'
                             }}
+                            onClick={() => setLocation('/jobs')}
                             data-testid="button-browse-jobs"
                           >
                             <Search className="w-5 h-5 mr-2" />
@@ -137,6 +142,19 @@ export default function HeroCarousel() {
                             className="border-2 text-white hover:text-current shadow-lg hover:shadow-xl transition-all duration-300"
                             style={{ 
                               borderColor: slide.accent
+                            }}
+                            onClick={() => {
+                              if (user) {
+                                // If user is logged in, go to their dashboard
+                                if (user.role === 'applicant') {
+                                  setLocation('/dashboard');
+                                } else {
+                                  setLocation('/jobs');
+                                }
+                              } else {
+                                // If not logged in, go to jobs page where they can see the login option
+                                setLocation('/jobs');
+                              }
                             }}
                             data-testid="button-apply-now"
                           >

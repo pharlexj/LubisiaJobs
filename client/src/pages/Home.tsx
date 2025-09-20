@@ -6,8 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Building, Search, UserPlus, Calendar, GraduationCap, MapPin } from 'lucide-react';
 import { datetime } from 'drizzle-orm/mysql-core';
+import { useLocation } from 'wouter';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Home() {
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  
   const { data: jobs = [] } = useQuery({
     queryKey: ['/api/public/jobs'],
   });
@@ -93,14 +98,29 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <Button className="w-full">Apply Now</Button>
+                  <Button 
+                    className="w-full"
+                    onClick={() => {
+                      if (user) {
+                        setLocation(`/jobs`);
+                      } else {
+                        setLocation('/jobs');
+                      }
+                    }}
+                  >
+                    Apply Now
+                  </Button>
                 </CardContent>
               </Card>
             ))}
           </div>
 
           <div className="text-center mt-8">
-            <Button variant="outline" size="lg">
+            <Button 
+              variant="outline" 
+              size="lg"
+              onClick={() => setLocation('/jobs')}
+            >
               View All Jobs
               <Search className="w-4 h-4 ml-2" />
             </Button>
@@ -113,7 +133,12 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900">Latest Notices</h2>
-            <Button variant="link">View All</Button>
+            <Button 
+              variant="link"
+              onClick={() => setLocation('/notices')}
+            >
+              View All
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -130,7 +155,11 @@ export default function Home() {
                   </div>
                   <h3 className="font-semibold text-gray-900 mb-2">{notice.title}</h3>
                   <p className="text-gray-600 text-sm line-clamp-3">{notice.content}</p>
-                  <Button variant="link" className="text-primary p-0 mt-3">
+                  <Button 
+                    variant="link" 
+                    className="text-primary p-0 mt-3"
+                    onClick={() => setLocation('/notices')}
+                  >
                     Read More
                   </Button>
                 </CardContent>
