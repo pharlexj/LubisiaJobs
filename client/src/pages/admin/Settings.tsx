@@ -39,7 +39,8 @@ import {
   Globe,
   Upload,
   Link,
-  X
+  X,
+  Image as ImageIcon
 } from 'lucide-react';
 
 // Form schemas
@@ -125,6 +126,20 @@ const galleryItemSchema = z.object({
   eventDate: z.string().optional(),
 });
 
+const carouselSlideSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  subtitle: z.string().min(1, "Subtitle is required"),
+  bgGradient: z.string().optional(),
+  iconName: z.enum(['Building', 'GraduationCap', 'Users', 'Award']),
+  accentColor: z.string().optional(),
+  imageUrl: z.string().optional(),
+  mobileImageUrl: z.string().optional(),
+  altText: z.string().optional(),
+  linkHref: z.string().optional(),
+  ctaLabel: z.string().optional(),
+  displayOrder: z.number().optional().default(0),
+});
+
 type NoticeFormData = z.infer<typeof noticeSchema>;
 type CountyFormData = z.infer<typeof countySchema>;
 type ConstituencyFormData = z.infer<typeof constituencySchema>;
@@ -140,6 +155,7 @@ type RoleAssignmentFormData = z.infer<typeof roleAssignmentSchema>;
 type AboutConfigFormData = z.infer<typeof aboutConfigSchema>;
 type GalleryItemFormData = z.infer<typeof galleryItemSchema>;
 type BoardMemberFormData = z.infer<typeof boardMemberSchema>;
+type CarouselSlideFormData = z.infer<typeof carouselSlideSchema>;
 
 export default function AdminSettings() {
   const { user } = useAuth();
@@ -167,6 +183,14 @@ export default function AdminSettings() {
   const [boardPhotoPreview, setBoardPhotoPreview] = useState<string>('');
   const [editingBoardMember, setEditingBoardMember] = useState<any | null>(null);
 
+  // Carousel slide states
+  const [carouselImageMode, setCarouselImageMode] = useState<'gradient' | 'image'>('gradient');
+  const [carouselImageFile, setCarouselImageFile] = useState<File | null>(null);
+  const [carouselMobileImageFile, setCarouselMobileImageFile] = useState<File | null>(null);
+  const [carouselImagePreview, setCarouselImagePreview] = useState<string>('');
+  const [carouselMobilePreview, setCarouselMobilePreview] = useState<string>('');
+  const [editingCarouselSlide, setEditingCarouselSlide] = useState<any | null>(null);
+
   // Fetch configuration data
   const { data: config } = useQuery({
     queryKey: ['/api/public/config'],
@@ -182,6 +206,12 @@ export default function AdminSettings() {
   // Fetch board members
   const { data: boardMembers = [] } = useQuery<any[]>({
     queryKey: ['/api/public/board-members'],
+    enabled: !!user && user.role === 'admin',
+  });
+
+  // Fetch carousel slides
+  const { data: carouselSlides = [] } = useQuery<any[]>({
+    queryKey: ['/api/admin/carousel-slides'],
     enabled: !!user && user.role === 'admin',
   });
 
@@ -230,6 +260,7 @@ export default function AdminSettings() {
   const aboutConfigForm = useForm<AboutConfigFormData>({ resolver: zodResolver(aboutConfigSchema) });
   const galleryItemForm = useForm<GalleryItemFormData>({ resolver: zodResolver(galleryItemSchema) });
   const boardMemberForm = useForm<BoardMemberFormData>({ resolver: zodResolver(boardMemberSchema) });
+  const carouselSlideForm = useForm<CarouselSlideFormData>({ resolver: zodResolver(carouselSlideSchema) });
 
   // File upload configuration for gallery (aligned with server-side accepted types)
   const galleryFileUpload = useFileUpload({
@@ -251,6 +282,17 @@ export default function AdminSettings() {
     successMessage: 'Board member photo uploaded successfully!',
     errorMessage: 'Failed to upload board member photo',
     invalidateQueries: ['/api/admin/board-members']
+  });
+
+  // File upload configuration for carousel slide images
+  const carouselImageUpload = useFileUpload({
+    endpoint: '/api/upload',
+    fieldName: 'file',
+    acceptedTypes: ['image/jpeg', 'image/jpg', 'image/png'],
+    maxSizeInMB: 10,
+    successMessage: 'Carousel image uploaded successfully!',
+    errorMessage: 'Failed to upload carousel image',
+    invalidateQueries: ['/api/admin/carousel-slides']
   });
 
   // Generic mutation handler
@@ -433,6 +475,12 @@ export default function AdminSettings() {
       label: 'System',
       icon: SettingsIcon,
       description: 'Manage system settings including favicon'
+    },
+    {
+      id: 'carousel',
+      label: 'Carousel',
+      icon: ImageIcon,
+      description: 'Manage homepage carousel slides and pictures'
     },
   ];
 
@@ -706,6 +754,72 @@ export default function AdminSettings() {
           variant: 'destructive',
         });
       }
+    }
+  };
+
+  const handleCreateCarouselSlide = async (data: CarouselSlideFormData) => {
+    try {
+      let processedData = { ...data };
+
+      // Handle desktop image upload if in image mode
+      if (carouselImageMode === 'image' && carouselImageFile) {
+        toast({
+          title: 'Processing',
+          description: 'Uploading carousel image...',
+        });
+
+        const uploadResult = await carouselImageUpload.uploadFile(carouselImageFile);
+        if (uploadResult?.filename) {
+          processedData.imageUrl = `/uploads/${uploadResult.filename}`;
+        }
+      }
+
+      // Handle mobile image upload if provided
+      if (carouselMobileImageFile) {
+        const mobileUploadResult = await carouselImageUpload.uploadFile(carouselMobileImageFile);
+        if (mobileUploadResult?.filename) {
+          processedData.mobileImageUrl = `/uploads/${mobileUploadResult.filename}`;
+        }
+      }
+
+      // Clear gradient if using image mode
+      if (carouselImageMode === 'image') {
+        processedData.bgGradient = '';
+      } else {
+        // Clear image fields if using gradient mode
+        processedData.imageUrl = '';
+        processedData.mobileImageUrl = '';
+        processedData.altText = '';
+      }
+
+      if (editingCarouselSlide) {
+        // Update existing slide
+        const response = await apiRequest('PUT', `/api/admin/carousel-slides/${editingCarouselSlide.id}`, processedData);
+        toast({
+          title: 'Success',
+          description: 'Carousel slide updated successfully.',
+        });
+        setEditingCarouselSlide(null);
+      } else {
+        // Create new slide
+        createMutation.mutate({ endpoint: '/api/admin/carousel-slides', data: processedData });
+      }
+
+      // Reset upload states after successful submission
+      setCarouselImageFile(null);
+      setCarouselMobileImageFile(null);
+      setCarouselImagePreview('');
+      setCarouselMobilePreview('');
+      setCarouselImageMode('gradient');
+      carouselSlideForm.reset();
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carousel-slides'] });
+
+    } catch (error: any) {
+      toast({
+        title: 'Operation Failed',
+        description: error.message || 'Failed to process carousel slide',
+        variant: 'destructive',
+      });
     }
   };
 

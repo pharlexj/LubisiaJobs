@@ -12,7 +12,7 @@ import { ApplicantService } from "./applicantService";
 import { log } from "util";
 import { z } from "zod";
 import { createInsertSchema } from 'drizzle-zod';
-import { boardMembers } from "@shared/schema";
+import { boardMembers, carouselSlides } from "@shared/schema";
 
 // Board member validation schemas
 const insertBoardMemberSchema = createInsertSchema(boardMembers).omit({
@@ -22,6 +22,15 @@ const insertBoardMemberSchema = createInsertSchema(boardMembers).omit({
 });
 
 const updateBoardMemberSchema = insertBoardMemberSchema.partial();
+
+// Carousel slides validation schemas
+const insertCarouselSlideSchema = createInsertSchema(carouselSlides).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+const updateCarouselSlideSchema = insertCarouselSlideSchema.partial();
 
 // OTP utility functions
 const applicantService = new ApplicantService(storage);
@@ -1219,6 +1228,120 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     } catch (error) {
       console.error('Error deleting board member:', error);
       res.status(500).json({ message: 'Failed to delete board member' });
+    }
+  });
+
+  // ===== CAROUSEL SLIDES MANAGEMENT =====
+  
+  // Get all carousel slides (admin)
+  app.get('/api/admin/carousel-slides', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const slides = await storage.getCarouselSlides();
+      res.json(slides);
+    } catch (error) {
+      console.error('Error fetching carousel slides:', error);
+      res.status(500).json({ message: 'Failed to fetch carousel slides' });
+    }
+  });
+
+  // Create carousel slide (admin)
+  app.post('/api/admin/carousel-slides', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      // Validate request body with Zod
+      const result = insertCarouselSlideSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: 'Validation failed',
+          errors: result.error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
+
+      const slideData = {
+        ...result.data,
+        createdBy: user.id,
+        displayOrder: result.data.displayOrder || 0,
+      };
+
+      const slide = await storage.createCarouselSlide(slideData);
+      res.json(slide);
+    } catch (error) {
+      console.error('Error creating carousel slide:', error);
+      res.status(500).json({ message: 'Failed to create carousel slide' });
+    }
+  });
+
+  // Update carousel slide (admin)
+  app.put('/api/admin/carousel-slides/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const slideId = parseInt(req.params.id);
+      if (isNaN(slideId)) {
+        return res.status(400).json({ message: 'Invalid carousel slide ID' });
+      }
+
+      // Validate request body with Zod
+      const result = updateCarouselSlideSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: 'Validation failed',
+          errors: result.error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
+
+      const slide = await storage.updateCarouselSlide(slideId, result.data);
+      if (!slide) {
+        return res.status(404).json({ message: 'Carousel slide not found' });
+      }
+
+      res.json(slide);
+    } catch (error) {
+      console.error('Error updating carousel slide:', error);
+      res.status(500).json({ message: 'Failed to update carousel slide' });
+    }
+  });
+
+  // Delete carousel slide (admin)
+  app.delete('/api/admin/carousel-slides/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const slideId = parseInt(req.params.id);
+      if (isNaN(slideId)) {
+        return res.status(400).json({ message: 'Invalid carousel slide ID' });
+      }
+
+      const slide = await storage.deleteCarouselSlide(slideId);
+      if (!slide) {
+        return res.status(404).json({ message: 'Carousel slide not found' });
+      }
+
+      res.json({ message: 'Carousel slide deleted successfully', slide });
+    } catch (error) {
+      console.error('Error deleting carousel slide:', error);
+      res.status(500).json({ message: 'Failed to delete carousel slide' });
     }
   });
 

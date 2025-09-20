@@ -31,6 +31,7 @@ import {
   galleryItems,
   systemConfig,
   boardMembers,
+  carouselSlides,
   noticeSubscriptions,
   notifications,
   notificationRecipients,
@@ -63,6 +64,8 @@ import {
   type GalleryItem,
   type SystemConfig,
   type BoardMember,
+  type CarouselSlide,
+  type InsertCarouselSlide,
   type InsertGalleryItem,
   type InsertSystemConfig,
   type InsertBoardMember,
@@ -793,6 +796,42 @@ async getFaq() {
       .where(eq(boardMembers.id, id))
       .returning();
     return boardMember;
+  }
+
+  // Carousel slides operations
+  async getCarouselSlides() {
+    return await db
+      .select()
+      .from(carouselSlides)
+      .where(eq(carouselSlides.isActive, true))
+      .orderBy(carouselSlides.displayOrder, carouselSlides.id);
+  }
+
+  async createCarouselSlide(slide: InsertCarouselSlide) {
+    const [carouselSlide] = await db
+      .insert(carouselSlides)
+      .values(slide)
+      .returning();
+    return carouselSlide;
+  }
+
+  async updateCarouselSlide(id: number, slide: Partial<InsertCarouselSlide>) {
+    const [carouselSlide] = await db
+      .update(carouselSlides)
+      .set({ ...slide, updatedAt: sql`now()` })
+      .where(eq(carouselSlides.id, id))
+      .returning();
+    return carouselSlide;
+  }
+
+  async deleteCarouselSlide(id: number) {
+    // Soft delete by setting isActive to false
+    const [carouselSlide] = await db
+      .update(carouselSlides)
+      .set({ isActive: false, updatedAt: sql`now()` })
+      .where(eq(carouselSlides.id, id))
+      .returning();
+    return carouselSlide;
   }
 
   // Notification operations
