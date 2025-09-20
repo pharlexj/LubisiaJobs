@@ -630,8 +630,8 @@ export default function AdminSettings() {
 
   const handleCreateGalleryItem = async (data: GalleryItemFormData) => {
     try {
-      // Validate that either URL or file is provided
-      if (galleryImageMode === 'url' && (!data.imageUrl || data.imageUrl.trim() === '')) {
+      // Validate that either URL or file is provided (only for new items or when changing image)
+      if (!editingItem && galleryImageMode === 'url' && (!data.imageUrl || data.imageUrl.trim() === '')) {
         toast({
           title: 'Image Required',
           description: 'Please provide an image URL.',
@@ -640,7 +640,7 @@ export default function AdminSettings() {
         return;
       }
 
-      if (galleryImageMode === 'upload' && !uploadedImageFile) {
+      if (!editingItem && galleryImageMode === 'upload' && !uploadedImageFile) {
         toast({
           title: 'Image Required',
           description: 'Please select an image file to upload.',
@@ -649,13 +649,13 @@ export default function AdminSettings() {
         return;
       }
 
-      let imageUrl = data.imageUrl || '';
+      let imageUrl = data.imageUrl || (editingItem ? editingItem.imageUrl : '');
 
       // Handle file upload if in upload mode
       if (galleryImageMode === 'upload' && uploadedImageFile) {
         toast({
           title: 'Processing...',
-          description: 'Uploading image and creating gallery item...',
+          description: `${editingItem ? 'Updating' : 'Creating'} gallery item...`,
         });
 
         // Upload the file first
@@ -675,17 +675,30 @@ export default function AdminSettings() {
         eventDate: data.eventDate ? new Date(data.eventDate).toISOString() : null
       };
 
-      createMutation.mutate({ endpoint: '/api/admin/gallery', data: processedData });
+      if (editingItem && editingType === 'gallery') {
+        // Update existing gallery item
+        await apiRequest('PUT', `/api/admin/gallery/${editingItem.id}`, processedData);
+        toast({
+          title: 'Success',
+          description: 'Gallery item updated successfully.',
+        });
+        setEditingItem(null);
+        setEditingType('');
+      } else {
+        // Create new gallery item
+        createMutation.mutate({ endpoint: '/api/admin/gallery', data: processedData });
+      }
 
       // Reset upload states after successful submission
       setUploadedImageFile(null);
       setPreviewImageUrl('');
       setGalleryImageMode('url');
+      queryClient.invalidateQueries({ queryKey: ['/api/public/gallery'] });
 
     } catch (error: any) {
       toast({
-        title: 'Upload Failed',
-        description: error.message || 'Failed to upload image',
+        title: `${editingItem ? 'Update' : 'Upload'} Failed`,
+        description: error.message || `Failed to ${editingItem ? 'update' : 'create'} gallery item`,
         variant: 'destructive',
       });
     }
@@ -2248,10 +2261,24 @@ export default function AdminSettings() {
                                     <p className="text-gray-900 mt-1">{String(value).substring(0, 200)}{String(value).length > 200 ? '...' : ''}</p>
                                   </div>
                                   <div className="flex space-x-2 ml-4">
-                                    <Button variant="ghost" size="sm">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => {
+                                        // Set editing mode for about config
+                                        setEditingItem({ key, value: String(value), section: 'about' });
+                                        setEditingType('about-config');
+                                        aboutConfigForm.reset({ key, value: String(value), section: 'about' });
+                                        setIsModalOpen(true);
+                                      }}
+                                    >
                                       <Edit className="w-4 h-4" />
                                     </Button>
-                                    <Button variant="ghost" size="sm">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => handleDeleteItem(0, `/api/admin/system-config?section=about&key=${encodeURIComponent(key)}`, 'configuration item')}
+                                    >
                                       <Trash2 className="w-4 h-4" />
                                     </Button>
                                   </div>
@@ -2316,7 +2343,7 @@ export default function AdminSettings() {
                       </DialogTrigger>
                       <DialogContent className='max-w-2xl max-h-[80vh] overflow-y-auto'>
                         <DialogHeader>
-                          <DialogTitle>Add Gallery Item</DialogTitle>
+                          <DialogTitle>{editingItem && editingType === 'gallery' ? 'Edit Gallery Item' : 'Add Gallery Item'}</DialogTitle>
                         </DialogHeader>
                         <form onSubmit={galleryItemForm.handleSubmit(handleCreateGalleryItem)} className="space-y-4">
                           <div>
@@ -2530,10 +2557,31 @@ export default function AdminSettings() {
                                   {item.eventDate ? new Date(item.eventDate).toLocaleDateString() : 'No date'}
                                 </p>
                                 <div className="flex space-x-2">
-                                  <Button variant="ghost" size="sm">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => {
+                                      // Set editing mode for gallery item
+                                      setEditingItem(item);
+                                      setEditingType('gallery');
+                                      galleryItemForm.reset({
+                                        title: item.title,
+                                        description: item.description || '',
+                                        category: item.category,
+                                        imageUrl: item.imageUrl || '',
+                                        eventDate: item.eventDate || ''
+                                      });
+                                      setPreviewImageUrl(item.imageUrl || '');
+                                      setIsModalOpen(true);
+                                    }}
+                                  >
                                     <Edit className="w-4 h-4" />
                                   </Button>
-                                  <Button variant="ghost" size="sm">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleDeleteItem(item.id, '/api/admin/gallery', 'gallery item')}
+                                  >
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
                                 </div>
