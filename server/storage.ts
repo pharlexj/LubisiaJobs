@@ -1407,6 +1407,266 @@ async seedStudy(studyA: Omit<StudyArea, 'id'>): Promise<StudyArea> {
     return deletedConstituency;
   }
 
+  // Ward CRUD operations
+  async updateWard(id: number, wardData: Partial<any>) {
+    const [updatedWard] = await db
+      .update(wards)
+      .set({ ...wardData })
+      .where(eq(wards.id, id))
+      .returning();
+    return updatedWard;
+  }
+
+  async deleteWard(id: number) {
+    const [deletedWard] = await db
+      .delete(wards)
+      .where(eq(wards.id, id))
+      .returning();
+    return deletedWard;
+  }
+
+  // Study Area CRUD operations
+  async updateStudyArea(id: number, studyAreaData: Partial<any>) {
+    const [updatedStudyArea] = await db
+      .update(studyArea)
+      .set({ ...studyAreaData })
+      .where(eq(studyArea.id, id))
+      .returning();
+    return updatedStudyArea;
+  }
+
+  async deleteStudyArea(id: number) {
+    const [deletedStudyArea] = await db
+      .delete(studyArea)
+      .where(eq(studyArea.id, id))
+      .returning();
+    return deletedStudyArea;
+  }
+
+  // Specialization CRUD operations
+  async updateSpecialization(id: number, specializationData: Partial<any>) {
+    const [updatedSpecialization] = await db
+      .update(specializations)
+      .set({ ...specializationData })
+      .where(eq(specializations.id, id))
+      .returning();
+    return updatedSpecialization;
+  }
+
+  async deleteSpecialization(id: number) {
+    const [deletedSpecialization] = await db
+      .delete(specializations)
+      .where(eq(specializations.id, id))
+      .returning();
+    return deletedSpecialization;
+  }
+
+  // SMS related methods
+  async getApplicantsByJobAndType(jobId: number, applicantType: string): Promise<any[]> {
+    let statusFilter;
+    
+    switch (applicantType) {
+      case 'shortlisted':
+        statusFilter = 'shortlisted';
+        break;
+      case 'successful':
+      case 'hired':
+        statusFilter = 'hired';
+        break;
+      case 'unsuccessful':
+      case 'rejected':
+        statusFilter = 'rejected';
+        break;
+      default:
+        statusFilter = 'submitted';
+    }
+
+    const applicantData = await db
+      .select({
+        id: applicants.id,
+        userId: applicants.userId,
+        firstName: applicants.firstName,
+        surname: applicants.surname,
+        otherName: applicants.otherName,
+        phoneNumber: applicants.phoneNumber,
+        nationalId: applicants.nationalId,
+        gender: applicants.gender,
+        countyName: counties.name,
+        wardId: applicants.wardId,
+        applicationStatus: applications.status,
+        jobTitle: jobs.title,
+        jobId: applications.jobId,
+        applicationId: applications.id
+      })
+      .from(applications)
+      .innerJoin(applicants, eq(applications.applicantId, applicants.id))
+      .innerJoin(jobs, eq(applications.jobId, jobs.id))
+      .leftJoin(counties, eq(applicants.countyId, counties.id))
+      .where(
+        and(
+          eq(applications.jobId, jobId),
+          eq(applications.status, statusFilter as any)
+        )
+      )
+      .orderBy(desc(applications.createdAt));
+
+    return applicantData;
+  }
+
+  async sendSMSToApplicants(applicantIds: number[], message: string, jobId: number, applicantType: string): Promise<any> {
+    const { sendSms } = await import('./lib/africastalking-sms');
+    
+    // Get applicant phone numbers
+    const applicantsData = await db
+      .select({
+        id: applicants.id,
+        phoneNumber: applicants.phoneNumber,
+        firstName: applicants.firstName,
+        surname: applicants.surname
+      })
+      .from(applicants)
+      .where(sql`${applicants.id} = ANY(${applicantIds})`);
+
+    const results = [];
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (const applicant of applicantsData) {
+      try {
+        if (applicant.phoneNumber) {
+          await sendSms({
+            to: applicant.phoneNumber,
+            message: message
+          });
+          
+          results.push({
+            applicantId: applicant.id,
+            name: `${applicant.firstName} ${applicant.surname}`,
+            phoneNumber: applicant.phoneNumber,
+            status: 'sent',
+            error: null
+          });
+          successCount++;
+        } else {
+          results.push({
+            applicantId: applicant.id,
+            name: `${applicant.firstName} ${applicant.surname}`,
+            phoneNumber: 'N/A',
+            status: 'failed',
+            error: 'No phone number'
+          });
+          failureCount++;
+        }
+      } catch (error: any) {
+        results.push({
+          applicantId: applicant.id,
+          name: `${applicant.firstName} ${applicant.surname}`,
+          phoneNumber: applicant.phoneNumber || 'N/A',
+          status: 'failed',
+          error: error.message || 'Unknown error'
+        });
+        failureCount++;
+      }
+    }
+
+    return {
+      totalRecipients: applicantIds.length,
+      successCount,
+      failureCount,
+      results,
+      jobId,
+      applicantType,
+      message
+    };
+  }
+
+  async getStaffForSMS(): Promise<any[]> {
+    // Get all non-applicant users (staff members)
+    const staffData = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        surname: users.surname,
+        phoneNumber: users.phoneNumber,
+        role: users.role
+      })
+      .from(users)
+      .where(sql`${users.role} != 'applicant'`)
+      .orderBy(users.firstName);
+
+    return staffData;
+  }
+
+  async sendSMSToStaff(staffIds: string[], message: string): Promise<any> {
+    const { sendSms } = await import('./lib/africastalking-sms');
+    
+    // Get staff phone numbers
+    const staffData = await db
+      .select({
+        id: users.id,
+        phoneNumber: users.phoneNumber,
+        firstName: users.firstName,
+        surname: users.surname,
+        email: users.email
+      })
+      .from(users)
+      .where(sql`${users.id} = ANY(${staffIds})`);
+
+    const results = [];
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (const staff of staffData) {
+      try {
+        if (staff.phoneNumber) {
+          await sendSms({
+            to: staff.phoneNumber,
+            message: message
+          });
+          
+          results.push({
+            staffId: staff.id,
+            name: `${staff.firstName} ${staff.surname}`,
+            email: staff.email,
+            phoneNumber: staff.phoneNumber,
+            status: 'sent',
+            error: null
+          });
+          successCount++;
+        } else {
+          results.push({
+            staffId: staff.id,
+            name: `${staff.firstName} ${staff.surname}`,
+            email: staff.email,
+            phoneNumber: 'N/A',
+            status: 'failed',
+            error: 'No phone number'
+          });
+          failureCount++;
+        }
+      } catch (error: any) {
+        results.push({
+          staffId: staff.id,
+          name: `${staff.firstName} ${staff.surname}`,
+          email: staff.email,
+          phoneNumber: staff.phoneNumber || 'N/A',
+          status: 'failed',
+          error: error.message || 'Unknown error'
+        });
+        failureCount++;
+      }
+    }
+
+    return {
+      totalRecipients: staffIds.length,
+      successCount,
+      failureCount,
+      results,
+      message
+    };
+  }
+
   async seedInstitutions(institute: Omit<Institution, 'id'>): Promise<Institution> {
     const [newInstitution] = await db
       .insert(institutions)

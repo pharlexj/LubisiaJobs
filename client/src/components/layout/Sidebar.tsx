@@ -18,7 +18,8 @@ import {
   CheckCircle,
   Calendar,
   Award,
-  LogOut
+  LogOut,
+  MessageCircle
 } from 'lucide-react';
 import ProfileCompletion from '@/components/applicant/ProfileCompletion';
 
@@ -102,6 +103,12 @@ export default function Sidebar({ userRole }: SidebarProps) {
       icon: Bell, 
       label: 'Notifications', 
       description: 'Send notifications' 
+    },
+    { 
+      href: '/admin/sms', 
+      icon: MessageCircle, 
+      label: 'SMS Communications', 
+      description: 'Send SMS messages' 
     },
     { 
       href: '/admin/settings', 

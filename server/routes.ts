@@ -1727,6 +1727,257 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     }
   });
 
+  // Update county (admin)
+  app.put('/api/admin/counties/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const id = parseInt(req.params.id);
+      const county = await storage.updateCounty(id, req.body);
+      res.json(county);
+    } catch (error) {
+      console.error('Error updating county:', error);
+      res.status(500).json({ message: 'Failed to update county' });
+    }
+  });
+
+  // Delete county (admin)
+  app.delete('/api/admin/counties/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const id = parseInt(req.params.id);
+      const county = await storage.deleteCounty(id);
+      res.json(county);
+    } catch (error) {
+      console.error('Error deleting county:', error);
+      res.status(500).json({ message: 'Failed to delete county' });
+    }
+  });
+
+  // Update constituency (admin)
+  app.put('/api/admin/constituencies/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const id = parseInt(req.params.id);
+      const constituency = await storage.updateConstituency(id, req.body);
+      res.json(constituency);
+    } catch (error) {
+      console.error('Error updating constituency:', error);
+      res.status(500).json({ message: 'Failed to update constituency' });
+    }
+  });
+
+  // Delete constituency (admin)
+  app.delete('/api/admin/constituencies/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const id = parseInt(req.params.id);
+      const constituency = await storage.deleteConstituency(id);
+      res.json(constituency);
+    } catch (error) {
+      console.error('Error deleting constituency:', error);
+      res.status(500).json({ message: 'Failed to delete constituency' });
+    }
+  });
+
+  // Update ward (admin)
+  app.put('/api/admin/wards/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const id = parseInt(req.params.id);
+      const ward = await storage.updateWard(id, req.body);
+      res.json(ward);
+    } catch (error) {
+      console.error('Error updating ward:', error);
+      res.status(500).json({ message: 'Failed to update ward' });
+    }
+  });
+
+  // Delete ward (admin)
+  app.delete('/api/admin/wards/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const id = parseInt(req.params.id);
+      const ward = await storage.deleteWard(id);
+      res.json(ward);
+    } catch (error) {
+      console.error('Error deleting ward:', error);
+      res.status(500).json({ message: 'Failed to delete ward' });
+    }
+  });
+
+  // Update study area (admin)
+  app.put('/api/admin/study-areas/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const id = parseInt(req.params.id);
+      const studyArea = await storage.updateStudyArea(id, req.body);
+      res.json(studyArea);
+    } catch (error) {
+      console.error('Error updating study area:', error);
+      res.status(500).json({ message: 'Failed to update study area' });
+    }
+  });
+
+  // Delete study area (admin)
+  app.delete('/api/admin/study-areas/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const id = parseInt(req.params.id);
+      const studyArea = await storage.deleteStudyArea(id);
+      res.json(studyArea);
+    } catch (error) {
+      console.error('Error deleting study area:', error);
+      res.status(500).json({ message: 'Failed to delete study area' });
+    }
+  });
+
+  // Update specialization (admin)
+  app.put('/api/admin/specializations/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const id = parseInt(req.params.id);
+      const specialization = await storage.updateSpecialization(id, req.body);
+      res.json(specialization);
+    } catch (error) {
+      console.error('Error updating specialization:', error);
+      res.status(500).json({ message: 'Failed to update specialization' });
+    }
+  });
+
+  // Delete specialization (admin)
+  app.delete('/api/admin/specializations/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const id = parseInt(req.params.id);
+      const specialization = await storage.deleteSpecialization(id);
+      res.json(specialization);
+    } catch (error) {
+      console.error('Error deleting specialization:', error);
+      res.status(500).json({ message: 'Failed to delete specialization' });
+    }
+  });
+
+  // SMS Routes
+  
+  // Get applicants by job and filter for SMS
+  app.get('/api/admin/sms-applicants', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { jobId, applicantType } = req.query;
+      if (!jobId || !applicantType) {
+        return res.status(400).json({ message: 'jobId and applicantType are required' });
+      }
+
+      const applicants = await storage.getApplicantsByJobAndType(parseInt(jobId as string), applicantType as string);
+      res.json(applicants);
+    } catch (error) {
+      console.error('Error fetching SMS applicants:', error);
+      res.status(500).json({ message: 'Failed to fetch applicants for SMS' });
+    }
+  });
+
+  // Send SMS to selected applicants
+  app.post('/api/admin/send-sms', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { applicantIds, message, jobId, applicantType } = req.body;
+      if (!applicantIds || !message || !Array.isArray(applicantIds) || applicantIds.length === 0) {
+        return res.status(400).json({ message: 'applicantIds and message are required' });
+      }
+
+      const result = await storage.sendSMSToApplicants(applicantIds, message, jobId, applicantType);
+      res.json(result);
+    } catch (error) {
+      console.error('Error sending SMS:', error);
+      res.status(500).json({ message: 'Failed to send SMS' });
+    }
+  });
+
+  // Send SMS to staff
+  app.post('/api/admin/send-staff-sms', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { staffIds, message } = req.body;
+      if (!staffIds || !message || !Array.isArray(staffIds) || staffIds.length === 0) {
+        return res.status(400).json({ message: 'staffIds and message are required' });
+      }
+
+      const result = await storage.sendSMSToStaff(staffIds, message);
+      res.json(result);
+    } catch (error) {
+      console.error('Error sending staff SMS:', error);
+      res.status(500).json({ message: 'Failed to send SMS to staff' });
+    }
+  });
+
+  // Get staff for SMS
+  app.get('/api/admin/staff-list', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const staff = await storage.getStaffForSMS();
+      res.json(staff);
+    } catch (error) {
+      console.error('Error fetching staff for SMS:', error);
+      res.status(500).json({ message: 'Failed to fetch staff list' });
+    }
+  });
+
   // Create FAQ (admin)
   app.post('/api/admin/faqs', isAuthenticated, async (req: any, res) => {
     try {

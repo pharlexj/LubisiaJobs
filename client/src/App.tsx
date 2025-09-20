@@ -26,6 +26,7 @@ import AdminApplications from "@/pages/admin/Applications";
 import AdminReports from "@/pages/admin/Reports";
 import AdminNotifications from "@/pages/admin/Notifications";
 import AdminSettings from "@/pages/admin/Settings";
+import AdminSMSCommunications from "@/pages/admin/SMSCommunications";
 
 // Board pages
 import BoardDashboard from "@/pages/board/Dashboard";
@@ -81,6 +82,7 @@ function Router() {
       <ProtectedRoute path="/admin/applications" component={AdminApplications} allowedRoles={["admin"]} />
       <ProtectedRoute path="/admin/reports" component={AdminReports} allowedRoles={["admin"]} />
       <ProtectedRoute path="/admin/notifications" component={AdminNotifications} allowedRoles={["admin"]} />
+      <ProtectedRoute path="/admin/sms" component={AdminSMSCommunications} allowedRoles={["admin"]} />
       <ProtectedRoute path="/admin/settings" component={AdminSettings} allowedRoles={["admin"]} />
 
       {/* Board routes */}
