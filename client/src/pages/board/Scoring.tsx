@@ -84,6 +84,9 @@ export default function BoardScoring() {
   // Get current user's score for selected application
   const { data: myScore } = useQuery({
     queryKey: ['/api/board/my-score', selectedApplication?.id],
+    queryFn: () => selectedApplication?.id ? 
+      fetch(`/api/board/my-score/${selectedApplication.id}`).then(r => r.json()) : 
+      null,
     enabled: !!selectedApplication?.id,
     refetchOnWindowFocus: false,
   });
@@ -91,6 +94,9 @@ export default function BoardScoring() {
   // Get all panel scores for selected application
   const { data: panelScoresData } = useQuery({
     queryKey: ['/api/board/panel-scores', selectedApplication?.id],
+    queryFn: () => selectedApplication?.id ? 
+      fetch(`/api/board/panel-scores/${selectedApplication.id}`).then(r => r.json()) : 
+      null,
     enabled: !!selectedApplication?.id,
     refetchOnWindowFocus: false,
   });

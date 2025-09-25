@@ -33,6 +33,7 @@ import BoardDashboard from "@/pages/board/Dashboard";
 import BoardShortlisting from "@/pages/board/Shortlisting";
 import BoardInterviews from "@/pages/board/Interviews";
 import BoardScoring from "@/pages/board/Scoring";
+import BoardReports from "@/pages/board/Reports";
 import { useEffect } from "react";
 
 function Router() {
@@ -91,6 +92,7 @@ function Router() {
       <ProtectedRoute path="/board/shortlisting" component={BoardShortlisting} allowedRoles={["board"]} />
       <ProtectedRoute path="/board/interviews" component={BoardInterviews} allowedRoles={["board"]} />
       <ProtectedRoute path="/board/scoring" component={BoardScoring} allowedRoles={["board"]} />
+      <ProtectedRoute path="/board/reports" component={BoardReports} allowedRoles={["board"]} />
 
       {/* Fallback */}
       <Route component={NotFound} />

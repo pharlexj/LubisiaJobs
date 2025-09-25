@@ -2505,6 +2505,84 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     }
   });
 
+  // Get scoring statistics (board members only)
+  app.get('/api/board/scoring-statistics', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'board') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const applications = await storage.getApplications({ status: 'shortlisted' });
+      
+      // Get all scored applications count
+      let totalScoredApplications = 0;
+      let totalScoreSum = 0;
+      let activeScorers = new Set();
+      let highScores = 0;
+      let mediumScores = 0;
+      let lowScores = 0;
+
+      for (const application of applications) {
+        const scores = await storage.getPanelScores(application.id);
+        if (scores.length > 0) {
+          totalScoredApplications++;
+          
+          for (const score of scores) {
+            activeScorers.add(score.panelId);
+            const totalScore = (score.academicScore || 0) + (score.experienceScore || 0) + 
+                             (score.skillsScore || 0) + (score.leadershipScore || 0) + 
+                             (score.generalScore || 0) - (score.negativeScore || 0);
+            totalScoreSum += totalScore;
+            
+            if (totalScore >= 80) highScores++;
+            else if (totalScore >= 60) mediumScores++;
+            else lowScores++;
+          }
+        }
+      }
+
+      const averageScore = totalScoredApplications > 0 ? totalScoreSum / totalScoredApplications : 0;
+
+      res.json({
+        totalScoredApplications,
+        averageScore,
+        activeScorers: activeScorers.size,
+        highScores,
+        mediumScores,
+        lowScores
+      });
+    } catch (error) {
+      console.error('Error fetching scoring statistics:', error);
+      res.status(500).json({ message: 'Failed to fetch scoring statistics' });
+    }
+  });
+
+  // Get interview statistics (board members only)
+  app.get('/api/board/interview-statistics', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'board') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const applications = await storage.getApplications();
+      
+      const totalInterviews = applications.filter(app => app.interviewDate).length;
+      const completedInterviews = applications.filter(app => app.status === 'interviewed').length;
+      const scheduledInterviews = applications.filter(app => app.status === 'interview_scheduled').length;
+      
+      res.json({
+        totalInterviews,
+        completedInterviews,
+        scheduledInterviews
+      });
+    } catch (error) {
+      console.error('Error fetching interview statistics:', error);
+      res.status(500).json({ message: 'Failed to fetch interview statistics' });
+    }
+  });
+
   // File upload endpoint
   app.post('/api/upload', isAuthenticated, upload.single('file'), async (req: any, res) => {
     try {
