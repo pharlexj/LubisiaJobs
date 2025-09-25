@@ -29,7 +29,7 @@ export const sessions = pgTable(
 );
 
 // User roles enum
-export const userRoleEnum = pgEnum("user_role", ["applicant", "admin", "board"]);
+export const userRoleEnum = pgEnum("user_role", ["applicant", "admin", "board","accountant","records","procurement","hod"]);
 
 // Application status enum
 export const applicationStatusEnum = pgEnum("application_status", [
@@ -62,7 +62,7 @@ export const wards = pgTable("wards", {
 // Departments
 export const departments = pgTable("departments", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 250 }).notNull(),
+  name: varchar("name", { length: 250 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -85,14 +85,14 @@ export const awards = pgTable("awards", {
 export const specializations = pgTable("specializations", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
-  studyArea:integer('study_area'),
+  studyAreaId:integer('study_area_id').notNull().references(() => studyArea.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Ethnicity
 export const ethnicity = pgTable("ethnicity", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -122,16 +122,16 @@ export const institutions = pgTable("institutions", {
 // Applicants
 export const applicants = pgTable("applicants", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id").notNull().unique().references(() => users.id),
   salutation: varchar("salutation", { length: 8 }),
   firstName: varchar("first_name", { length: 100 }),
   surname: varchar("surname", { length: 100 }),
   otherName: varchar("other_name", { length: 100 }),
-  phoneNumber: varchar("phone_number", { length: 20 }),
+  phoneNumber: varchar("phone_number", { length: 20 }).unique(),
   phoneVerified: boolean("phone_verified").default(false),
   phoneVerifiedAt: date("phone_verified_at"),
   altPhoneNumber: varchar("alt_phone_number", { length: 20 }),
-  nationalId: varchar("national_id", { length: 50 }),
+  nationalId: varchar("national_id", { length: 50 }).unique(),
   idPassportType: varchar("id_passport_type", { length: 20 }), // 'national_id', 'passport', 'alien_id'
   dateOfBirth: date("date_of_birth"),
   gender: varchar("gender", { length: 10 }),
@@ -143,9 +143,9 @@ export const applicants = pgTable("applicants", {
   ethnicity: varchar("ethnicity", { length: 50 }),
   religion: varchar("religion", { length: 50 }),
   isPwd: boolean("is_pwd").default(false),
-  pwdNumber: varchar("pwd_number", { length: 100 }),
+  pwdNumber: varchar("pwd_number", { length: 100 }).unique(),
   isEmployee: boolean("is_employee").default(false),
-  kraPin: varchar("kra_pin", { length: 50 }),
+  kraPin: varchar("kra_pin", { length: 50 }).unique(),
   professionId: integer("profession_id").references(() => professions.id),
   profileCompletionPercentage: integer("profile_completion_percentage").default(0),
   createdAt: timestamp("created_at").defaultNow(),
@@ -158,9 +158,9 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   surname: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  nationalId: varchar("national_id", { length: 11 }),
+  nationalId: varchar("national_id", { length: 11 }).unique(),
   idPassportType: varchar("id_passport_type", { length: 20 }),
-  phoneNumber: varchar('phone_number'),
+  phoneNumber: varchar('phone_number').unique(),
   password: varchar("password"),
   passwordHash: varchar("password_hash").notNull(),
   role: userRoleEnum("role").default("applicant"),
@@ -175,16 +175,20 @@ export const jobs = pgTable("jobs", {
   description: text("description"),
   departmentId: integer("department_id").notNull().references(() => departments.id),
   designationId: integer("designation_id"),
-  requirements: jsonb("requirements"), // Store qualification requirements
+  requirements: jsonb("requirements"), // ✅ structured rules
   isActive: boolean("is_active").notNull().default(true),
-  jg: integer("jg_id").notNull().references(()=>JG.id),
-  catetogy: varchar("category"),
+  jg: integer("jg_id").notNull().references(() => JG.id),
+  category: varchar("category"),
   experience: varchar("experience"),
   posts: integer("posts"),
   venue: varchar("venue"),
-  requiredCourses: varchar("required_courses"),
-  certificateLevel: integer("cert_level_id").references(()=>certificateLevel.id),
+  // ✅ new fields
+  requiredSpecializationIds: jsonb("required_specialization_ids")
+    .$type<number[]>()
+    .default(sql`'[]'::jsonb`), // multi-select
+  certificateLevel: integer("cert_level_id").references(() => certificateLevel.id),
   requiredStudyAreaId: integer("required_study_area_id").references(() => studyArea.id),
+
   isReleased: integer("is_released"),
   advertType: varchar("advert_type"),
   status: varchar("status"),
@@ -194,6 +198,7 @@ export const jobs = pgTable("jobs", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
 //Certificate Level
 export const certificateLevel = pgTable("certificate_level", {
   id: serial('id').primaryKey(),
@@ -214,8 +219,29 @@ export const applications = pgTable("applications", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Education records
 export const education = pgTable("education_records", {
+  id: serial("id").primaryKey(),
+  applicantId: integer("applicant_id").notNull().references(() => applicants.id),
+  courseName: varchar("course_name", { length: 255 }),
+  certificateLevelId: integer("certificate_level_id")
+    .notNull()
+    .references(() => certificateLevel.id),          // ✅ fix ref
+  specializationId: integer("specialization_id")
+    .notNull()
+    .references(() => specializations.id),
+  studyAreaId: integer("study_area_id")
+    .notNull()
+    .references(() => studyArea.id),                 // ✅ normalized instead of varchar
+  institution: varchar("institution", { length: 255 }).notNull(),
+  grade: varchar("grade", { length: 50 }),
+  yearFrom: integer("year_from").notNull(),
+  yearCompleted: integer("year_completed").notNull(),
+  certificatePath: varchar("certificate_path", { length: 500 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Education records
+export const educationz = pgTable("education_records", {
   id: serial("id").primaryKey(),
   applicantId: integer("applicant_id").notNull().references(() => applicants.id),
   courseId: integer("course_id").references(() => coursesOffered.id),
@@ -224,7 +250,6 @@ export const education = pgTable("education_records", {
   specializationId: integer("specialization_id").notNull().references(() => specializations.id),
   studyArea: varchar("study_area", { length: 255 }).notNull(),
   institution: varchar("institution", { length: 255 }).notNull(),
-  qualification: varchar("qualification", { length: 255 }).notNull(),
   grade: varchar("grade", { length: 50 }),
   yearFrom: integer("year_from").notNull(),
   yearCompleted: integer("year_completed").notNull(),
@@ -237,25 +262,25 @@ export const educationRecords = education;
 
 export const studyArea = pgTable("study_area", {
   id: serial("id").primaryKey(),
-  name: varchar('name',{ length: 250 }).notNull(),
+  name: varchar('name',{ length: 250 }).notNull().unique(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 export const JG = pgTable("jg", {
   id: serial("id").primaryKey(),
-  name: varchar('name',{ length: 250 }).notNull(),
+  name: varchar('name',{ length: 250 }).notNull().unique(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 export const religion = pgTable("religions", {
   id: serial("id").primaryKey(),
-  name: varchar('name',{ length: 250 }).notNull(),
+  name: varchar('name',{ length: 250 }).notNull().unique(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 //Payroll Employees
 export const payroll = pgTable("payroll", {
   id: serial("id").primaryKey(),
   designation: varchar('designation', { length: 250 }).notNull(),
-  personalNumber: varchar('personal_number', { length: 13 }).notNull(),  
-  idNumber: varchar('id_number', { length: 13 }).notNull(),  
+  personalNumber: varchar('personal_number', { length: 13 }).notNull().unique(),  
+  idNumber: varchar('id_number', { length: 13 }).notNull().unique(),  
   createdAt: timestamp("created_at").defaultNow(),
 });
 // County employees table for verification

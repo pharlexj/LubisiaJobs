@@ -10,9 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Filter, MapPin, Briefcase } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePublicConfig } from "@/hooks/usePublicConfig";
+import { apiRequest } from '@/lib/queryClient';
 
 export default function Jobs() {
-  const { isAuthenticated } = useAuth();
+  // const { isAuthenticated } = useAuth();
+   const { isAuthenticated, user, applicantProfile,redirectUrl } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedJobGroup, setSelectedJobGroup] = useState<string>('all');
@@ -21,6 +23,7 @@ export default function Jobs() {
   const jobGroups = config?.jobGroups || [];
   const jobs = config?.jobs || [];  
   const counties = config?.counties || [];
+  
   const filteredJobs = jobs.filter(job => { 
     const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          job.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -29,7 +32,6 @@ export default function Jobs() {
     
     return matchesSearch && matchesDepartment && matchesJobGroup;
   });
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-neutral-50">
@@ -211,11 +213,24 @@ export default function Jobs() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredJobs.map((job) => (
-                <JobCard 
-                  key={job.id} 
-                  job={job} 
-                  isAuthenticated={isAuthenticated}
-                />
+                <JobCard
+                key={job.id}
+                job={job}
+                applicantProfile={applicantProfile}
+                applyToJob={async (jobId: number) => {
+                  try {
+                    const res = await apiRequest("POST", "/api/applicant/apply", { jobId });
+                    if (!res || res.error) {
+                      throw new Error(res?.message || "Application failed");
+                    }
+                    return res; // server returns application object
+                  } catch (err: any) {
+                    // throw so react-query onError can catch it
+                    throw new Error(err.message || "Server error");
+                  }
+                }}
+              />
+
               ))}
             </div>
           </>

@@ -3,26 +3,42 @@ import { Progress } from "@/components/ui/progress";
 import { CheckCircle, Circle, Clock } from "lucide-react";
 
 interface Step {
-  id: number;
+  id: number | string;
   name: string;
   required: boolean;
   completed: boolean;
-  conditional?: boolean;
+  conditional?: boolean; // used for things like employee-only
 }
 
 interface ProgressIndicatorProps {
   steps: Step[];
-  currentStep: number;
-  completedSteps: number; // total number of completed steps
+  currentStep: number | string;
+  completedSteps: number; // count of completed steps
+  isEmployee?: boolean;   // ✅ add flag for step 1.5 logic
 }
 
 export default function ProgressIndicator({
   steps,
   currentStep,
   completedSteps,
+  isEmployee = false,
 }: ProgressIndicatorProps) {
-  const totalSteps = steps.length;
-  const completionPercentage = (completedSteps / totalSteps) * 100;
+  // ✅ filter steps dynamically
+  const filteredSteps = steps.filter((step) => {
+    // exclude optional (required=false) from denominator
+    if (!step.required) return false;
+    // exclude step 1.5 if not employee
+    if (step.id === 1.5 && !isEmployee) return false;
+    return true;
+  });
+
+  const totalSteps = filteredSteps.length;
+
+  // ✅ calculate completion percentage safely
+  const completionPercentage = Math.min(
+    (completedSteps / totalSteps) * 100,
+    100
+  );
 
   const getStepStatus = (step: Step) => {
     if (step.completed) return "completed";
@@ -85,7 +101,7 @@ export default function ProgressIndicator({
         </div>
         <Progress value={completionPercentage} className="h-3" />
         <p className="text-sm text-gray-600 mt-2">
-          {completedSteps} of {totalSteps} steps completed
+          {completedSteps} of {totalSteps} required steps completed
         </p>
       </div>
 
@@ -96,13 +112,13 @@ export default function ProgressIndicator({
         {/* Desktop View */}
         <div className="hidden lg:block">
           <div className="flex items-center justify-between">
-            {steps.map((step, index) => (
+            {filteredSteps.map((step, index) => (
               <div
                 key={step.id}
                 className="flex flex-col items-center relative"
               >
                 {/* Connection Line */}
-                {index < steps.length - 1 && (
+                {index < filteredSteps.length - 1 && (
                   <div className="absolute top-5 left-10 w-full h-0.5 bg-gray-300 -z-10">
                     <div
                       className="h-full bg-secondary transition-all duration-300"
@@ -135,7 +151,7 @@ export default function ProgressIndicator({
 
         {/* Mobile View */}
         <div className="lg:hidden space-y-3">
-          {steps.map((step) => (
+          {filteredSteps.map((step) => (
             <div
               key={step.id}
               className="flex items-center space-x-4 p-3 rounded-lg border"

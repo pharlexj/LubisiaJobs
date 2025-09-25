@@ -241,6 +241,7 @@ async getApplicant(userId: string): Promise<any> {
     .select()
     .from(applicants)
     .leftJoin(users, eq(applicants.userId, users.id))
+    .leftJoin(payroll, eq(payroll.idNumber, users.nationalId))
     .leftJoin(employees, eq(applicants.id, employees.applicantId))
     .where(eq(applicants.userId, userId));
 
@@ -276,7 +277,7 @@ async getApplicant(userId: string): Promise<any> {
   // Build the full applicant object
   const fullApplicant = {
     ...applicant.applicants,
-    employee: applicant.employees || null,
+    employee: applicant.employees || applicant.payroll,
     education: educationRecordsArr,
     shortCourses: shortCourseRecords,
     professionalQualifications: qualificationRecords,
@@ -331,7 +332,7 @@ async getApplicantById(id: number): Promise<any | undefined> {
   // Build the full applicant object
   const fullApplicant = {
     ...applicant.applicants,
-    employee: applicant.employees || null,
+    employee: applicant.employees || undefined,
     education: educationRecordsArr,
     shortCourses: shortCourseRecords,
     professionalQualifications: qualificationRecords,
@@ -376,6 +377,8 @@ async getApplicantById(id: number): Promise<any | undefined> {
 
 async updateApplicant(applicantId: number, data: any, step:number) {
   // ✅ Update base applicant row
+  console.log('Profile data',data);
+  
   await db
     .update(applicants)
     .set({
@@ -405,7 +408,7 @@ async updateApplicant(applicantId: number, data: any, step:number) {
     .where(eq(applicants.id, applicantId));
 
   // ✅ Upsert employee (if exists in payload)
-  if (data.employee) {
+  if (data.employee?.dofa) {
     const existingEmployee = await db
       .select()
       .from(employees)
@@ -997,6 +1000,20 @@ async getFaq() {
       .where(eq(notices.id, id))
       .returning();
     return deletedNotice;
+  }
+  async deleteJg(id: number) {
+    const [deleteJg] = await db
+      .delete(JG)
+      .where(eq(JG.id, id))
+      .returning();
+    return deleteJg;
+  }
+  async deleteDept(id: number) {
+    const [deleteDept] = await db
+      .delete(departments)
+      .where(eq(departments.id, id))
+      .returning();
+    return deleteDept;
   }
 
   // Subscription operations

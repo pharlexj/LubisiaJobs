@@ -80,7 +80,7 @@ export default function LocationDropdowns({ onLocationChange, defaultValues }: L
               <SelectValue placeholder="Select county" />
             </SelectTrigger>
             <SelectContent>
-              {counties.map((county) => (
+              {(counties as any).map((county:any) => (
                 <SelectItem key={county.id} value={county.id.toString()}>
                   {county.name}
                 </SelectItem>
@@ -104,7 +104,7 @@ export default function LocationDropdowns({ onLocationChange, defaultValues }: L
               <SelectValue placeholder={selectedCounty ? "Select constituency" : "Select county first"} />
             </SelectTrigger>
             <SelectContent>
-              {constituencies.map((constituency) => (
+              {(constituencies as any).map((constituency:any) => (
                 <SelectItem key={constituency.id} value={constituency.id.toString()}>
                   {constituency.name}
                 </SelectItem>
@@ -128,7 +128,7 @@ export default function LocationDropdowns({ onLocationChange, defaultValues }: L
               <SelectValue placeholder={selectedConstituency ? "Select ward" : "Select constituency first"} />
             </SelectTrigger>
             <SelectContent>
-              {wards.map((ward) => (
+              {(wards as any).map((ward:any) => (
                 <SelectItem key={ward.id} value={ward.id.toString()}>
                   {ward.name}
                 </SelectItem>
@@ -146,9 +146,9 @@ export default function LocationDropdowns({ onLocationChange, defaultValues }: L
         <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-sm text-green-800">
             <strong>Selected Location:</strong>{' '}
-            {wards.find(w => w.id === selectedWard)?.name} Ward,{' '}
-            {constituencies.find(c => c.id === selectedConstituency)?.name} Constituency,{' '}
-            {counties.find(c => c.id === selectedCounty)?.name} County
+            {(wards as any).find((w:any) => w.id === selectedWard)?.name} Ward,{' '}
+            {(constituencies as any).find((c:any) => c.id === selectedConstituency)?.name} Constituency,{' '}
+            {(counties as any).find((c:any) => c.id === selectedCounty)?.name} County
           </p>
         </div>
       )}

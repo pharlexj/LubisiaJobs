@@ -510,10 +510,17 @@ export default function AdminSettings() {
     createMutation.mutate({ 
       endpoint: '/api/admin/constituencies', 
       data: { ...data, countyId: parseInt(data.countyId) }
-    });
+    },
+      {
+      onSuccess: () => {
+        constituencyForm.reset();
+        queryClient.invalidateQueries({ queryKey: ['/api/public/config'] }); // refresh list
+      },
+    }
+    );
   };
 
-  const handleCreateWard = (data: WardFormData) => {
+  const handleCreateWard = (data: WardFormData) => {    
     createMutation.mutate({ 
       endpoint: '/api/admin/wards', 
       data: { ...data, constituencyId: parseInt(data.constituencyId) }
@@ -561,10 +568,19 @@ export default function AdminSettings() {
   };
 
   const handleCreateRoleAssignment = (data: RoleAssignmentFormData) => {
+    if (editingItem) {
+      updateMutation.mutate({
+        endpoint: '/api/admin/role-assignments',
+        id: editingItem.id,
+        data
+      });
+    } else {
     createMutation.mutate({ 
       endpoint: '/api/admin/role-assignments', 
       data: { ...data, assignedBy: user?.id }
-    });
+    });      
+    }
+    
   };
 
   const handleCreateAboutConfig = (data: AboutConfigFormData) => {
@@ -971,7 +987,18 @@ export default function AdminSettings() {
                         departments.map((dept: any) => (
                           <Card key={dept.id}>
                             <CardContent className="p-4">
-                              <h4 className="font-semibold mb-2">{dept.name}</h4>
+                              <div className="flex justify-between item-starts mb-2">
+                                <h4 className="font-semibold mb-2">{dept.name}</h4>
+                                <div className="flex justify space-x-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteItem(dept.id, '/api/admin/department', 'department')}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                            </div>
+                              </div>
                               {dept.description && (
                                 <p className="text-sm text-gray-600">{dept.description}</p>
                               )}
@@ -1088,7 +1115,7 @@ export default function AdminSettings() {
                             <CardContent className="p-4">
                               <div className="flex justify-between items-start mb-2">
                                 <h4 className="font-semibold">{notice.title}</h4>
-                                <div className="flex space-x-1">
+                                <div className="flex justify space-x-1">
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -1553,7 +1580,19 @@ export default function AdminSettings() {
                         jobGroups.map((group: any) => (
                           <Card key={group.id}>
                             <CardContent className="p-4">
-                              <h4 className="font-semibold mb-2">Job Group {group.name}</h4>
+                              <div className="flex justify-between item-starts mb-2">
+                                <h4 className="font-semibold mb-2">Job Group {group.name}</h4>
+                                <div className="flex justify space-x-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteItem(group.id, '/api/admin/job-groups', 'Job Group')}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                            </div>
+
+                              </div>
                               {group.description && (
                                 <p className="text-sm text-gray-600">{group.description}</p>
                               )}
@@ -1606,7 +1645,7 @@ export default function AdminSettings() {
                       </DialogContent>
                     </Dialog>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent>                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {awards.length === 0 ? (
                         <div className="col-span-2 text-center py-8 text-gray-500">
@@ -1617,10 +1656,18 @@ export default function AdminSettings() {
                         awards.map((award: any) => (
                           <Card key={award.id}>
                             <CardContent className="p-4">
-                              <h4 className="font-semibold mb-2">{award.name}</h4>
-                              {award.description && (
-                                <p className="text-sm text-gray-600">{award.description}</p>
-                              )}
+                              <div className="flex justify-between items-start mb-2">
+                                <h4 className="font-semibold">{award.name}</h4>
+                                <div className="flex justify space-x-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteItem(award.id, '/api/admin/awards', 'awards')}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
                             </CardContent>
                           </Card>
                         ))
@@ -1677,9 +1724,18 @@ export default function AdminSettings() {
                       <p>Click "Add Ethnicity" to manage ethnicity data</p>
                     </div>) : (ethnicity.map((e:any)=> (
                       <Card>
-                        <CardContent>
-                          <div className='text-sm text-gray-600 text-center py-8'>
-                            <h4> { e.name}</h4>
+                        <CardContent className='py-3'>
+                          <div className='flex justify-between items-start mb-2'>
+                            <h4> {e.name}</h4>
+                            <div className="flex justify space-x-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteItem(ethnicity.id, '/api/admin/ethnicity', 'ethnicity')}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -1915,7 +1971,18 @@ export default function AdminSettings() {
                           .map((user: any) => (
                             <Card key={user.id}>
                               <CardContent className="p-4">
+                                <div className="flex justify-between item-starts mb-2">
                                 <h4 className="font-semibold">{user.name}</h4>
+                                  <div className="flex justify space-x-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleEditItem(user.id, '/api/admin/role-assignments', 'Role')}
+                                      >
+                                        <Edit className="w-4 h-4" />
+                                      </Button>
+                                </div>
+                                </div>
                                 <p className="text-sm text-gray-600">{user.email}</p>
                                 <Badge className="mt-2" variant="secondary">
                                   {user.role === 'admin' ? 'Administrator' : 
@@ -2708,6 +2775,191 @@ export default function AdminSettings() {
                           email configurations, etc. will be added here.
                         </p>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              {/* Carousel Tab */}
+              <TabsContent value="carousel">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Carousel Management</CardTitle>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Manage homepage carousel slides
+                      </p>
+                    </div>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          onClick={() => {
+                            setEditingCarouselSlide(null);
+                            carouselSlideForm.reset();
+                            setCarouselImageMode("gradient");
+                            setCarouselImageFile(null);
+                            setCarouselMobileImageFile(null);
+                            setCarouselImagePreview("");
+                            setCarouselMobilePreview("");
+                          }}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Slide
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>
+                            {editingCarouselSlide ? "Edit Slide" : "Add New Slide"}
+                          </DialogTitle>
+                        </DialogHeader>
+                        <form
+                          onSubmit={carouselSlideForm.handleSubmit(handleCreateCarouselSlide)}
+                          className="space-y-4"
+                        >
+                          <div>
+                            <Label htmlFor="slide-title">Title</Label>
+                            <Input id="slide-title" {...carouselSlideForm.register("title")} />
+                          </div>
+                          <div>
+                            <Label htmlFor="slide-subtitle">Subtitle</Label>
+                            <Input
+                              id="slide-subtitle"
+                              {...carouselSlideForm.register("subtitle")}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="slide-icon">Icon</Label>
+                            <Select
+                              onValueChange={(v) => carouselSlideForm.setValue("iconName", v as any)}
+                              defaultValue={editingCarouselSlide?.iconName}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select an icon" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Building">Building</SelectItem>
+                                <SelectItem value="GraduationCap">Graduation Cap</SelectItem>
+                                <SelectItem value="Users">Users</SelectItem>
+                                <SelectItem value="Award">Award</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Image vs Gradient mode toggle */}
+                          <div>
+                            <Label>Background Type</Label>
+                            <div className="flex gap-4 mt-1">
+                              <Button
+                                type="button"
+                                variant={carouselImageMode === "gradient" ? "default" : "outline"}
+                                onClick={() => setCarouselImageMode("gradient")}
+                              >
+                                Gradient
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={carouselImageMode === "image" ? "default" : "outline"}
+                                onClick={() => setCarouselImageMode("image")}
+                              >
+                                Image
+                              </Button>
+                            </div>
+                          </div>
+
+                          {carouselImageMode === "gradient" ? (
+                            <div>
+                              <Label htmlFor="bg-gradient">Gradient</Label>
+                              <Input
+                                id="bg-gradient"
+                                placeholder="e.g., from-blue-500 to-purple-600"
+                                {...carouselSlideForm.register("bgGradient")}
+                              />
+                            </div>
+                          ) : (
+                            <>
+                              <div>
+                                <Label>Desktop Image</Label>
+                                <Input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) =>
+                                    e.target.files?.[0] && setCarouselImageFile(e.target.files[0])
+                                  }
+                                />
+                              </div>
+                              <div>
+                                <Label>Mobile Image</Label>
+                                <Input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) =>
+                                    e.target.files?.[0] &&
+                                    setCarouselMobileImageFile(e.target.files[0])
+                                  }
+                                />
+                              </div>
+                            </>
+                          )}
+
+                          <div className="flex justify-end space-x-2">
+                            <Button type="submit">
+                              {editingCarouselSlide ? "Update Slide" : "Create Slide"}
+                            </Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </CardHeader>
+
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {carouselSlides.length === 0 ? (
+                        <p className="text-gray-500 text-center py-4">
+                          No carousel slides yet. Add one above.
+                        </p>
+                      ) : (
+                        carouselSlides.map((slide: any) => (
+                          <Card key={slide.id}>
+                            <CardContent className="p-4">
+                              <h4 className="font-semibold">{slide.title}</h4>
+                              <p className="text-sm text-gray-600">{slide.subtitle}</p>
+                              {slide.imageUrl ? (
+                                <img
+                                  src={slide.imageUrl}
+                                  alt={slide.altText || slide.title}
+                                  className="mt-2 rounded-md h-32 object-cover"
+                                />
+                              ) : (
+                                <div
+                                  className={`mt-2 h-32 rounded-md bg-gradient-to-r ${slide.bgGradient}`}
+                                />
+                              )}
+                              <div className="flex gap-2 mt-3">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setEditingCarouselSlide(slide);
+                                    carouselSlideForm.reset(slide);
+                                    setIsModalOpen(true);
+                                  }}
+                                >
+                                  <Edit className="w-4 h-4 mr-1" /> Edit
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() =>
+                                    handleDeleteItem(slide.id, "/api/admin/carousel-slides", "slide")
+                                  }
+                                >
+                                  <Trash2 className="w-4 h-4 mr-1" /> Delete
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
                     </div>
                   </CardContent>
                 </Card>

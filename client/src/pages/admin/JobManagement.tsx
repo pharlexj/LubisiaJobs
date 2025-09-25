@@ -12,31 +12,54 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
+import { MultiSelect } from '@/components/ui/MultiSelect';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { isUnauthorizedError } from '@/lib/authUtils';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import type { Job, Department, Designation, CourseOffered, Jg,CertificateLevel,StudyArea as StudyAreas } from '@shared/schema';
+import { number, z } from 'zod';
 import { Plus, Edit, Eye,Trash2, Upload,Calendar, Users,Search, Filter} from 'lucide-react';
 
-const jobSchema = z
+// Zod schema for job form validation
+export const jobSchema = z
   .object({
     title: z.string().min(5, "Job title must be at least 5 characters"),
-    jg: z.string().min(1, "Please select a job group"),
-    posts: z.string().min(1, "Please specify number of posts"),
-    description: z.string().min(20, "Description must be at least 20 characters"),
-    departmentId: z.string().min(1, "Please select a department"),
-    designationId: z.string().optional(),
-    category: z.string().min(1, "Please select category"),
-    certificateLevel: z.string().min(1, "Please select certificate level"),
+    jg: z.coerce.number().min(1, "Please select a job group"),
+    posts: z.coerce.number().min(1, "Please specify number of posts"),
+    description: z
+      .string()
+      .min(20, "Description must be at least 20 characters"),
+    departmentId: z.coerce.number().min(1, "Please select a department"),
+    designationId: z.coerce.number().optional(),
+
+    // ✅ exact or progression
+    progressionAllowed: z.boolean().optional().default(false),
+
+    category: z.enum(["Open", "Internal"], {
+      errorMap: () => ({ message: "Please select category" }),
+    }),
+
+    // ✅ numeric certificateLevel
+    certificateLevel: z.coerce.number({
+      required_error: "Please select certificate level",
+      invalid_type_error: "Certificate level must be a number",
+    }),
+
     requirements: z.string().optional(),
-    requiredStudyAreaId: z.string().optional(),
+
+    // ✅ study area and multiple specializations
+    requiredStudyAreaId: z.coerce.number().optional(),
+    requiredSpecializationIds: z.array(z.coerce.number()).optional().default([]),
+    
+
     advertType: z.string().min(1, "Please specify advert type"),
     startDate: z.string().min(1, "Please select an application Start Date"),
     endDate: z.string().min(1, "Please select an application deadline"),
-    advertNumb: z.string().min(6, "Please Enter Advert Number"),
+    advertNumb: z
+      .string()
+      .min(6, "Please Enter Advert Number (min 6 characters)"),
+
     experience: z.string().optional(),
     isActive: z.boolean().optional(),
   })
@@ -70,11 +93,12 @@ const jobSchema = z
         ctx.addIssue({
           path: ["requiredStudyAreaId"],
           code: z.ZodIssueCode.custom,
-          message: "Required Courses must be selected when category is Internal",
+          message: "Study Area must be selected when category is Internal",
         });
       }
     }
   });
+
 type JobFormData = z.infer<typeof jobSchema>;
 export default function AdminJobManagement() {
   const { user } = useAuth();
@@ -106,23 +130,24 @@ export default function AdminJobManagement() {
   const jobGroups = configData?.jobGroups || [];
   const jobs = configData?.jobs || [];
   const studyArea = configData?.studyAreas || [];
+  const specializations = configData?.specializations;
 
   const form = useForm<JobFormData>({
     resolver: zodResolver(jobSchema),
     defaultValues: {
       title: '',
       description: '',
-      departmentId: '',
-      designationId: '',
-      jg: '',
-      certificateLevel: '',
-      requiredStudyAreaId: '',
-      posts: '',
+      departmentId: 0,
+      designationId: 0,
+      jg: 0,
+      certificateLevel: 0,
+      requiredStudyAreaId: 0,
+      posts: 0,
       experience: '',
-      category: '',
+      category: 'Open',
       requirements: '',
       advertNumb: '',
-      advertType: "",
+      advertType: '',
 
     },
   });
@@ -133,15 +158,15 @@ export default function AdminJobManagement() {
       // apiRequest already returns parsed JSON, no need to call .json() again
       return await apiRequest('POST', '/api/admin/jobs', {
         ...data,
-        departmentId: parseInt(data.departmentId),
-        posts: parseInt(data.posts),
-        jg: parseInt(data.jg),
-        designationId: data.designationId ? parseInt(data.designationId) : null,
-        certificateLevel: parseInt(data.certificateLevel),
-        requiredStudyAreaId: data.requiredStudyAreaId,
-        experience: data.experience,
-        advertType: data.advertType,
-        requirements: data.requirements || null,
+        departmentId: (data.departmentId),
+        posts: (data.posts),
+        jg: (data.jg),
+        designationId: data.designationId ? (data.designationId) : null,
+        certificateLevel: (data.certificateLevel),
+        requiredStudyAreaId: (data.requiredStudyAreaId),
+        experience: (data.experience),
+        advertType: (data.advertType),
+        requirements: (data.requirements) || null,
       });
     },
     onSuccess: () => {
@@ -216,12 +241,12 @@ export default function AdminJobManagement() {
       // Update existing job with proper type conversion
       const processedData = {
         ...data,
-        departmentId: parseInt(data.departmentId),
-        posts: parseInt(data.posts),
-        jg: parseInt(data.jg),
-        designationId: data.designationId ? parseInt(data.designationId) : null,
-        certificateLevel: parseInt(data.certificateLevel),
-        requirements: data.requirements || null,
+        departmentId: (data.departmentId),
+        posts: (data.posts),
+        jg: (data.jg),
+        designationId: data.designationId ? (data.designationId) : null,
+        certificateLevel: (data.certificateLevel),
+        requirements: (data.requirements) || null,
       };
       updateJobMutation.mutate({
         id: editingJob.id,
@@ -296,14 +321,14 @@ export default function AdminJobManagement() {
     form.reset({
       title: '',
       description: '',
-      departmentId: '',
-      designationId: '',
-      jg: '',
-      certificateLevel: '',
-      requiredStudyAreaId: '',
-      posts: '',
+      departmentId: 0,
+      designationId: 0,
+      jg: 0,
+      certificateLevel: 0,
+      requiredStudyAreaId: 0,
+      posts: 0,
       experience: '',
-      category: '',
+      category: 'Open',
       requirements: '',
       advertNumb: '',
       advertType: '',
@@ -446,7 +471,7 @@ export default function AdminJobManagement() {
                       <div className="grid grid-cols-3 gap-4">
                       <div>
                         <Label htmlFor="jg">Job Group</Label>
-                        <Select onValueChange={(value) => form.setValue('jg', value)}>
+                        <Select onValueChange={(value) => form.setValue('jg', parseInt(value))}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select Job Group" />
                           </SelectTrigger>
@@ -479,7 +504,7 @@ export default function AdminJobManagement() {
                       </div>
                       <div>
                         <Label htmlFor="category">Category</Label>
-                        <Select onValueChange={(value) => form.setValue('category', value)}>
+                        <Select onValueChange={(value) => form.setValue('category', value as "Open" | "Internal")}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select Category" />
                           </SelectTrigger>
@@ -499,7 +524,8 @@ export default function AdminJobManagement() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="departmentId">Department</Label>
-                        <Select onValueChange={(value) => form.setValue('departmentId', value)}>
+                        <Select onValueChange ={                         
+                          (value) => form.setValue('departmentId', parseInt(value))}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select Department" />
                           </SelectTrigger>
@@ -536,46 +562,96 @@ export default function AdminJobManagement() {
                       </div>
                     </div>                    
                     <div className="grid grid-cols-2 gap-4">
+                      {/* ✅ Study Area */}
                       <div>
-                        <Label htmlFor="requiredStudyAreaId">Required Courses/Fields</Label>
-                        <Select onValueChange={(value) => form.setValue('requiredStudyAreaId', value)}>                          
+                        <Label htmlFor="requiredStudyAreaId">Study Area</Label>
+                        <Select
+                          onValueChange={(val) => {
+                            form.setValue("requiredStudyAreaId", Number(val));
+                            // reset specializations when study area changes
+                            form.setValue("requiredSpecializationIds", []);
+                          }}
+                          value={form.watch("requiredStudyAreaId")?.toString() || ""}
+                        >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select Required Courses" />
+                            <SelectValue placeholder="Select Study Area" />
                           </SelectTrigger>
                           <SelectContent>
-                            {studyArea.map((area:any) => (
-                              <SelectItem key={area.id} value={area.id.toString()}>
-                                {area.name}
-                              </SelectItem>))}
-                          </SelectContent>
-                        </Select>
-                        {form.formState.errors.requiredStudyAreaId && (
-                          <p className="text-sm text-red-600 mt-1">
-                            {form.formState.errors.requiredStudyAreaId.message}
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <Label htmlFor="certificateLevel">Required Certificate Level</Label>
-                        <Select onValueChange={(value) => form.setValue('certificateLevel', value)} disabled={!form.watch("requiredStudyAreaId")}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Certificate Level"/>                            
-                          </SelectTrigger>
-                          <SelectContent>
-                            {certificateLevels.map((certs:any) => (
-                              <SelectItem key={certs.id} value={certs.id.toString()}>
-                                {certs.name}
+                            {(studyArea as any[]).map((sa: any) => (
+                              <SelectItem key={sa.id} value={sa.id.toString()}>
+                                {sa.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                        {form.formState.errors.certificateLevel && (
-                          <p className="text-sm text-red-600 mt-1">
-                            {form.formState.errors.certificateLevel.message}
-                          </p>
-                        )}
                       </div>
+
+                      {/* ✅ Certificate Level */}
+                      <div>
+                        <Label htmlFor="certificateLevel">Certificate Level</Label>
+                        <Select
+                          onValueChange={(val) => form.setValue("certificateLevel", Number(val))}
+                          value={form.watch("certificateLevel")?.toString() || ""}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {certificateLevels.map((cl: any) => (
+                              <SelectItem key={cl.id} value={cl.id.toString()}>
+                                {cl.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* ✅ Specializations (multi-select, full width) */}
+                      {form.watch("requiredStudyAreaId") && (
+                        <div className="col-span-2">
+                          <Label htmlFor="requiredSpecializationIds">Specializations</Label>
+                          <MultiSelect
+                              options={specializations
+                                .filter(
+                                  (spec: any) =>
+                                    spec.studyAreaId === Number(form.watch("requiredStudyAreaId"))
+                                )
+                                .map((spec: any) => ({
+                                  label: spec.name,
+                                  value: spec.id,
+                                }))}
+                              values={form.watch("requiredSpecializationIds") || []}
+                              onChange={(vals) =>
+                                form.setValue(
+                                  "requiredSpecializationIds",
+                                  vals.map((v) => Number(v)) // ensure numbers
+                                )
+                              }
+                              placeholder="Select one or more specializations"
+                            />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Click items to add/remove. Selected show as tags above.
+                          </p>
+                        </div>
+                      )}
+
+
+                      {/* ✅ Progression Checkbox */}
+                      <div className="col-span-2 flex items-center space-x-2">
+                        <Input
+                          type="checkbox"
+                          id="progressionAllowed"
+                          {...form.register("progressionAllowed")}
+                          className="h-4 w-4"
+                        />
+                        <Label htmlFor="progressionAllowed" className="text-sm text-gray-700">
+                          Allow Higher Education Levels (progression)
+                        </Label>
+                      </div>
+
                     </div>
+
+
                     <div className="grid grid-cols-1 gap-4">                      
                     </div>
                     <div>
@@ -595,7 +671,7 @@ export default function AdminJobManagement() {
                     <div className='grid grid-cols-3 gap-4'>                       
                       <div>
                         <Label htmlFor="designationId">Designation</Label>
-                        <Select onValueChange={(value) => form.setValue('designationId', value)} disabled={form.watch("category") !== "Internal"}>
+                        <Select onValueChange={(value) => form.setValue('designationId', (parseInt(value)))} disabled={form.watch("category") !== "Internal"}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select Designation" />
                           </SelectTrigger>

@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 type StudyAreas = {
   id: number | string;
   name: string;
-
 }
 type Specialization = {
   id: number | string;
@@ -72,7 +71,7 @@ type PublicConfig = {
   institutions: Institution[];
   awards: Awards[];
   courses: Courses[];
-  jg: Jg[];
+  Jg: Jg[];
   ethnicity: any[];
   certificateLevels: CertificateLevel[];
   jobs: Jobs[];
@@ -89,10 +88,8 @@ type PublicConfig = {
   wards: any[],
   constituencie: any[],
   admins: any[],
-  userData:any[],
-  
+  userData:any[],  
 };
-
 export const usePublicConfig = () => {
   return useQuery<PublicConfig>({
     queryKey: ['/api/public/config'],

@@ -42,7 +42,8 @@ const certificateLevel = [
   'KCSE',
   'KCPE',
   'Craft Certificate',
-  'PhD'
+  'PhD',
+  'Certification'
 ];
 const specializations: Record<string, string[]> = {
   "Hospitality & Tourism": [
@@ -64,77 +65,49 @@ const specializations: Record<string, string[]> = {
     'Agribusiness Management and Marketing',
     'Agricultural Resource Economics and Management',
     'Agribusiness Management and Enterprise Development',
-      ''
     ],
-  "Law": [
-    ''
-  ],
-  "Science": [
-    ''
-      
-    ],
-  "Mathematics, Actuarial Science & Economics": [
-    ''
-  ],
-  "Textile Technology, Clothing and Fashion Design": [
-    ''
-  ],
-  "Physical Eduation": [
-    ''
-  ],
+  "Law": ["Law"],
+  "Science": [],
+  "Mathematics, Actuarial Science & Economics": [],
+  "Textile Technology, Clothing and Fashion Design": [],
+  "Physical Eduation": [],
   "Human Health Sciences": [
-    ''
+    'Medicine and Surgery', 'Medical Engineering', 'Health Records and Information Technology',
+    'Orthopaedic Technology','Laboratory Technology','Laboratory','Laboratory Technician'
   ],
-  "Animal Health Sciences": [
-    ''
-  ],
+  "Animal Health Sciences": [],
   "Food Science and Nutrition": [
-    ''
+    'Nutrition and Dietetics management'
   ],
-  "Humanities and Social Sciences": [
-    ''
-  ],
-  "Environmental Sciences & Natural Resource Management": [
-    ''
-  ],
-  "Languages": [
-    ''
-  ],
+  "Humanities and Social Sciences":[],
+  "Environmental Sciences & Natural Resource Management": [],
+  "Languages": [],
   "Business": [
-    ''
+    'Business Administration','Business Management'
   ],
   "Arts": [
-    ''
+    'Arts'
   ],
   "Education": [
-    ''
+    'Early Childhood Education'
   ],
   "Computing and Information Sciences": [
     'Information Communication Technology',
     'Computer Science', 'Software Engineering',
-    'Archives and Information Services'
+    'Archives and Information Services',
+    'Miscrosoft','Cisco','Google'
   ],
-  "Religious Studies": [
-    ''
-  ],
-  "Technical Training": [
-    ''
-  ],
+  "Religious Studies": [],
+  "Technical Training": [],
   "Secondary Education Level": [
-    ''
+    'KCSE','JSE','UAE'
   ],
-  "GeoScience": [
-    ''      
-    ],
+  "GeoScience": [],
   "Special Education": [
-    ''
+    'Sign Languages'
   ],
-  "Engineering": [
-    ''
-  ],
-  "Architecture, Design, Planning and Land Management": [
-    ''
-  ]
+  "Engineering": [],
+  "Architecture, Design, Planning and Land Management": []
 };
 const Awards = [
   'Master\'s Degree', 'Bachelor\'s Degree',
@@ -154,7 +127,7 @@ const depts = [
   'Finance and Economic Planning', 'Education and Technical Training', 'Health Services and Sanitation',
   'Public Service Management', 'Agriculture', 'Land Housing and Urban Development', 'County Public Service Board','Water, Environment and Natural Resources and Natural Resources'
 ];
-const ethnicity = ["Luhya","Kalenjin","Kikuyu","Luo","Teso","Kisii","Kenyan Somalis"];
+const ethnicity = ["Luhya","Kalenjin","Kikuyu","Luo","Teso","Kisii","Kenyan Somalis","Maasai","Turkana","Pokomo"];
 const subCountyMap: Record<string, string[]> = {
   'Trans Nzoia': ['Kiminini', 'Saboti', 'Endebess', 'Cherangany', 'Kwanza'],
   'Bungoma': ['Kabuchai', 'Kimilili', 'Sirisia', 'Webuye East', 'Webuye West', 'Bumula', 'Kanduyi', 'Mt Elgon','Tongaren'],
@@ -172,11 +145,11 @@ const subCountyMap: Record<string, string[]> = {
 };
 const wardMap: Record<string, string[]> = {
     //Trans Nzoia County
-  'Cherangany': ['Makutano', 'Kaplamai', 'Sinyerere', 'Motosiet', 'Chepsiro/Kiptoror', 'Kapkures', 'Cherangany/Suwerwa'],
-  'Saboti': ['Saboti', 'Tuwan', 'Matisi', 'Mbakalo', 'Kinyoro'],
-  'Kiminini': ['Kiminini', 'Waitaluk', 'Sirende', 'Sikhendu', 'Nabiswa'],
+  'Cherangany': ['Makutano', 'Kaplamai', 'Sinyerere', 'Motosiet', 'Chepsiro/Kiptoror', 'Cherangany/Suwerwa'],
+  'Saboti': ['Saboti', 'Tuwan', 'Matisi', 'Kinyoro','Machewa'],
+  'Kiminini': ['Hospital','Kiminini', 'Waitaluk', 'Sirende', 'Sikhendu', 'Nabiswa'],
   'Endebess': ['Endebess', 'Matumbei', 'Chepchoina'],
-    'Kwanza': ['Kwanza', 'Kapomboi', 'Keiyo', 'Bidii'],
+  'Kwanza': ['Kwanza', 'Kapomboi', 'Keiyo', 'Bidii'],
     // Bungoma County
   'Mt Elgon': [    'Cheptais', 'Chesikaki', 'Chepyuk', 'Kapkateny', 'Kaptama', 'Elgon'  ],
   'Sirisia': [    'Namwela', 'Malakisi/South Kulisiru', 'Lwandanyi'  ],

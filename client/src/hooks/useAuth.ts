@@ -24,6 +24,7 @@ export function useAuth() {
   };
 
   return {
+    applicantProfile: data?.applicantProfile ?? null, 
     user: data?.user ?? null,
     redirectUrl: data?.redirectUrl,
     isAuthenticated: !!data?.user,

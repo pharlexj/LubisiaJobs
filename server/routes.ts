@@ -196,14 +196,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Logged out" });
     });
   });
-  app.get("/api/auth/me", (req:any, res) => {
+  app.get("/api/auth/me", async (req:any, res) => {
   if (!req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
-
   // Decide redirectUrl based on role or other logic
   // --- Get current session user ---
     let redirectUrl = "/"; // default
+    let applicantProfile = null;
 
 switch (req.user?.role) {
   case "admin":
@@ -211,13 +211,14 @@ switch (req.user?.role) {
     break;
   case "applicant":
     redirectUrl = "/dashboard";
+    applicantProfile = await storage.getApplicant(req.user?.id);    
     break;
   default:
     redirectUrl = "/";
     break;
 }
 
-  res.json({ user: req.user, redirectUrl });
+  res.json({ user: req.user, redirectUrl, applicantProfile });
 });
 // Employee verification routes
   app.post('/api/employee/verify', async (req:any, res) => {
@@ -384,6 +385,7 @@ switch (req.user?.role) {
       // Get applicant profile if user is an applicant
       let applicantProfile = null;
       if (user.role === 'applicant') {
+
         applicantProfile = await storage.getApplicant(userId);
       }
 
@@ -1077,7 +1079,7 @@ switch (req.user?.role) {
       }
       
       // ✅ Eligibility Check 1: Profile must be 100% complete
-      if (applicant.profileCompletionPercentage !== 100) {
+      if (applicant.profileCompletionPercentage < 100) {
         return res.status(400).json({ 
           message: 'Profile must be 100% complete to apply for jobs',
           currentCompletion: applicant.profileCompletionPercentage
@@ -1098,17 +1100,31 @@ switch (req.user?.role) {
 
 
       
+      // ✅ Eligibility Check 3: Study area & specialization
       if (job.jobs?.requiredStudyAreaId) {
         const hasMatchingStudyArea = applicant.education?.some(
-          (edu: any) => parseInt(edu.studyArea) === job.jobs.requiredStudyAreaId
+          (edu: any) => Number(edu.specialization?.studyAreaId || edu.studyAreaId) === job.jobs.requiredStudyAreaId
         );
+
         if (!hasMatchingStudyArea) {
-          return res.status(400).json({ 
-            message: 'Your educational background does not match the required study area for this job'
+          return res.status(400).json({
+            message: "Your educational background does not match the required study area for this job",
           });
         }
       }
-      
+
+      // ✅ Eligibility Check 3.1: Specializations (if job requires specific ones)
+      if (job.jobs?.requiredSpecializationIds?.length > 0) {
+        const hasMatchingSpec = applicant.education?.some((edu: any) =>
+          job.jobs.requiredSpecializationIds.includes(Number(edu.specializationId))
+        );
+
+        if (!hasMatchingSpec) {
+          return res.status(400).json({
+            message: "Your specialization does not meet the requirements for this job",
+          });
+        }
+      }      
       // ✅ Eligibility Check 4: Certificate level requirement (if job has one)
       if (job.jobs?.certificateLevel) {
         const hasMatchingCertLevel = applicant.education?.some(
@@ -1577,6 +1593,46 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     } catch (error) {
       console.error('Error deleting notice:', error);
       res.status(500).json({ message: 'Failed to delete notice' });
+    }
+  });
+  // Delete Department (admin)
+  app.delete('/api/admin/department:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const deptId = parseInt(req.params.id);
+      if (isNaN(deptId)) {
+        return res.status(400).json({ message: 'Invalid department ID' });
+      }
+
+      const department = await storage.deleteDept(deptId);
+      res.json(department);
+    } catch (error) {
+      console.error('Error deleting department:', error);
+      res.status(500).json({ message: 'Failed to delete department' });
+    }
+  });
+  // Delete JG (admin)
+  app.delete('/api/admin/job-groups:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const jgId = parseInt(req.params.id);
+      if (isNaN(jgId)) {
+        return res.status(400).json({ message: 'Invalid jg ID' });
+      }
+
+      const jg = await storage.deleteJg(jgId);
+      res.json(jg);
+    } catch (error) {
+      console.error('Error deleting jg:', error);
+      res.status(500).json({ message: 'Failed to delete jg' });
     }
   });
 
