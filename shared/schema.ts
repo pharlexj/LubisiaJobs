@@ -778,6 +778,14 @@ export type InsertBoardMember = z.infer<typeof insertBoardMember>;
 export const insertCarouselSlide = createInsertSchema(carouselSlides).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertCarouselSlide = z.infer<typeof insertCarouselSlide>;
 
+export const insertPanelScore = createInsertSchema(panelScores).omit({ 
+  scoreId: true, 
+  createAt: true, 
+  updatedAt: true, 
+  scoredOn: true 
+});
+export type InsertPanelScore = z.infer<typeof insertPanelScore>;
+
 export const insertNoticeSubscription = createInsertSchema(noticeSubscriptions).omit({ id: true, subscribedAt: true });
 export type InsertNoticeSubscription = z.infer<typeof insertNoticeSubscription>;
 export type NoticeSubscription = typeof noticeSubscriptions.$inferSelect;

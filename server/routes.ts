@@ -2388,6 +2388,123 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     }
   });
 
+  // Panel Scoring API Endpoints for Collaborative Board Member Scoring
+
+  // Create or update panel score for an application by a board member
+  app.post('/api/board/panel-scores', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'board') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { applicationId, academicScore, experienceScore, skillsScore, leadershipScore, generalScore, negativeScore, remarks } = req.body;
+      
+      // Use user ID as panel ID (each user is a panel member)
+      const panelId = parseInt(user.id) || 0;
+
+      // Check if score already exists for this application and panel member
+      const existingScore = await storage.getPanelScore(applicationId, panelId);
+
+      let panelScore;
+      if (existingScore) {
+        // Update existing score
+        panelScore = await storage.updatePanelScore(existingScore.scoreId, {
+          applicationId,
+          panelId,
+          academicScore: academicScore || 0,
+          experienceScore: experienceScore || 0,
+          skillsScore: skillsScore || 0,
+          leadershipScore: leadershipScore || 0,
+          generalScore: generalScore || 0,
+          negativeScore: negativeScore || 0,
+          remarks
+        });
+      } else {
+        // Create new score
+        panelScore = await storage.createPanelScore({
+          applicationId,
+          panelId,
+          academicScore: academicScore || 0,
+          experienceScore: experienceScore || 0,
+          skillsScore: skillsScore || 0,
+          leadershipScore: leadershipScore || 0,
+          generalScore: generalScore || 0,
+          negativeScore: negativeScore || 0,
+          remarks
+        });
+      }
+
+      // Get updated average scores
+      const averageScores = await storage.getAverageScores(applicationId);
+
+      res.json({ 
+        panelScore, 
+        averageScores,
+        message: 'Score saved successfully' 
+      });
+    } catch (error) {
+      console.error('Error saving panel score:', error);
+      res.status(500).json({ message: 'Failed to save panel score' });
+    }
+  });
+
+  // Get all panel scores for an application (board members only)
+  app.get('/api/board/panel-scores/:applicationId', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'board') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const applicationId = parseInt(req.params.applicationId);
+      const scores = await storage.getPanelScores(applicationId);
+      const averageScores = await storage.getAverageScores(applicationId);
+
+      res.json({ scores, averageScores });
+    } catch (error) {
+      console.error('Error fetching panel scores:', error);
+      res.status(500).json({ message: 'Failed to fetch panel scores' });
+    }
+  });
+
+  // Get current user's score for an application
+  app.get('/api/board/my-score/:applicationId', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'board') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const applicationId = parseInt(req.params.applicationId);
+      const panelId = parseInt(user.id) || 0;
+      const score = await storage.getPanelScore(applicationId, panelId);
+
+      res.json({ score: score || null });
+    } catch (error) {
+      console.error('Error fetching user score:', error);
+      res.status(500).json({ message: 'Failed to fetch user score' });
+    }
+  });
+
+  // Get average scores for an application (board members only)
+  app.get('/api/board/average-scores/:applicationId', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'board') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const applicationId = parseInt(req.params.applicationId);
+      const averageScores = await storage.getAverageScores(applicationId);
+
+      res.json(averageScores);
+    } catch (error) {
+      console.error('Error fetching average scores:', error);
+      res.status(500).json({ message: 'Failed to fetch average scores' });
+    }
+  });
+
   // File upload endpoint
   app.post('/api/upload', isAuthenticated, upload.single('file'), async (req: any, res) => {
     try {

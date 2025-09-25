@@ -32,6 +32,7 @@ import {
   systemConfig,
   boardMembers,
   carouselSlides,
+  panelScores,
   noticeSubscriptions,
   notifications,
   notificationRecipients,
@@ -69,6 +70,8 @@ import {
   type InsertGalleryItem,
   type InsertSystemConfig,
   type InsertBoardMember,
+  type PanelScores,
+  type InsertPanelScore,
   type Notification,
   type NotificationRecipient,
   type InsertNotificationRecipient,
@@ -181,6 +184,20 @@ export interface IStorage {
   createBoardMember(member: InsertBoardMember): Promise<BoardMember>;
   updateBoardMember(id: number, member: Partial<InsertBoardMember>): Promise<BoardMember>;
   deleteBoardMember(id: number): Promise<BoardMember>;
+  
+  // Panel scoring operations
+  createPanelScore(score: InsertPanelScore): Promise<PanelScores>;
+  getPanelScores(applicationId: number): Promise<PanelScores[]>;
+  updatePanelScore(scoreId: number, score: Partial<InsertPanelScore>): Promise<PanelScores>;
+  getPanelScore(applicationId: number, panelId: number): Promise<PanelScores | undefined>;
+  getAverageScores(applicationId: number): Promise<{
+    avgAcademicScore: number;
+    avgExperienceScore: number;
+    avgSkillsScore: number;
+    avgLeadershipScore: number;
+    avgGeneralScore: number;
+    totalPanelMembers: number;
+  }>;
 }
 export class DatabaseStorage implements IStorage {
   // User operations
@@ -810,6 +827,83 @@ async getFaq() {
       .where(eq(boardMembers.id, id))
       .returning();
     return boardMember;
+  }
+
+  // Panel scoring operations
+  async createPanelScore(score: InsertPanelScore): Promise<PanelScores> {
+    const [panelScore] = await db
+      .insert(panelScores)
+      .values({
+        ...score,
+        updatedAt: sql`now()`
+      })
+      .returning();
+    return panelScore;
+  }
+
+  async getPanelScores(applicationId: number): Promise<PanelScores[]> {
+    return await db
+      .select()
+      .from(panelScores)
+      .where(eq(panelScores.applicationId, applicationId))
+      .orderBy(panelScores.scoredOn);
+  }
+
+  async updatePanelScore(scoreId: number, score: Partial<InsertPanelScore>): Promise<PanelScores> {
+    const [panelScore] = await db
+      .update(panelScores)
+      .set({
+        ...score,
+        updatedAt: sql`now()`
+      })
+      .where(eq(panelScores.scoreId, scoreId))
+      .returning();
+    return panelScore;
+  }
+
+  async getPanelScore(applicationId: number, panelId: number): Promise<PanelScores | undefined> {
+    const [panelScore] = await db
+      .select()
+      .from(panelScores)
+      .where(
+        and(
+          eq(panelScores.applicationId, applicationId),
+          eq(panelScores.panelId, panelId)
+        )
+      );
+    return panelScore;
+  }
+
+  async getAverageScores(applicationId: number): Promise<{
+    avgAcademicScore: number;
+    avgExperienceScore: number;
+    avgSkillsScore: number;
+    avgLeadershipScore: number;
+    avgGeneralScore: number;
+    totalPanelMembers: number;
+  }> {
+    const scores = await db
+      .select({
+        avgAcademicScore: sql<number>`COALESCE(AVG(${panelScores.academicScore}), 0)`,
+        avgExperienceScore: sql<number>`COALESCE(AVG(${panelScores.experienceScore}), 0)`,
+        avgSkillsScore: sql<number>`COALESCE(AVG(${panelScores.skillsScore}), 0)`,
+        avgLeadershipScore: sql<number>`COALESCE(AVG(${panelScores.leadershipScore}), 0)`,
+        avgGeneralScore: sql<number>`COALESCE(AVG(${panelScores.generalScore}), 0)`,
+        totalPanelMembers: sql<number>`COUNT(*)`,
+      })
+      .from(panelScores)
+      .where(eq(panelScores.applicationId, applicationId));
+
+    const result = scores[0] || {
+      avgAcademicScore: 0,
+      avgExperienceScore: 0,
+      avgSkillsScore: 0,
+      avgLeadershipScore: 0,
+      avgGeneralScore: 0,
+      totalPanelMembers: 0,
+    };
+
+    return result;
   }
 
   // Carousel slides operations
