@@ -220,8 +220,8 @@ export default function Jobs() {
                 applyToJob={async (jobId: number) => {
                   try {
                     const res = await apiRequest("POST", "/api/applicant/apply", { jobId });
-                    if (!res || res.error) {
-                      throw new Error(res?.message || "Application failed");
+                    if (!res || (res as any).error) {
+                      throw new Error((res as any)?.message || "Application failed");
                     }
                     return res; // server returns application object
                   } catch (err: any) {

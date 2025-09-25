@@ -33,7 +33,7 @@ export const userRoleEnum = pgEnum("user_role", ["applicant", "admin", "board","
 
 // Application status enum
 export const applicationStatusEnum = pgEnum("application_status", [
-  "draft", "submitted", "shortlisted", "interviewed", "rejected", "hired"
+  "draft", "submitted", "shortlisted", "interviewed", "rejected", "hired","interview_scheduled"
 ]);
 
 
