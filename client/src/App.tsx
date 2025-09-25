@@ -32,6 +32,7 @@ import AdminSMSCommunications from "@/pages/admin/SMSCommunications";
 import BoardDashboard from "@/pages/board/Dashboard";
 import BoardShortlisting from "@/pages/board/Shortlisting";
 import BoardInterviews from "@/pages/board/Interviews";
+import BoardScoring from "@/pages/board/Scoring";
 import { useEffect } from "react";
 
 function Router() {
@@ -89,6 +90,7 @@ function Router() {
       <ProtectedRoute path="/board" component={BoardDashboard} allowedRoles={["board"]} />
       <ProtectedRoute path="/board/shortlisting" component={BoardShortlisting} allowedRoles={["board"]} />
       <ProtectedRoute path="/board/interviews" component={BoardInterviews} allowedRoles={["board"]} />
+      <ProtectedRoute path="/board/scoring" component={BoardScoring} allowedRoles={["board"]} />
 
       {/* Fallback */}
       <Route component={NotFound} />
