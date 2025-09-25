@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { Link } from 'wouter';
 import Navigation from '@/components/layout/Navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -150,21 +151,29 @@ export default function BoardDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <Button className="h-24 flex flex-col items-center justify-center">
-                    <Users className="w-6 h-6 mb-2" />
-                    Review Applications
+                  <Button asChild className="h-24 flex flex-col items-center justify-center" data-testid="button-review-applications">
+                    <Link href="/board/shortlisting">
+                      <Users className="w-6 h-6 mb-2" />
+                      Review Applications
+                    </Link>
                   </Button>
-                  <Button variant="outline" className="h-24 flex flex-col items-center justify-center">
-                    <CheckCircle className="w-6 h-6 mb-2" />
-                    Shortlist Candidates
+                  <Button asChild variant="outline" className="h-24 flex flex-col items-center justify-center" data-testid="button-shortlist-candidates">
+                    <Link href="/board/shortlisting">
+                      <CheckCircle className="w-6 h-6 mb-2" />
+                      Shortlist Candidates
+                    </Link>
                   </Button>
-                  <Button variant="outline" className="h-24 flex flex-col items-center justify-center">
-                    <Calendar className="w-6 h-6 mb-2" />
-                    Schedule Interviews
+                  <Button asChild variant="outline" className="h-24 flex flex-col items-center justify-center" data-testid="button-schedule-interviews">
+                    <Link href="/board/interviews">
+                      <Calendar className="w-6 h-6 mb-2" />
+                      Schedule Interviews
+                    </Link>
                   </Button>
-                  <Button variant="outline" className="h-24 flex flex-col items-center justify-center">
-                    <TrendingUp className="w-6 h-6 mb-2" />
-                    Generate Reports
+                  <Button asChild variant="outline" className="h-24 flex flex-col items-center justify-center" data-testid="button-generate-reports">
+                    <Link href="/board/reports">
+                      <TrendingUp className="w-6 h-6 mb-2" />
+                      Generate Reports
+                    </Link>
                   </Button>
                 </div>
               </CardContent>
@@ -176,7 +185,11 @@ export default function BoardDashboard() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Applications for Review</CardTitle>
-                    <Button variant="outline" size="sm">View All</Button>
+                    <Button asChild variant="outline" size="sm" data-testid="button-view-all-applications">
+                      <Link href="/board/shortlisting">
+                        View All
+                      </Link>
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -208,8 +221,10 @@ export default function BoardDashboard() {
                               {application.status?.charAt(0).toUpperCase() + application.status?.slice(1)}
                             </Badge>
                             <div className="mt-2 flex space-x-1">
-                              <Button size="sm" variant="outline">
-                                Review
+                              <Button asChild size="sm" variant="outline" data-testid={`button-review-${application.id}`}>
+                                <Link href="/board/shortlisting">
+                                  Review
+                                </Link>
                               </Button>
                             </div>
                           </div>
@@ -225,7 +240,11 @@ export default function BoardDashboard() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Upcoming Interviews</CardTitle>
-                    <Button variant="outline" size="sm">Schedule New</Button>
+                    <Button asChild variant="outline" size="sm" data-testid="button-schedule-new-interview">
+                      <Link href="/board/interviews">
+                        Schedule New
+                      </Link>
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -249,11 +268,15 @@ export default function BoardDashboard() {
                             Candidate: {application.applicant?.firstName} {application.applicant?.surname}
                           </p>
                           <div className="flex space-x-2">
-                            <Button size="sm" variant="outline">
-                              View Profile
+                            <Button asChild size="sm" variant="outline" data-testid={`button-view-profile-${application.id}`}>
+                              <Link href="/board/shortlisting">
+                                View Profile
+                              </Link>
                             </Button>
-                            <Button size="sm" variant="outline">
-                              Reschedule
+                            <Button asChild size="sm" variant="outline" data-testid={`button-reschedule-${application.id}`}>
+                              <Link href="/board/interviews">
+                                Reschedule
+                              </Link>
                             </Button>
                           </div>
                         </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { Link } from 'wouter';
 import Navigation from '@/components/layout/Navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +26,8 @@ import {
   Eye,
   GraduationCap,
   Award,
-  Briefcase
+  Briefcase,
+  Star
 } from 'lucide-react';
 
 export default function BoardShortlisting() {
@@ -37,6 +39,7 @@ export default function BoardShortlisting() {
   const [statusFilter, setStatusFilter] = useState('submitted');
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [showRemarks, setShowRemarks] = useState(false);
+  const [showShortlistDialog, setShowShortlistDialog] = useState(false);
   const [remarks, setRemarks] = useState('');
   const [score, setScore] = useState('');
 
@@ -61,6 +64,7 @@ export default function BoardShortlisting() {
       queryClient.invalidateQueries({ queryKey: ['/api/board/applications'] });
       setSelectedApplication(null);
       setShowRemarks(false);
+      setShowShortlistDialog(false);
       setRemarks('');
       setScore('');
     },
@@ -95,14 +99,16 @@ export default function BoardShortlisting() {
     });
   };
 
-  const filteredApplications = applications.filter(app => {
+  const filteredApplications = (applications as any[]).filter((app: any) => {
+    const searchLower = searchTerm.toLowerCase();
     const matchesSearch = 
-      app.applicant?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.applicant?.surname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.job?.title?.toLowerCase().includes(searchTerm.toLowerCase());
+      (app.applicant?.firstName ?? '').toLowerCase().includes(searchLower) ||
+      (app.applicant?.surname ?? '').toLowerCase().includes(searchLower) ||
+      (app.job?.title ?? '').toLowerCase().includes(searchLower);
     const matchesJob = jobFilter === 'all' || app.jobId?.toString() === jobFilter;
+    const matchesStatus = app.status === statusFilter;
     
-    return matchesSearch && matchesJob;
+    return matchesSearch && matchesJob && matchesStatus;
   });
 
   const getQualificationMatch = (application: any) => {
@@ -199,7 +205,7 @@ export default function BoardShortlisting() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Jobs</SelectItem>
-                        {jobs.map((job) => (
+                        {(jobs as any[]).map((job: any) => (
                           <SelectItem key={job.id} value={job.id.toString()}>
                             {job.title}
                           </SelectItem>
@@ -255,7 +261,7 @@ export default function BoardShortlisting() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredApplications.map((application) => {
+                        {filteredApplications.map((application: any) => {
                           const qualMatch = getQualificationMatch(application);
                           
                           return (
@@ -315,47 +321,65 @@ export default function BoardShortlisting() {
                               </td>
                               <td className="py-3 px-4">
                                 <div className="flex space-x-2">
-                                  <Dialog>
-                                    <DialogTrigger asChild>
-                                      <Button 
-                                        size="sm" 
-                                        className="bg-secondary hover:bg-green-700"
-                                        onClick={() => setSelectedApplication(application)}
-                                      >
-                                        <CheckCircle className="w-3 h-3 mr-1" />
-                                        Shortlist
-                                      </Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                      <DialogHeader>
-                                        <DialogTitle>Shortlist Candidate</DialogTitle>
-                                      </DialogHeader>
-                                      <div className="space-y-4">
-                                        <div>
-                                          <Label>Interview Date</Label>
-                                          <Input type="date" className="mt-1" />
+                                  {application.status === 'submitted' && (
+                                    <Dialog open={showShortlistDialog} onOpenChange={setShowShortlistDialog}>
+                                      <DialogTrigger asChild>
+                                        <Button 
+                                          size="sm" 
+                                          className="bg-secondary hover:bg-green-700"
+                                          onClick={() => setSelectedApplication(application)}
+                                          data-testid={`button-shortlist-${application.id}`}
+                                        >
+                                          <CheckCircle className="w-3 h-3 mr-1" />
+                                          Shortlist
+                                        </Button>
+                                      </DialogTrigger>
+                                      <DialogContent>
+                                        <DialogHeader>
+                                          <DialogTitle>Shortlist Candidate</DialogTitle>
+                                        </DialogHeader>
+                                        <div className="space-y-4">
+                                          <div>
+                                            <Label>Interview Date</Label>
+                                            <Input type="date" className="mt-1" />
+                                          </div>
+                                          <div>
+                                            <Label>Remarks</Label>
+                                            <Textarea 
+                                              placeholder="Add remarks about the candidate..."
+                                              value={remarks}
+                                              onChange={(e) => setRemarks(e.target.value)}
+                                              className="mt-1"
+                                            />
+                                          </div>
+                                          <div className="flex justify-end space-x-2">
+                                            <Button variant="outline" onClick={() => setShowShortlistDialog(false)}>Cancel</Button>
+                                            <Button 
+                                              onClick={() => handleStatusUpdate(selectedApplication?.id, 'shortlisted', { interviewDate: new Date().toISOString().split('T')[0] })}
+                                              disabled={updateApplicationMutation.isPending}
+                                              data-testid="button-confirm-shortlist"
+                                            >
+                                              {updateApplicationMutation.isPending ? 'Processing...' : 'Shortlist'}
+                                            </Button>
+                                          </div>
                                         </div>
-                                        <div>
-                                          <Label>Remarks</Label>
-                                          <Textarea 
-                                            placeholder="Add remarks about the candidate..."
-                                            value={remarks}
-                                            onChange={(e) => setRemarks(e.target.value)}
-                                            className="mt-1"
-                                          />
-                                        </div>
-                                        <div className="flex justify-end space-x-2">
-                                          <Button variant="outline">Cancel</Button>
-                                          <Button 
-                                            onClick={() => handleStatusUpdate(selectedApplication?.id, 'shortlisted', { interviewDate: new Date().toISOString().split('T')[0] })}
-                                            disabled={updateApplicationMutation.isPending}
-                                          >
-                                            {updateApplicationMutation.isPending ? 'Processing...' : 'Shortlist'}
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    </DialogContent>
-                                  </Dialog>
+                                      </DialogContent>
+                                    </Dialog>
+                                  )}
+                                  
+                                  {application.status === 'shortlisted' && (
+                                    <Button 
+                                      asChild
+                                      size="sm" 
+                                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                                      data-testid={`button-score-${application.id}`}
+                                    >
+                                      <Link href="/board/scoring">
+                                        <Star className="w-3 h-3 mr-1" />
+                                        Score
+                                      </Link>
+                                    </Button>
+                                  )}
                                   
                                   <Button 
                                     size="sm" 
@@ -364,20 +388,24 @@ export default function BoardShortlisting() {
                                       setSelectedApplication(application);
                                       setShowRemarks(true);
                                     }}
+                                    data-testid={`button-view-profile-${application.id}`}
                                   >
                                     <Eye className="w-3 h-3 mr-1" />
                                     View Profile
                                   </Button>
                                   
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline"
-                                    className="text-red-600 hover:bg-red-50"
-                                    onClick={() => handleStatusUpdate(application.id, 'rejected', { remarks: 'Did not meet requirements' })}
-                                  >
-                                    <XCircle className="w-3 h-3 mr-1" />
-                                    Reject
-                                  </Button>
+                                  {application.status !== 'rejected' && (
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      className="text-red-600 hover:bg-red-50"
+                                      onClick={() => handleStatusUpdate(application.id, 'rejected', { remarks: 'Did not meet requirements' })}
+                                      data-testid={`button-reject-${application.id}`}
+                                    >
+                                      <XCircle className="w-3 h-3 mr-1" />
+                                      Reject
+                                    </Button>
+                                  )}
                                 </div>
                               </td>
                             </tr>
