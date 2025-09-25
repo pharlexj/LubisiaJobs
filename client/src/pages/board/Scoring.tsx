@@ -110,8 +110,8 @@ export default function BoardScoring() {
         title: 'Score Saved',
         description: 'Your scoring has been saved successfully.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/board/my-score'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/board/panel-scores'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/board/my-score', selectedApplication?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/board/panel-scores', selectedApplication?.id] });
       setShowScoring(false);
     },
     onError: (error) => {

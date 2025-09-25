@@ -24,7 +24,11 @@ import {
   Printer,
   Plus,
   Edit,
-  Save
+  Save,
+  GraduationCap,
+  Briefcase,
+  Download,
+  X
 } from 'lucide-react';
 
 interface InterviewScore {
@@ -58,6 +62,9 @@ export default function BoardInterviews() {
   const { data: jobs = [] } = useQuery({
     queryKey: ['/api/public/jobs'],
   });
+
+  // Use the selected candidate data directly for now - may need detailed API call later
+  const candidateDetails = selectedCandidate;
 
   const updateApplicationMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
@@ -573,6 +580,273 @@ export default function BoardInterviews() {
             )}
           </div>
         </main>
+
+        {/* Candidate Scoring Dialog */}
+        {showScoring && selectedCandidate && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden flex">
+              {/* Left Panel - Candidate Details */}
+              <div className="w-1/2 border-r border-gray-200 overflow-y-auto">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-semibold">Candidate Information</h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowScoring(false);
+                        resetScoreForm();
+                      }}
+                      data-testid="button-close-scoring-dialog"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Basic Information */}
+                  <div className="mb-6">
+                    <h4 className="font-semibold text-gray-900 mb-3">Personal Information</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-600">Full Name:</span>
+                        <p className="font-medium" data-testid="text-candidate-fullname">{selectedCandidate.applicant?.fullName || selectedCandidate.fullName || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">ID Number:</span>
+                        <p className="font-medium" data-testid="text-candidate-idnumber">{selectedCandidate.applicant?.idNumber || selectedCandidate.idNumber || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Phone:</span>
+                        <p className="font-medium" data-testid="text-candidate-phone">{selectedCandidate.applicant?.phoneNumber || selectedCandidate.phoneNumber || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Email:</span>
+                        <p className="font-medium" data-testid="text-candidate-email">{selectedCandidate.applicant?.email || selectedCandidate.email || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Gender:</span>
+                        <p className="font-medium" data-testid="text-candidate-gender">{selectedCandidate.applicant?.gender || selectedCandidate.gender || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Date of Birth:</span>
+                        <p className="font-medium" data-testid="text-candidate-dob">
+                          {selectedCandidate.applicant?.dateOfBirth || selectedCandidate.dateOfBirth ? 
+                            new Date(selectedCandidate.applicant?.dateOfBirth || selectedCandidate.dateOfBirth).toLocaleDateString() : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Education History */}
+                  {candidateDetails?.educationRecords && candidateDetails.educationRecords.length > 0 && (
+                    <div className="mb-6" data-testid="section-education-history">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                        <GraduationCap className="h-4 w-4 mr-2" />
+                        Education History
+                      </h4>
+                      <div className="space-y-3">
+                        {candidateDetails.educationRecords.map((edu: any, index: number) => (
+                          <div key={index} className="border border-gray-200 rounded-lg p-3" data-testid={`education-record-${index}`}>
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <h5 className="font-medium text-gray-900" data-testid={`text-education-qualification-${index}`}>{edu.qualification}</h5>
+                                <p className="text-sm text-gray-600" data-testid={`text-education-institution-${index}`}>{edu.institution}</p>
+                              </div>
+                              <div className="text-right text-sm">
+                                <p className="text-gray-600" data-testid={`text-education-year-${index}`}>{edu.yearCompleted}</p>
+                                <p className="font-medium text-blue-600" data-testid={`text-education-grade-${index}`}>{edu.grade}</p>
+                              </div>
+                            </div>
+                            {edu.fieldOfStudy && (
+                              <p className="text-sm text-gray-600" data-testid={`text-education-field-${index}`}>Field: {edu.fieldOfStudy}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Employment History */}
+                  {candidateDetails?.employmentHistory && candidateDetails.employmentHistory.length > 0 && (
+                    <div className="mb-6" data-testid="section-employment-history">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                        <Briefcase className="h-4 w-4 mr-2" />
+                        Employment History
+                      </h4>
+                      <div className="space-y-3">
+                        {candidateDetails.employmentHistory.map((job: any, index: number) => (
+                          <div key={index} className="border border-gray-200 rounded-lg p-3" data-testid={`employment-record-${index}`}>
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <h5 className="font-medium text-gray-900" data-testid={`text-employment-position-${index}`}>{job.position}</h5>
+                                <p className="text-sm text-gray-600" data-testid={`text-employment-employer-${index}`}>{job.employer}</p>
+                              </div>
+                              <div className="text-right text-sm text-gray-600">
+                                <p data-testid={`text-employment-period-${index}`}>{job.startDate} - {job.endDate || 'Present'}</p>
+                              </div>
+                            </div>
+                            {job.responsibilities && (
+                              <p className="text-sm text-gray-600" data-testid={`text-employment-responsibilities-${index}`}>{job.responsibilities}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Documents */}
+                  {candidateDetails?.documents && candidateDetails.documents.length > 0 && (
+                    <div className="mb-6" data-testid="section-documents">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Documents
+                      </h4>
+                      <div className="space-y-2">
+                        {candidateDetails.documents.map((doc: any, index: number) => (
+                          <div key={index} className="flex items-center justify-between p-2 border border-gray-200 rounded" data-testid={`document-${index}`}>
+                            <div className="flex items-center">
+                              <FileText className="h-4 w-4 mr-2 text-gray-400" />
+                              <span className="text-sm font-medium" data-testid={`text-document-type-${index}`}>{doc.documentType}</span>
+                            </div>
+                            <Button variant="ghost" size="sm" data-testid={`button-view-document-${index}`}>
+                              <Download className="h-3 w-3 mr-1" />
+                              View
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Panel - Scoring */}
+              <div className="w-1/2 overflow-y-auto">
+                <div className="p-6">
+                  <h3 className="text-xl font-semibold mb-6">Interview Scoring</h3>
+
+                  {/* Scoring Form */}
+                  <div className="space-y-4">
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-gray-900 mb-3">Scoring Criteria</h4>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-sm font-medium">Technical Knowledge (0-30)</Label>
+                          <Input 
+                            type="number" 
+                            placeholder="0-30" 
+                            max="30"
+                            className="mt-1"
+                            value={interviewScore.technicalKnowledge}
+                            onChange={(e) => setInterviewScore(prev => ({
+                              ...prev,
+                              technicalKnowledge: parseInt(e.target.value) || 0
+                            }))}
+                            data-testid="input-technical-knowledge"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label className="text-sm font-medium">Communication Skills (0-25)</Label>
+                          <Input 
+                            type="number" 
+                            placeholder="0-25" 
+                            max="25"
+                            className="mt-1"
+                            value={interviewScore.communicationSkills}
+                            onChange={(e) => setInterviewScore(prev => ({
+                              ...prev,
+                              communicationSkills: parseInt(e.target.value) || 0
+                            }))}
+                            data-testid="input-communication-skills"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label className="text-sm font-medium">Problem Solving (0-25)</Label>
+                          <Input 
+                            type="number" 
+                            placeholder="0-25" 
+                            max="25"
+                            className="mt-1"
+                            value={interviewScore.problemSolving}
+                            onChange={(e) => setInterviewScore(prev => ({
+                              ...prev,
+                              problemSolving: parseInt(e.target.value) || 0
+                            }))}
+                            data-testid="input-problem-solving"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label className="text-sm font-medium">Leadership Potential (0-20)</Label>
+                          <Input 
+                            type="number" 
+                            placeholder="0-20" 
+                            max="20"
+                            className="mt-1"
+                            value={interviewScore.leadershipPotential}
+                            onChange={(e) => setInterviewScore(prev => ({
+                              ...prev,
+                              leadershipPotential: parseInt(e.target.value) || 0
+                            }))}
+                            data-testid="input-leadership-potential"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="font-semibold text-gray-900">Total Score:</span>
+                          <span className="text-xl font-bold text-primary">
+                            {calculateTotalScore()}/100
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium">Interview Comments</Label>
+                      <Textarea 
+                        placeholder="Interview comments and remarks..."
+                        rows={4}
+                        className="mt-1"
+                        value={interviewScore.comments}
+                        onChange={(e) => setInterviewScore(prev => ({
+                          ...prev,
+                          comments: e.target.value
+                        }))}
+                        data-testid="textarea-interview-comments"
+                      />
+                    </div>
+
+                    <div className="flex justify-end space-x-3 pt-4">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setShowScoring(false);
+                          resetScoreForm();
+                        }}
+                        data-testid="button-cancel-scoring"
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={handleSaveScore}
+                        disabled={updateApplicationMutation.isPending}
+                        data-testid="button-save-score"
+                      >
+                        <Save className="w-4 h-4 mr-2" />
+                        {updateApplicationMutation.isPending ? 'Saving...' : 'Save Score'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
