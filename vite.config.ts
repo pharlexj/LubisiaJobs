@@ -4,12 +4,6 @@ import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 export default defineConfig({
-  schema: "@/shared/schema.ts",
-  out: "./drizzle",
-  driver: "pg",
-  dbCredentials: {
-    connectionString: process.env.DATABASE_URL,
-  },
   plugins: [
     react(),
     runtimeErrorOverlay(),
