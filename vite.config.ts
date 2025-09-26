@@ -2,13 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
-import { fileURLToPath } from "url";
-
-// ✅ Fix __dirname for ES module scope
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  root: path.resolve(__dirname, "client"), // ✅ Point to your frontend folder
   plugins: [
     react(),
     runtimeErrorOverlay(),
@@ -23,23 +18,21 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "client", "src"),
-      "@shared": path.resolve(__dirname, "shared"),
+      "@": path.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path.resolve(import.meta.dirname, "shared"),
+      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
   },
+  root: path.resolve(import.meta.dirname, "client"),
   build: {
-    chunkSizeWarningLimit: 2500, // ✅ Raise limit to 2.5MB
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes("node_modules")) {
-            if (id.includes("react")) return "vendor_react";
-            if (id.includes("pdfjs-dist")) return "vendor_pdf";
-            if (id.includes("lodash")) return "vendor_lodash";
-            return "vendor";
-          }
-        },
-      },
+    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    emptyOutDir: true,
+    chunkSizeWarningLimit: 2500,
+  },
+  server: {
+    fs: {
+      strict: true,
+      deny: ["**/.*"],
     },
   },
 });
