@@ -2,9 +2,13 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { fileURLToPath } from "url";
+
+// ✅ Fix __dirname for ES module scope
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  root: path.resolve(__dirname, "client"), // 👈 Point to the folder with index.html
+  root: path.resolve(__dirname, "client"), // ✅ Point to your frontend folder
   plugins: [
     react(),
     runtimeErrorOverlay(),
@@ -24,7 +28,7 @@ export default defineConfig({
     },
   },
   build: {
-    chunkSizeWarningLimit: 2500,
+    chunkSizeWarningLimit: 2500, // ✅ Raise limit to 2.5MB
     rollupOptions: {
       output: {
         manualChunks(id) {
