@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { getApplications } from "@/lib/queryFns";
 import { isUnauthorizedError } from '@/lib/authUtils';
 import { 
   Search, 
@@ -44,13 +45,19 @@ export default function BoardShortlisting() {
   const [score, setScore] = useState('');
 
   const { data: applications = [], isLoading } = useQuery({
-    queryKey: ['/api/board/applications', { status: statusFilter, jobId: jobFilter !== 'all' ? jobFilter : undefined }],
-    enabled: !!user && user.role === 'board',
-  });
+  queryKey: [
+    "/api/board/applications",
+    { status: statusFilter, jobId: jobFilter !== "all" ? jobFilter : undefined },
+  ],
+  queryFn: getApplications,
+  enabled: !!user && user.role === "board",
+});
 
   const { data: jobs = [] } = useQuery({
     queryKey: ['/api/public/jobs'],
   });
+  
+  console.log(applications);  
 
   const updateApplicationMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {

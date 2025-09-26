@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { isUnauthorizedError } from '@/lib/authUtils';
+import { getApplications } from "@/lib/queryFns";
 import { 
   Calendar, 
   Clock, 
@@ -54,11 +55,21 @@ export default function BoardInterviews() {
     comments: ''
   });
 
-  const { data: applications = [], isLoading } = useQuery({
-    queryKey: ['/api/board/applications', { status: 'shortlisted' }],
-    enabled: !!user && user.role === 'board',
-  });
-
+  const [jobFilter, setJobFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('submitted');
+  // const { data: applications = [], isLoading } = useQuery({
+  //   queryKey: ['/api/board/applications', { status: 'shortlisted' }],
+  //   enabled: !!user && user.role === 'board',
+  // });
+const { data: applications = [], isLoading } = useQuery({
+  queryKey: [
+    "/api/board/applications",
+    { status: statusFilter, jobId: jobFilter !== "all" ? jobFilter : undefined },
+  ],
+  queryFn: getApplications,
+  enabled: !!user && user.role === "board",
+});
+  
   const { data: jobs = [] } = useQuery({
     queryKey: ['/api/public/jobs'],
   });

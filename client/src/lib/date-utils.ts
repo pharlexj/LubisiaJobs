@@ -1,5 +1,5 @@
 // lib/date-utils.ts
-
+import DOMPurify from "dompurify";
 /**
  * Format a deadline string into human-readable text + a color for UI.
  * Used for displaying when a job closes.
@@ -46,7 +46,20 @@ export const formatDeadline = (deadline: string | null | undefined) => {
     color: "text-gray-600",
   };
 };
+export const formatJobText = (text: string | null | undefined) => {
+    if (!text) return "";
 
+    let formatted = text
+      .replace(/\b(i{1,3}|iv|v|vi{0,3}|ix|x)\./gi, (match) => `${match.toUpperCase()}`)
+      .replace(/\n/g, "<br>")
+      .replace(/\r\n/g, "<br>")
+      .replace(/\.(\S)/g, ". $1");
+
+    return DOMPurify.sanitize(formatted, {
+      ALLOWED_TAGS: ["br", "p", "strong", "em", "u", "ol", "ul", "li"],
+      ALLOWED_ATTR: [],
+    });
+  };
 /**
  * Format a date range as a readable string.
  * Example: "Sep 1, 2025 – Sep 30, 2025"

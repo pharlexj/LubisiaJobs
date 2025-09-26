@@ -1437,7 +1437,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       const slide = await storage.createCarouselSlide(slideData);
       res.json(slide);
     } catch (error) {
-      console.error('Error creating carousel slide:', error);
+      console.log('Error creating carousel slide:', error);
       res.status(500).json({ message: 'Failed to create carousel slide' });
     }
   });
@@ -2315,6 +2315,8 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
 
       const jobId = req.query.jobId ? parseInt(req.query.jobId as string) : undefined;
       const status = req.query.status as string | undefined;
+      
+      console.log("Fetching applications with jobId:", jobId, "and status:", status);
       
       const applications = await storage.getApplications({ jobId, status });
       res.json(applications);

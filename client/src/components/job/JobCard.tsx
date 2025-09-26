@@ -27,7 +27,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { toast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
-import { formatDeadline } from "@/lib/date-utils";
+import { formatDeadline,formatJobText } from "@/lib/date-utils";
 
 interface JobCardProps {
   job: any;
@@ -176,23 +176,6 @@ export default function JobCard({
       </div>
     );
   };
-
-  // ----------------- Format Text -----------------
-  const formatJobText = (text: string | null | undefined) => {
-    if (!text) return "";
-
-    let formatted = text
-      .replace(/\b(i{1,3}|iv|v|vi{0,3}|ix|x)\./gi, (match) => `${match.toUpperCase()}`)
-      .replace(/\n/g, "<br>")
-      .replace(/\r\n/g, "<br>")
-      .replace(/\.(\S)/g, ". $1");
-
-    return DOMPurify.sanitize(formatted, {
-      ALLOWED_TAGS: ["br", "p", "strong", "em", "u", "ol", "ul", "li"],
-      ALLOWED_ATTR: [],
-    });
-  };
-
   // ----------------- Handle Apply -----------------
   const handleApply = () => {
     if (!isAuthenticated) {

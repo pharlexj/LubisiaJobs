@@ -38,7 +38,7 @@ export default function AdminApplications() {
   const { data: applications = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/applications'],
     enabled: !!user && user.role === 'admin',
-  });
+  });  
 
   const { data: jobs = [] } = useQuery<any[]>({
     queryKey: ['/api/public/jobs'],
@@ -119,7 +119,8 @@ export default function AdminApplications() {
     
     return matchesSearch && matchesJob && matchesStatus;
   });
-
+ 
+  console.log('App',filteredApplications);
   const statusCounts = applications.reduce((acc: any, app: any) => {
     acc[app.status] = (acc[app.status] || 0) + 1;
     return acc;
@@ -362,7 +363,7 @@ export default function AdminApplications() {
                                           </div>
                                           <div className="flex items-center gap-2">
                                             <Mail className="w-4 h-4 text-gray-400" />
-                                            <span>{selectedApplication?.applicant?.user?.email}</span>
+                                            <span>{selectedApplication?.user?.email}</span>
                                           </div>
                                         </div>
                                       </div>
@@ -372,7 +373,7 @@ export default function AdminApplications() {
                                         <div className="space-y-2 text-sm">
                                           <p><strong>Position:</strong> {selectedApplication?.job?.title}</p>
                                           <p><strong>Department:</strong> {selectedApplication?.job?.department?.name}</p>
-                                          <p><strong>Job Group:</strong> {selectedApplication?.job?.designation?.jobGroup}</p>
+                                          <p><strong>Job Group:</strong> {selectedApplication?.jobgroup?.jobGroup}</p>
                                           <p><strong>Applied Date:</strong> {selectedApplication?.submittedOn ? new Date(selectedApplication.submittedOn).toLocaleDateString() : 'Draft'}</p>
                                         </div>
                                       </div>

@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { isUnauthorizedError } from '@/lib/authUtils';
+import { usePublicConfig } from "@/hooks/usePublicConfig";
+import { formatJobText } from "@/lib/date-utils";
 import { 
   Search, 
   Filter, 
@@ -74,6 +76,8 @@ export default function ApplicantApplications() {
         return <Clock className="w-4 h-4" />;
     }
   };
+  const { data: config } = usePublicConfig();
+  const jobGroups = config?.jobGroups || [];
 
   const filteredApplications = (applications as any).filter((app:any) => {
     const matchesSearch = app.job?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -262,7 +266,7 @@ export default function ApplicantApplications() {
                             <div>
                               <span className="font-medium">Job Group:</span>
                               <br />
-                              {application.job?.designation?.jobGroup}
+                              {(jobGroups).find((d: any) => d.id === application?.job.jgId)?.name}
                             </div>
                             <div>
                               <span className="font-medium">Applied:</span>
@@ -305,11 +309,11 @@ export default function ApplicantApplications() {
                                 View Details
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-2xl">
-                              <DialogHeader>
+                            <DialogContent className='max-w-4xl max-h-[85vh] overflow-hidden flex flex-col'>
+                              <DialogHeader className="flex-shrink-0">
                                 <DialogTitle>{selectedApplication?.job?.title}</DialogTitle>
                               </DialogHeader>
-                              <div className="space-y-4">
+                              <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                                 <div className="grid grid-cols-2 gap-4">
                                   <div>
                                     <span className="font-medium">Status:</span>
@@ -329,11 +333,15 @@ export default function ApplicantApplications() {
                                 
                                 <div>
                                   <span className="font-medium">Job Description:</span>
-                                  <p className="mt-1 text-gray-600">
-                                    {selectedApplication?.job?.description || 'No description available'}
-                                  </p>
+                                <div
+                                  className="text-gray-600"
+                                  dangerouslySetInnerHTML={{
+                                    __html:
+                                      formatJobText(selectedApplication?.job?.description) ||
+                                      "Detailed job description will be provided upon application.",
+                                  }}
+                                />                                  
                                 </div>
-
                                 {selectedApplication?.remarks && (
                                   <div>
                                     <span className="font-medium">Feedback:</span>

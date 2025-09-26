@@ -573,15 +573,23 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
       job: {
         id: jobs.id,
         title: jobs.title,
+        description: jobs.description,
+        jgId: jobs.jg,
         department: {
           id: departments.id,
-          name: departments.name
+          name: departments?.name
         }
-      }
+      },
+      user:{email: users.email},
+      applicant: { ...applicants },
+      jobgroup: { jobGroup: JG.name }
     })
     .from(applications)
     .leftJoin(jobs, eq(applications.jobId, jobs.id))
     .leftJoin(departments, eq(jobs.departmentId, departments.id))
+    .leftJoin(applicants, eq(applicants.id, applications.applicantId))
+    .leftJoin(users, eq(users.id, applicants.userId))
+    .leftJoin(JG,eq(JG.id,jobs.jg))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(applications.createdAt));
 

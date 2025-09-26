@@ -14,7 +14,7 @@ import { apiRequest } from '@/lib/queryClient';
 
 export default function Jobs() {
   // const { isAuthenticated } = useAuth();
-   const { isAuthenticated, user, applicantProfile,redirectUrl } = useAuth();
+  const { isAuthenticated, user, applicantProfile,redirectUrl } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedJobGroup, setSelectedJobGroup] = useState<string>('all');

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { MultiSelect } from '@/components/ui/MultiSelect';
+import { MultiSelect } from '@/components/ui/multiselect';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { isUnauthorizedError } from '@/lib/authUtils';
@@ -144,7 +144,7 @@ export default function AdminJobManagement() {
       requiredStudyAreaId: 0,
       posts: 0,
       experience: '',
-      category: 'Open',
+      category: "Open",
       requirements: '',
       advertNumb: '',
       advertType: '',
@@ -154,7 +154,6 @@ export default function AdminJobManagement() {
 
   const createJobMutation = useMutation({
     mutationFn: async (data: JobFormData) => {
-      console.log("Sending payload:", data);
       // apiRequest already returns parsed JSON, no need to call .json() again
       return await apiRequest('POST', '/api/admin/jobs', {
         ...data,
@@ -235,7 +234,6 @@ export default function AdminJobManagement() {
   });
 
   const handleCreateJob = (data: JobFormData) => {
-    console.log(' At handkecreate job',data);
     
     if (editingJob) {
       // Update existing job with proper type conversion
@@ -284,7 +282,6 @@ export default function AdminJobManagement() {
 
   const handleViewJob = (job: any) => {
     // Navigate to job details page or show job details modal
-    console.log('View job:', job);
     // You can implement a view modal or redirect to details page
   };
 
@@ -471,7 +468,7 @@ export default function AdminJobManagement() {
                       <div className="grid grid-cols-3 gap-4">
                       <div>
                         <Label htmlFor="jg">Job Group</Label>
-                        <Select onValueChange={(value) => form.setValue('jg', parseInt(value))}>
+                        <Select  value={form.watch("jg").toString() || ""} onValueChange={(value) => form.setValue('jg', parseInt(value))}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select Job Group" />
                           </SelectTrigger>
@@ -504,7 +501,7 @@ export default function AdminJobManagement() {
                       </div>
                       <div>
                         <Label htmlFor="category">Category</Label>
-                        <Select onValueChange={(value) => form.setValue('category', value as "Open" | "Internal")}>
+                        <Select value={form.watch("category") || ""} onValueChange={(value) => form.setValue('category', value as "Open" | "Internal")}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select Category" />
                           </SelectTrigger>
@@ -524,7 +521,7 @@ export default function AdminJobManagement() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="departmentId">Department</Label>
-                        <Select onValueChange ={                         
+                        <Select value={form.watch("departmentId").toString() || ""} onValueChange ={                         
                           (value) => form.setValue('departmentId', parseInt(value))}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select Department" />
@@ -545,7 +542,7 @@ export default function AdminJobManagement() {
                       </div>
                       <div>
                         <Label htmlFor="advertType">Advert Type</Label>
-                        <Select onValueChange={(value) => form.setValue('advertType', value)}>
+                        <Select value={form.watch("advertType")||""} onValueChange={(value) => form.setValue('advertType', value)}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select Advert type" />
                           </SelectTrigger>
@@ -703,7 +700,7 @@ export default function AdminJobManagement() {
                       </div>
                       <div>
                         <Label htmlFor="requirements">Required Document</Label>
-                        <Select onValueChange={(value) => form.setValue('requirements', value)}>
+                        <Select value={form.watch("requirements")|| ""} onValueChange={(value) => form.setValue('requirements', value)}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select Required Document" />
                           </SelectTrigger>
