@@ -21,15 +21,15 @@ export default function Jobs() {
   const { data: config, isLoading } = usePublicConfig();  
   const departments = config?.departments || [];
   const jobGroups = config?.jobGroups || [];
-  const jobs = config?.jobs || [];  
+  const jobs = config?.jobs || [];
+  const activeJobs = jobs.filter((job: any) => job.isActive);
   const counties = config?.counties || [];
   
-  const filteredJobs = jobs.filter(job => { 
+  const filteredJobs = activeJobs.filter(job => { 
     const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          job.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDepartment = selectedDepartment === 'all' || job.departmentId?.toString() === selectedDepartment;
     const matchesJobGroup = selectedJobGroup === 'all' || job.jg?.toString() === selectedJobGroup;
-    
     return matchesSearch && matchesDepartment && matchesJobGroup;
   });
   if (isLoading) {
@@ -73,7 +73,7 @@ export default function Jobs() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-3xl font-bold text-primary mb-2">{jobs.length}</div>
+              <div className="text-3xl font-bold text-primary mb-2">{activeJobs.length}</div>
               <div className="text-gray-600">Active Jobs</div>
             </CardContent>
           </Card>
@@ -169,29 +169,55 @@ export default function Jobs() {
 
         {/* Jobs Grid */}
         {filteredJobs.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <Briefcase className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Jobs Found</h3>
-              <p className="text-gray-600 mb-6">
-                {searchTerm || selectedDepartment !== 'all' || selectedJobGroup !== 'all'
-                  ? 'No jobs match your current filters. Try adjusting your search criteria.'
-                  : 'There are currently no active job postings. Check back soon for new opportunities!'}
-              </p>
-              {(searchTerm || selectedDepartment !== 'all' || selectedJobGroup !== 'all') && (
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    setSearchTerm('');
-                    setSelectedDepartment('all');
-                    setSelectedJobGroup('all');
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+          (
+            !isAuthenticated ? (
+              <>
+                <div className="mb-8 text-center">
+                  <Briefcase className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Active Jobs Available</h3>
+                  <p className="text-gray-600 mb-6">
+                    There are currently {activeJobs.length} active job postings. You can view all available jobs below. To apply, please log in or create an account.
+                  </p>
+                  <Button size="lg" onClick={() => window.location.href = '/login'}>
+                    Login or Create Account
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {activeJobs.map((job) => (
+                    <JobCard
+                      key={job.id}
+                      job={job}
+                      applicantProfile={applicantProfile}
+                      applyToJob={async () => {}}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No Jobs Found</h3>
+                  <p className="text-gray-600 mb-6">
+                    {searchTerm || selectedDepartment !== 'all' || selectedJobGroup !== 'all'
+                      ? 'No jobs match your current filters. Try adjusting your search criteria.'
+                      : 'There are currently no active job postings. Check back soon for new opportunities!'}
+                  </p>
+                  {(searchTerm || selectedDepartment !== 'all' || selectedJobGroup !== 'all') && (
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        setSearchTerm('');
+                        setSelectedDepartment('all');
+                        setSelectedJobGroup('all');
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          )
         ) : (
           <>
             <div className="flex justify-between items-center mb-6">

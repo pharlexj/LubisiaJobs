@@ -1,3 +1,4 @@
+import { sendEmail } from './lib/email-service'; // Adjust path if needed
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import express from "express";
@@ -9,7 +10,6 @@ import bcrypt from "bcrypt";
 import passport from "passport";
 import { sendOtp, verifyOtp } from "./lib/africastalking-sms";
 import { ApplicantService } from "./applicantService";
-import { log } from "util";
 import { z } from "zod";
 import { createInsertSchema } from 'drizzle-zod';
 import { boardMembers, carouselSlides } from "@shared/schema";
@@ -212,6 +212,16 @@ switch (req.user?.role) {
   case "applicant":
     redirectUrl = "/dashboard";
     applicantProfile = await storage.getApplicant(req.user?.id);    
+      if (!applicantProfile?.phoneVerified) {
+        return res.status(403).json({
+          status: "phone_verification_required",
+          message: "Phone number not verified.",
+          instructions: "Please enter the 6-digit code sent to your phone. If you did not receive it, you can resend the code.",
+          phoneNumber: applicantProfile.phoneNumber || req.user.phoneNumber || null,
+          resendCodeEndpoint: "/api/auth/send-otp",
+          enterCodeAt: "/auth/otp"
+        });
+      }
     break;
   default:
     redirectUrl = "/";
@@ -1415,10 +1425,25 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
       }
-
       // Validate request body with Zod
       const result = insertCarouselSlideSchema.safeParse(req.body);
       if (!result.success) {
+        // Enhanced error logging: show field, message, and type
+        console.error('Carousel Slide Validation Error:', {
+          payload: req.body,
+          errors: result.error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message,
+            code: err.code,
+          }))
+        });
+        // Also log a summary of missing/invalid fields for quick debugging
+        const missingFields = result.error.errors
+          .filter(err => err.code === 'invalid_type' && err.received === 'undefined')
+          .map(err => err.path.join('.'));
+        if (missingFields.length > 0) {
+          console.error('Missing required fields:', missingFields);
+        }
         return res.status(400).json({ 
           message: 'Validation failed',
           errors: result.error.errors.map(err => ({
@@ -1738,17 +1763,59 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
           recipientCount = 0;
       }
 
+      // Sanitize scheduledAt to ensure it's a valid ISO string or undefined
+      let scheduledAt = req.body.scheduledAt;
+      if (scheduledAt) {
+        if (typeof scheduledAt === 'string') {
+          const date = new Date(scheduledAt);
+          scheduledAt = !isNaN(date.getTime()) ? date.toISOString() : undefined;
+        } else if (scheduledAt instanceof Date) {
+          scheduledAt = scheduledAt.toISOString();
+        } else {
+          scheduledAt = undefined;
+        }
+      }
+      const notificationType = req.body.type;
       const notificationData = {
         ...req.body,
+        scheduledAt,
         createdBy: user.id,
-        status: req.body.scheduledAt ? 'scheduled' : 'sent',
-        sentAt: req.body.scheduledAt ? null : new Date(),
+        status: scheduledAt ? 'scheduled' : 'sent',
+        sentAt: scheduledAt ? null : new Date(),
         recipientCount,
-        deliveredCount: req.body.scheduledAt ? 0 : recipientCount, // Mark as delivered immediately if not scheduled
+        deliveredCount: scheduledAt ? 0 : recipientCount,
       };
 
+      // Save notification to DB first
       const notification = await storage.createNotification(notificationData);
-      res.json(notification);
+      let sendResult = null;
+      if (!scheduledAt) {
+        if (notificationType === 'sms') {
+          // Reuse SMS sending logic
+          // Get recipients (phone numbers)
+          const recipients = await storage.getNotificationRecipientsForAudience(notification.id, req.body.targetAudience);
+          const phoneNumbers = recipients.map((r: any) => String(r.phoneNumber)).filter(Boolean);
+          if (phoneNumbers.length > 0) {
+            // sendSms expects a string, so send individually
+            sendResult = [];
+            for (const number of phoneNumbers) {
+              const result = await sendSms(number, req.body.message);
+              sendResult.push({ number, result });
+            }
+          }
+        } else if (notificationType === 'email') {
+          // Reuse email sending logic (assume sendEmail exists)
+          const recipients = await storage.getNotificationRecipientsForAudience(notification.id, req.body.targetAudience);
+          const emails = recipients.map((r: any) => String(r.email)).filter(Boolean);
+          if (emails.length > 0 && typeof sendEmail === 'function') {
+            sendResult = await sendEmail(emails, req.body.title, req.body.message);
+          }
+        } else if (notificationType === 'system') {
+          // System alert: just save to DB, maybe trigger websocket/event
+          sendResult = 'system_alert_saved';
+        }
+      }
+      res.json({ notification, sendResult });
     } catch (error) {
       console.error('Error creating notification:', error);
       res.status(500).json({ message: 'Failed to create notification' });
@@ -2105,17 +2172,22 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
       }
-
-      const { jobId, applicantType } = req.query;
+      // Accept jobId/applicantType from either query string or request body (for flexibility)
+      let jobId = req.query.jobId || req.body?.jobId;
+      let applicantType = req.query.applicantType || req.body?.applicantType;
       if (!jobId || !applicantType) {
         return res.status(400).json({ message: 'jobId and applicantType are required' });
       }
-
-      const applicants = await storage.getApplicantsByJobAndType(parseInt(jobId as string), applicantType as string);
+      jobId = parseInt(jobId as string);
+      if (isNaN(jobId)) {
+        return res.status(400).json({ message: 'jobId must be a valid number' });
+      }
+      const applicants = await storage.getApplicantsByJobAndType(jobId, applicantType as string);
       res.json(applicants);
     } catch (error) {
+      const errMsg = (error instanceof Error && error.message) ? error.message : String(error);
       console.error('Error fetching SMS applicants:', error);
-      res.status(500).json({ message: 'Failed to fetch applicants for SMS' });
+      res.status(500).json({ message: 'Failed to fetch applicants for SMS', error: errMsg });
     }
   });
 
@@ -2293,24 +2365,6 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', `attachment; filename="${type}_report_${Date.now()}.csv"`);
         res.send(csvData);
-      } else {
-        // Return JSON for now (can be extended to PDF)
-        res.json(reportData);
-      }
-    } catch (error) {
-      console.error('Error downloading report:', error);
-      res.status(500).json({ message: 'Failed to download report' });
-    }
-  });
-
-  // Protected board committee routes
-  
-  // Get applications for review (board)
-  app.get('/api/board/applications', isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!user || user.role !== 'board') {
-        return res.status(403).json({ message: 'Access denied' });
       }
 
       const jobId = req.query.jobId ? parseInt(req.query.jobId as string) : undefined;

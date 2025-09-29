@@ -48,7 +48,7 @@ export const counties = pgTable("counties", {
 // Constituencies
 export const constituencies = pgTable("constituencies", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(),
+  name: varchar("name", { length: 100 }).unique().notNull(),
   countyId: integer("county_id").notNull().references(() => counties.id),
 });
 
@@ -87,7 +87,10 @@ export const specializations = pgTable("specializations", {
   name: varchar("name", { length: 100 }).notNull(),
   studyAreaId:integer('study_area_id').notNull().references(() => studyArea.id),
   createdAt: timestamp("created_at").defaultNow(),
-});
+},
+  (table) => ({
+    uniqueNameStudyArea: uniqueIndex("unique_specialization_name_studyarea").on(table.name, table.studyAreaId),
+  }));
 
 // Ethnicity
 export const ethnicity = pgTable("ethnicity", {
@@ -170,7 +173,7 @@ export const users = pgTable("users", {
 // Jobs
 export const jobs = pgTable("jobs", {
   id: serial("id").primaryKey(),
-  advertNumb: varchar("code"),
+  advertNumb: varchar("code").unique(),
   title: varchar("title", { length: 250 }).notNull(),
   description: text("description"),
   departmentId: integer("department_id").notNull().references(() => departments.id),
@@ -188,7 +191,7 @@ export const jobs = pgTable("jobs", {
     .default(sql`'[]'::jsonb`), // multi-select
   certificateLevel: integer("cert_level_id").references(() => certificateLevel.id),
   requiredStudyAreaId: integer("required_study_area_id").references(() => studyArea.id),
-
+  progressionAllowed:boolean("is_progression_allowed").default(false),
   isReleased: integer("is_released"),
   advertType: varchar("advert_type"),
   status: varchar("status"),
@@ -248,7 +251,7 @@ export const educationz = pgTable("education_records", {
   courseName: varchar("course_name", { length: 255 }),
   certificateLevelId: integer("certificate_level_id").notNull().references(() => awards.id),
   specializationId: integer("specialization_id").notNull().references(() => specializations.id),
-  studyArea: varchar("study_area", { length: 255 }).notNull(),
+  studyArea: varchar("study_area_id", { length: 255 }).notNull(),
   institution: varchar("institution", { length: 255 }).notNull(),
   grade: varchar("grade", { length: 50 }),
   yearFrom: integer("year_from").notNull(),
@@ -448,7 +451,7 @@ export const carouselSlides = pgTable("carousel_slides", {
   // Display control
   displayOrder: integer("display_order").default(0),
   isActive: boolean("is_active").default(true),
-  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
@@ -775,7 +778,8 @@ export type InsertSystemConfig = z.infer<typeof insertSystemConfig>;
 export const insertBoardMember = createInsertSchema(boardMembers).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertBoardMember = z.infer<typeof insertBoardMember>;
 
-export const insertCarouselSlide = createInsertSchema(carouselSlides).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCarouselSlide = createInsertSchema(carouselSlides)
+  .omit({ id: true, createdAt: true, updatedAt: true, createdBy: true });
 export type InsertCarouselSlide = z.infer<typeof insertCarouselSlide>;
 
 export const insertPanelScore = createInsertSchema(panelScores).omit({ 

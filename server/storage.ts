@@ -200,6 +200,10 @@ export interface IStorage {
   }>;
 }
 export class DatabaseStorage implements IStorage {
+  // Stub for IStorage interface compliance. Does nothing to prevent accidental data loss.
+  async truncateAll(): Promise<void> {
+    // Intentionally left blank. No truncation performed.
+  }
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -558,7 +562,7 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
     conditions.push(eq(applications.status, filters.status as any));
   }
 
-  const application = await db
+  const applicationsResult = await db
     .select({
       id: applications.id,
       jobId: applications.jobId,
@@ -570,30 +574,33 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
       interviewScore: applications.interviewScore,
       createdAt: applications.createdAt,
       updatedAt: applications.updatedAt,
-      job: {
-        id: jobs.id,
-        title: jobs.title,
-        description: jobs.description,
-        jgId: jobs.jg,
-        department: {
-          id: departments.id,
-          name: departments?.name
-        }
-      },
-      user:{email: users.email},
-      applicant: { ...applicants },
-      jobgroup: { jobGroup: JG.name }
+      phoneNumber:users.phoneNumber,
+      jobIdRef: jobs.id,
+      jobTitle: jobs.title,
+      jobDescription: jobs.description,
+      jobJgId: jobs.jg,
+      departmentId: departments.id,
+      departmentName: departments.name,
+      userEmail: users.email,
+      applicantFirstName: applicants.firstName,
+      applicantSurname: applicants.surname,
+      applicantNationalId: applicants.nationalId,
+      ward: wards.name,
+      constituency: constituencies.name,
+      jobGroupName: JG.name
     })
     .from(applications)
     .leftJoin(jobs, eq(applications.jobId, jobs.id))
     .leftJoin(departments, eq(jobs.departmentId, departments.id))
     .leftJoin(applicants, eq(applicants.id, applications.applicantId))
     .leftJoin(users, eq(users.id, applicants.userId))
-    .leftJoin(JG,eq(JG.id,jobs.jg))
+    .leftJoin(JG, eq(JG.id, jobs.jg))
+    .leftJoin(wards, eq(wards.id, applicants.wardId))
+    .leftJoin(constituencies, eq(constituencies.id, applicants.constituencyId))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(applications.createdAt));
 
-    return application;
+  return applicationsResult;
 }
   async createApplication(application: Omit<Application, 'id' | 'createdAt' | 'updatedAt'>): Promise<Application> {
     const [newApplication] = await db
@@ -1429,29 +1436,41 @@ async getFaq() {
     }
   }
   // Job Groups
-  async seedJobGroup(jobGroup: Omit<Jg, 'id' | 'createdAt'>): Promise<Jg> {
-  const [newJobGroup] = await db
-    .insert(JG)
-    .values(jobGroup)
-    .returning();
-  return newJobGroup;
-}
-  // Job Groups
-  async seedEthnicity(Ethnic: Omit<Ethnicity, 'id' | 'createdAt'>): Promise<Ethnicity> {
-  const [newEthnicity] = await db
-    .insert(ethnicity)
-    .values(Ethnic)
-    .returning();
-  return newEthnicity;
-}
+    async seedJobGroup(jobGroup: Omit<Jg, 'id' | 'createdAt'>): Promise<Jg> {
+      const [upserted] = await db
+        .insert(JG)
+        .values(jobGroup)
+        .onConflictDoUpdate({
+          target: JG.name,
+          set: { ...jobGroup }
+        })
+        .returning();
+      return upserted;
+    }
+  // Ethnicity
+    async seedEthnicity(Ethnic: Omit<Ethnicity, 'id' | 'createdAt'>): Promise<Ethnicity> {
+      const [upserted] = await db
+        .insert(ethnicity)
+        .values(Ethnic)
+        .onConflictDoUpdate({
+          target: ethnicity.name,
+          set: { ...Ethnic }
+        })
+        .returning();
+      return upserted;
+    }
   //Seed Counties
-  async seedCounties(county: Omit<County, 'id' | 'createdAt'>): Promise<County> {
-  const [newCounties] = await db
-    .insert(counties)
-    .values(county)
-    .returning();
-  return newCounties;
-  }
+    async seedCounties(county: Omit<County, 'id' | 'createdAt'>): Promise<County> {
+      const [upserted] = await db
+        .insert(counties)
+        .values(county)
+        .onConflictDoUpdate({
+          target: counties.name,
+          set: { ...county }
+        })
+        .returning();
+      return upserted;
+    }
 
   async updateCounty(id: number, countyData: Partial<any>) {
     const [updatedCounty] = await db
@@ -1471,54 +1490,78 @@ async getFaq() {
   }
 // Seed a single ward
 async seedWard(ward: Omit<Ward, 'id'>): Promise<Ward> {
-  const [newWard] = await db
+  const [upserted] = await db
     .insert(wards)
     .values(ward)
+    .onConflictDoUpdate({
+      target: wards.name,
+      set: { ...ward }
+    })
     .returning();
-  return newWard;
+  return upserted;
 }
 // Seed a single Award
 async seedAward(award: Omit<Award, 'id'>): Promise<Award> {
-  const [newAward] = await db
+  const [upserted] = await db
     .insert(awards)
     .values(award)
+    .onConflictDoUpdate({
+      target: awards.name,
+      set: { ...award }
+    })
     .returning();
-  return newAward;
+  return upserted;
 }
 // Seed a single Cert level
 async seedCertLevel(cert: Omit<CertificateLevel, 'id'>): Promise<CertificateLevel> {
-  const [newCertLevel] = await db
+  const [upserted] = await db
     .insert(certificateLevel)
     .values(cert)
+    .onConflictDoUpdate({
+      target: certificateLevel.name,
+      set: { ...cert }
+    })
     .returning();
-  return newCertLevel;
+  return upserted;
 }
 // Seed a single Specialize
 async seedSpecialize(specialize: Omit<Specialization, 'id'>): Promise<Specialization> {
-  const [newSpecial] = await db
+  const [upserted] = await db
     .insert(specializations)
     .values(specialize)
+    .onConflictDoUpdate({
+      target: [specializations.name, specializations.studyAreaId],
+      set: { ...specialize }
+    })
     .returning();
-  return newSpecial;
+  return upserted;
 }
 // Seed a single Study Area
 async seedStudy(studyA: Omit<StudyArea, 'id'>): Promise<StudyArea> {
-  const [newStudyArea] = await db
+  const [upserted] = await db
     .insert(studyArea)
     .values(studyA)
+    .onConflictDoUpdate({
+      target: studyArea.name,
+      set: { ...studyA }
+    })
     .returning();
-  return newStudyArea;
+  return upserted;
 }
   // Seed Constituencies
-  async seedSubCounties(
-    subCounty: Omit<Constituency, 'id'>    
-  ): Promise<Constituency> {
-    const [newSub] = await db
-      .insert(constituencies)
-      .values(subCounty)
-      .returning();
-    return newSub;
-  }
+    async seedSubCounties(
+      subCounty: Omit<Constituency, 'id'>    
+    ): Promise<Constituency> {
+      const [upserted] = await db
+        .insert(constituencies)
+        .values(subCounty)
+        .onConflictDoUpdate({
+          target: constituencies.name,
+          set: { ...subCounty }
+        })
+        .returning();
+      return upserted;
+    }
 
   async updateConstituency(id: number, constituencyData: Partial<any>) {
     const [updatedConstituency] = await db
@@ -2032,21 +2075,7 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
     };
   }
 
-  // Truncate all tables
-  async truncateAll(): Promise<void> {
-  // Truncate child tables first to avoid FK constraint errors
-  await db.execute(sql`TRUNCATE TABLE wards RESTART IDENTITY CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE constituencies RESTART IDENTITY CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE counties RESTART IDENTITY CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE jg RESTART IDENTITY CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE awards RESTART IDENTITY CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE certificate_level RESTART IDENTITY CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE specializations RESTART IDENTITY CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE study_area RESTART IDENTITY CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE departments RESTART IDENTITY CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE ethnicity RESTART IDENTITY CASCADE`);
-
-}
+  // Truncate method removed to prevent accidental data loss during seeding.
 
   // Document operations
   async saveDocument(documentData: {
@@ -2072,4 +2101,15 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
     return document;
   }
 }
-export const storage = new DatabaseStorage();
+// Add a method to filter notification recipients by audience if needed
+export class DatabaseStorageWithAudience extends DatabaseStorage {
+  async getNotificationRecipientsForAudience(notificationId: number, audience: string): Promise<NotificationRecipient[]> {
+    // Example: filter by status or other audience criteria
+    const allRecipients = await this.getNotificationRecipients(notificationId);
+    // You can filter by audience if needed, e.g. status, type, etc.
+    // For now, just return all
+    return allRecipients;
+  }
+}
+
+export const storage = new DatabaseStorageWithAudience();

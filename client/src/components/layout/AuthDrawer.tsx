@@ -147,24 +147,84 @@ type SignupData = z.infer<typeof signupSchema>;
       return res;
     },
     onSuccess: async () => {
+      try {
         const data = await refreshSession();
-        const { user, redirectUrl } = data;
-      queryClient.setQueryData(['auth', 'me'], user);
-
-      toast({
-        title: 'Login Successful',
-        description: `Welcome, ${user?.firstName || 'user'}!`,
-      });
-      if (redirectUrl) {
-        setLocation(redirectUrl);
+        // Check for phone not verified error from backend
+        const resp: any = data;
+        // Handle phone verification required (403 response)
+        if (
+          resp &&
+          (resp.status === "phone_verification_required" || resp.message === "Phone number not verified.")
+        ) {
+          setPendingPhoneNumber(resp.phoneNumber || resp.actions?.phoneNumber || "");
+          setShowOtpStep(true);
+          toast({
+            title: "Phone Verification Required",
+            description:
+              resp.instructions ||
+              resp.message ||
+              "Please verify your phone number.",
+            variant: "destructive",
+          });
+          return;
+        }
+        const { user, redirectUrl } = data as any;
+        queryClient.setQueryData(["auth", "me"], user);
+        toast({
+          title: "Login Successful",
+          description: `Welcome, ${user?.firstName || "user"}!`,
+        });
+        if (redirectUrl) {
+          setLocation(redirectUrl);
+        }
+        onOpenChange(false);
+      } catch (err: any) {
+        // Handle phone not verified error from backend (403)
+        if (
+          err?.status === "phone_verification_required" ||
+          err?.message === "Phone number not verified."
+        ) {
+          setPendingPhoneNumber(err.phoneNumber || err.actions?.phoneNumber || "");
+          setShowOtpStep(true);
+          toast({
+            title: "Phone Verification Required",
+            description:
+              err.instructions ||
+              err.message ||
+              "Please verify your phone number.",
+            variant: "destructive",
+          });
+          return;
+        }
+        toast({
+          title: "Login Error",
+          description: err?.message || "Login failed.",
+          variant: "destructive",
+        });
       }
-      onOpenChange(false);
     },
     onError: (error: any) => {
+      // Handle phone not verified error from backend (403)
+      if (
+        error?.status === "phone_verification_required" ||
+        error?.message === "Phone number not verified."
+      ) {
+        setPendingPhoneNumber(error.phoneNumber || error.actions?.phoneNumber || "");
+        setShowOtpStep(true);
+        toast({
+          title: "Phone Verification Required",
+          description:
+            error.instructions ||
+            error.message ||
+            "Please verify your phone number.",
+          variant: "destructive",
+        });
+        return;
+      }
       toast({
-        title: 'Login Failed',
-        description: error.message || 'Login failed.',
-        variant: 'destructive',
+        title: "Login Failed",
+        description: error.message || "Login failed.",
+        variant: "destructive",
       });
     },
   });
@@ -243,7 +303,7 @@ const handleSendOtp = () => {
 
       // ✅ now login
       const data = await refreshSession();
-      const { user, redirectUrl } = data;
+  const { user, redirectUrl } = data as any;
       queryClient.setQueryData(["auth", "me"], user);
 
       if (redirectUrl) {
@@ -767,14 +827,18 @@ const strength = getPasswordStrength(passwordValue);
                       )}
                     </div>
 
-                    <Button
-                      type="submit"
-                      data-testid="button-verifyOtp"
-                      className="w-full"
-                      disabled={verifyOtpMutation.isPending}
-                    >
-                      {verifyOtpMutation.isPending ? 'Verifying...' : 'Verify & Continue'}
-                    </Button>
+                      <Button
+                        type="submit"
+                        data-testid="button-verifyOtp"
+                        className="w-full"
+                        disabled={verifyOtpMutation.isPending || !otpForm.watch('otp')}
+                        onClick={() => {
+                          // Always set phoneNumber in otpForm before submit
+                          otpForm.setValue('phoneNumber', pendingPhoneNumber);
+                        }}
+                      >
+                        {verifyOtpMutation.isPending ? 'Verifying...' : 'Verify & Continue'}
+                      </Button>
                     
                     <div className="text-center">
                       <Button

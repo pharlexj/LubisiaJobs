@@ -24,7 +24,7 @@ import {
 import ProfileCompletion from '@/components/applicant/ProfileCompletion';
 
 interface SidebarProps {
-  userRole: 'applicant' | 'admin' | 'board';
+  userRole: 'applicant' | 'admin' | 'board'|'account'|'a.i.e Holder';
 }
 
 export default function Sidebar({ userRole }: SidebarProps) {
@@ -151,6 +151,51 @@ export default function Sidebar({ userRole }: SidebarProps) {
     },
   ];
 
+  const accountNavItems = [
+    {
+      href: '/accounts/reports', 
+      icon: BarChart3, 
+      label:"claim",
+      description: 'Selection reports' 
+      
+    },
+    {
+      href: '/accounts/payment', 
+      icon: BarChart3, 
+      label:"payment",
+      description: 'Voucher Payment' 
+        
+      },
+    {
+      href: '/accounts/MIR', 
+      icon: BarChart3, 
+      label: "mir",      
+      description: 'Register Management' 
+        
+      },
+    {
+      href: '/accounts/budget', 
+      icon: BarChart3, 
+      label:"budget",
+      description: 'Budget Management' 
+        
+      },
+    {
+      href: '/accounts/votes', 
+      icon: BarChart3, 
+      label:"vote",
+      description: 'Votes Management' 
+        
+      },
+    {
+      href: '/accounts/reports', 
+      icon: BarChart3, 
+      label:"report",
+      description: 'Selection reports' 
+        
+      }
+  ];
+
   const getNavItems = () => {
     switch (userRole) {
       case 'applicant':
@@ -159,6 +204,8 @@ export default function Sidebar({ userRole }: SidebarProps) {
         return adminNavItems;
       case 'board':
         return boardNavItems;
+      case 'account':
+        return accountNavItems;
       default:
         return [];
     }
@@ -172,6 +219,8 @@ export default function Sidebar({ userRole }: SidebarProps) {
         return 'bg-red-100 text-red-800';
       case 'board':
         return 'bg-green-100 text-green-800';
+      case 'account':
+        return 'bg-yellow-100 text-yellow-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -185,6 +234,8 @@ export default function Sidebar({ userRole }: SidebarProps) {
         return 'Administrator';
       case 'board':
         return 'Board Member';
+      case 'account':
+        return 'Accountant';
       default:
         return 'User';
     }

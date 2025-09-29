@@ -359,7 +359,7 @@ async function seedAwards() {
 }
 // Run all seeds
 async function runAllSeeds() {
-  await storage.truncateAll();
+  //await storage.truncateAll();
   await seedJobGroups();
   await seedCounties();
   await seedSubCounties();
