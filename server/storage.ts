@@ -80,6 +80,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, like, sql, lt, PromiseOf, or, ne } from "drizzle-orm";
+import { Fullscreen } from "lucide-react";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -584,6 +585,7 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
       userEmail: users.email,
       applicantFirstName: applicants.firstName,
       applicantSurname: applicants.surname,
+      applicantsFullName: sql<string>`CONCAT(${applicants.firstName}, ' ', ${applicants.surname})`,
       applicantNationalId: applicants.nationalId,
       ward: wards.name,
       constituency: constituencies.name,

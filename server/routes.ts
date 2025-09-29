@@ -1178,7 +1178,7 @@ switch (req.user?.role) {
   app.get('/api/admin/applications', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
-      if (!user || user.role !== 'admin') {
+      if (!user || (user.role !== 'admin' && user.role !== 'board')) {
         return res.status(403).json({ message: 'Access denied' });
       }
       const jobId = req.query.jobId ? parseInt(req.query.jobId as string) : undefined;

@@ -21,11 +21,11 @@ export async function apiRequests(
   await throwIfResNotOk(res);
   return res.json();
 }
-export async function apiRequest(
+export async function apiRequest<T = any>(
   method: string,
   url: string,
   data?: unknown
-): Promise<Response> {
+): Promise<T> {
   let headers: HeadersInit = {};
   let body: BodyInit | undefined;
 

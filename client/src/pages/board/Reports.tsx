@@ -23,6 +23,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState } from "react";
+import Navigation from '@/components/layout/Navigation';
+import Sidebar from '@/components/layout/Sidebar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function BoardReports() {
@@ -32,7 +34,7 @@ export default function BoardReports() {
 
   // Get applications data
   const { data: applications = [], isLoading: applicationsLoading } = useQuery({
-    queryKey: ['/api/board/applications'],
+    queryKey: ['/api/admin/applications'],
     enabled: !!user && user.role === 'board',
   });
 
@@ -55,6 +57,7 @@ export default function BoardReports() {
   if (applicationsLoading) {
     return (
       <div className="min-h-screen bg-neutral-50">
+        <Navigation />
         <div className="container mx-auto py-8 px-4">
           <div className="mb-8">
             <Skeleton className="h-8 w-48 mb-2" />
@@ -89,7 +92,7 @@ export default function BoardReports() {
 
   // Filter applications based on selected filters
   const filteredApplications = applicationsData.filter((app: any) => {
-    if (selectedJobFilter !== 'all' && app.jobId?.toString() !== selectedJobFilter) return false;
+    if (selectedJobFilter !== 'all' && app.jobIdRef?.toString() !== selectedJobFilter) return false;
     if (selectedStatusFilter !== 'all' && app.status !== selectedStatusFilter) return false;
     return true;
   });
@@ -123,7 +126,11 @@ export default function BoardReports() {
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      <div className="container mx-auto py-8 px-4">
+      <Navigation />
+      <div className="flex">
+        <Sidebar userRole="board" />
+        <main className="flex-1">
+          <div className="container mx-auto py-8 px-4">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -493,14 +500,14 @@ export default function BoardReports() {
               <CardContent>
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {filteredApplications.map((application: any) => {
-                    const job = jobsData.find((j: any) => j.id === application.jobId);
+                    const job = jobsData.find((j: any) => j.id === application.jobIdRef);
                     return (
                       <div key={application.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
                         <div className="flex-1">
                           <div className="flex items-center gap-3">
                             <div>
-                              <p className="font-medium">{application.fullName}</p>
-                              <p className="text-sm text-gray-600">{job?.title || 'Unknown Position'}</p>
+                              <p className="font-medium">{application.applicantsFullName}</p>
+                              <p className="text-sm text-gray-600">{application?.jobTitle || 'Unknown Position'}</p>
                             </div>
                           </div>
                         </div>
@@ -524,6 +531,8 @@ export default function BoardReports() {
             </Card>
           </TabsContent>
         </Tabs>
+          </div>
+        </main>
       </div>
     </div>
   );
