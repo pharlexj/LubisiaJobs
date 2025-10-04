@@ -1,4 +1,4 @@
-import { useState,useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import Navigation from '@/components/layout/Navigation';
@@ -66,12 +66,12 @@ const countySchema = z.object({
 
 const constituencySchema = z.object({
   name: z.string().min(2, "Constituency name must be at least 2 characters"),
-  countyId: z.coerce.string().min(1, "Please select a county"),
+  countyId: z.string().min(1, "Please select a county"),
 });
 
 const wardSchema = z.object({
   name: z.string().min(2, "Ward name must be at least 2 characters"),
-  constituencyId: z.coerce.string().min(1, "Please select a constituency"),
+  constituencyId: z.string().min(1, "Please select a constituency"),
 });
 
 const studyAreaSchema = z.object({
@@ -80,7 +80,7 @@ const studyAreaSchema = z.object({
 
 const specializationSchema = z.object({
   name: z.string().min(2, "Specialization name must be at least 2 characters"),
-  studyAreaId: z.coerce.string().min(1,"Study area should be selected"),
+  studyArea: z.string().min(1, "Please select a study area"),
 });
 
 const jobGroupSchema = z.object({
@@ -138,7 +138,6 @@ const carouselSlideSchema = z.object({
   linkHref: z.string().optional(),
   ctaLabel: z.string().optional(),
   displayOrder: z.number().optional().default(0),
-  createdBy: z.string().optional(),
 });
 
 type NoticeFormData = z.infer<typeof noticeSchema>;
@@ -245,25 +244,6 @@ export default function AdminSettings() {
     queryKey: ['/api/public/gallery'],
     enabled: !!user && user.role === 'admin',
   });
-  useEffect(() => {
-  if (carouselImageFile) {
-    const previewUrl = URL.createObjectURL(carouselImageFile);
-    setCarouselImagePreview(previewUrl);
-    return () => URL.revokeObjectURL(previewUrl);
-  } else {
-    setCarouselImagePreview('');
-  }
-}, [carouselImageFile]);
-
-useEffect(() => {
-  if (carouselMobileImageFile) {
-    const previewUrl = URL.createObjectURL(carouselMobileImageFile);
-    setCarouselMobilePreview(previewUrl);
-    return () => URL.revokeObjectURL(previewUrl);
-  } else {
-    setCarouselMobilePreview('');
-  }
-}, [carouselMobileImageFile]);
   // Forms
   const noticeForm = useForm<NoticeFormData>({ resolver: zodResolver(noticeSchema) });
   const countyForm = useForm<CountyFormData>({ resolver: zodResolver(countySchema) });
@@ -280,7 +260,7 @@ useEffect(() => {
   const aboutConfigForm = useForm<AboutConfigFormData>({ resolver: zodResolver(aboutConfigSchema) });
   const galleryItemForm = useForm<GalleryItemFormData>({ resolver: zodResolver(galleryItemSchema) });
   const boardMemberForm = useForm<BoardMemberFormData>({ resolver: zodResolver(boardMemberSchema) });
-  // Removed duplicate declaration. Only the extended carouselSlideForm remains below.
+  const carouselSlideForm = useForm<CarouselSlideFormData>({ resolver: zodResolver(carouselSlideSchema) });
 
   // File upload configuration for gallery (aligned with server-side accepted types)
   const galleryFileUpload = useFileUpload({
@@ -546,44 +526,17 @@ useEffect(() => {
       data: { ...data, constituencyId: parseInt(data.constituencyId) }
     });
   };
+
   const handleCreateStudyArea = (data: StudyAreaFormData) => {
     createMutation.mutate({ endpoint: '/api/admin/study-areas', data });
   };
 
   const handleCreateSpecialization = (data: SpecializationFormData) => {
-    console.log("Submitting specialization", data);
-    const studyAreaId = data.studyAreaId ? parseInt(data.studyAreaId, 10) : undefined;
-    if (!studyAreaId || isNaN(studyAreaId)) {
-      toast({
-        title: 'Error',
-        description: 'Please select a valid study area.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    toast({
-      title: 'Saving...',
-      description: 'Adding specialization, please wait.',
-      duration: 1500,
-    });
+    console.log(data);
+    
     createMutation.mutate({ 
       endpoint: '/api/admin/specializations', 
-      data: { ...data, studyAreaId }
-    }, {
-      onSuccess: () => {
-        toast({
-          title: 'Success',
-          description: 'Specialization added successfully.',
-        });
-        specializationForm.reset();
-      },
-      onError: (error: any) => {
-        toast({
-          title: 'Error',
-          description: error?.message || 'Failed to add specialization.',
-          variant: 'destructive',
-        });
-      }
+      data: { ...data, studyArea: parseInt(data.studyArea) }
     });
   };
 
@@ -793,7 +746,7 @@ useEffect(() => {
     : [];
 
   const filteredSpecializations = selectedStudyArea 
-    ? specializations.filter((s: any) => s.studyAreaId === parseInt(selectedStudyArea))
+    ? specializations.filter((s: any) => s.studyArea === parseInt(selectedStudyArea))
     : [];
 
   // Board member photo handling functions
@@ -850,49 +803,9 @@ useEffect(() => {
     }
   };
 
-  // Extend form type to include gradientStart, gradientEnd, gradientDir for UI only
-  type CarouselSlideFormDataExt = CarouselSlideFormData & {
-    gradientStart?: string;
-    gradientEnd?: string;
-    gradientDir?: string;
-    isActive?: boolean;
-  };
-
-  // Remove any previous carouselSlideForm declaration above this
-  // Only declare carouselSlideForm once, with extended type
-  const carouselSlideForm = useForm<CarouselSlideFormDataExt>({
-    defaultValues: {
-      gradientStart: '#3b82f6',
-      gradientEnd: '#a21caf',
-      gradientDir: 'r',
-      isActive: true,
-    }
-  });
-
-  const handleCreateCarouselSlide = async (data: CarouselSlideFormDataExt) => {
+  const handleCreateCarouselSlide = async (data: CarouselSlideFormData) => {
     try {
-      // Filter and validate payload
-      const requiredFields = ['title', 'subtitle', 'iconName'];
-      const processedData: Record<string, any> = {};
-      for (const key of requiredFields) {
-        const value = (data as Record<string, any>)[key];
-        if (!value || typeof value !== 'string' || !value.trim()) {
-          toast({
-            title: 'Validation Error',
-            description: `Missing or invalid field: ${key}`,
-            variant: 'destructive',
-          });
-          return;
-        }
-        processedData[key] = value.trim();
-      }
-      // Optional fields
-      processedData.accentColor = (data as Record<string, any>).accentColor || '';
-      processedData.linkHref = (data as Record<string, any>).linkHref || '';
-      processedData.ctaLabel = (data as Record<string, any>).ctaLabel || '';
-      processedData.displayOrder = typeof (data as Record<string, any>).displayOrder === 'number' ? (data as Record<string, any>).displayOrder : 0;
-      processedData.altText = (data as Record<string, any>).altText || '';
-  processedData.isActive = typeof data.isActive === 'boolean' ? data.isActive : true;
+      let processedData = { ...data };
 
       // Handle desktop image upload if in image mode
       if (carouselImageMode === 'image' && carouselImageFile) {
@@ -900,47 +813,34 @@ useEffect(() => {
           title: 'Processing',
           description: 'Uploading carousel image...',
         });
+
         const uploadResult = await carouselImageUpload.uploadFile(carouselImageFile);
-        if (uploadResult?.url) {
-          processedData.imageUrl = uploadResult.url;
-        } else {
-          processedData.imageUrl = '';
+        if (uploadResult?.filename) {
+          processedData.imageUrl = `/uploads/${uploadResult.filename}`;
         }
       }
 
       // Handle mobile image upload if provided
       if (carouselMobileImageFile) {
         const mobileUploadResult = await carouselImageUpload.uploadFile(carouselMobileImageFile);
-        if (mobileUploadResult?.url) {
-          processedData.mobileImageUrl = mobileUploadResult.url;
-        } else {
-          processedData.mobileImageUrl = '';
+        if (mobileUploadResult?.filename) {
+          processedData.mobileImageUrl = `/uploads/${mobileUploadResult.filename}`;
         }
       }
 
-      // Set bgGradient or clear image fields
+      // Clear gradient if using image mode
       if (carouselImageMode === 'image') {
         processedData.bgGradient = '';
       } else {
-        processedData.bgGradient = data.bgGradient || '';
+        // Clear image fields if using gradient mode
         processedData.imageUrl = '';
         processedData.mobileImageUrl = '';
         processedData.altText = '';
       }
 
-      // Only send allowed fields
-      const allowedKeys = [
-        'title', 'subtitle', 'iconName', 'bgGradient', 'accentColor', 'imageUrl', 'mobileImageUrl',
-        'altText', 'linkHref', 'ctaLabel', 'displayOrder', 'isActive'
-      ];
-      const payload: Record<string, any> = {};
-      for (const key of allowedKeys) {
-        if (processedData[key] !== undefined) payload[key] = processedData[key];
-      }
-
       if (editingCarouselSlide) {
         // Update existing slide
-        const response = await apiRequest('PUT', `/api/admin/carousel-slides/${editingCarouselSlide.id}`, payload);
+        const response = await apiRequest('PUT', `/api/admin/carousel-slides/${editingCarouselSlide.id}`, processedData);
         toast({
           title: 'Success',
           description: 'Carousel slide updated successfully.',
@@ -948,7 +848,7 @@ useEffect(() => {
         setEditingCarouselSlide(null);
       } else {
         // Create new slide
-        createMutation.mutate({ endpoint: '/api/admin/carousel-slides', data: payload });
+        createMutation.mutate({ endpoint: '/api/admin/carousel-slides', data: processedData });
       }
 
       // Reset upload states after successful submission
@@ -958,7 +858,7 @@ useEffect(() => {
       setCarouselMobilePreview('');
       setCarouselImageMode('gradient');
       carouselSlideForm.reset();
-  await queryClient.invalidateQueries({ queryKey: ['/api/admin/carousel-slides'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carousel-slides'] });
 
     } catch (error: any) {
       toast({
@@ -1525,12 +1425,10 @@ useEffect(() => {
                           studyAreas.map((area: any) => (
                             <div key={area.id} className="flex items-center justify-between p-2 border rounded">
                               <span className="text-sm">{area.name}</span>
-                              <Button size="sm"
+                              <Button 
+                                size="sm" 
                                 variant="outline"
-                                onClick={() => {
-                                  setSelectedStudyArea(area.id.toString());
-                                  specializationForm.setValue('studyAreaId', area.id.toString());
-                                }}
+                                onClick={() => setSelectedStudyArea(area.id.toString())}
                               >
                                 Select
                               </Button>
@@ -1568,7 +1466,7 @@ useEffect(() => {
                                 value={selectedStudyArea}
                                 onValueChange={(value) => {
                                   setSelectedStudyArea(value);
-                                  specializationForm.setValue('studyAreaId', value);
+                                  specializationForm.setValue('studyArea', value);
                                 }}
                               >
                                 <SelectTrigger>
@@ -2969,52 +2867,12 @@ useEffect(() => {
                           </div>
 
                           {carouselImageMode === "gradient" ? (
-                            <div className="space-y-2">
-                              <Label>Gradient Colors</Label>
-                              <div className="flex gap-2 items-center">
-                                <Input
-                                  type="color"
-                                  title="Start Color"
-                                  className="w-10 h-10 p-0 border-none bg-transparent"
-                                  {...carouselSlideForm.register('gradientStart')}
-                                  defaultValue="#3b82f6"
-                                />
-                                <span>to</span>
-                                <Input
-                                  type="color"
-                                  title="End Color"
-                                  className="w-10 h-10 p-0 border-none bg-transparent"
-                                  {...carouselSlideForm.register('gradientEnd')}
-                                  defaultValue="#a21caf"
-                                />
-                                <Select
-                                  onValueChange={v => carouselSlideForm.setValue('gradientDir', v)}
-                                  defaultValue={carouselSlideForm.watch('gradientDir') || 'r'}
-                                >
-                                  <SelectTrigger title="Gradient Direction">
-                                    <SelectValue placeholder="Direction" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="r">Right</SelectItem>
-                                    <SelectItem value="l">Left</SelectItem>
-                                    <SelectItem value="t">Top</SelectItem>
-                                    <SelectItem value="b">Bottom</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              {/* Compose Tailwind gradient string */}
+                            <div>
+                              <Label htmlFor="bg-gradient">Gradient</Label>
                               <Input
                                 id="bg-gradient"
-                                placeholder="Tailwind gradient classes"
-                                value={`from-[${carouselSlideForm.watch('gradientStart')||'#3b82f6'}] to-[${carouselSlideForm.watch('gradientEnd')||'#a21caf'}] bg-gradient-to-${carouselSlideForm.watch('gradientDir')||'r'}`}
-                                readOnly
-                              />
-                              <Label htmlFor="accent-color">Accent Color</Label>
-                              <Input
-                                id="accent-color"
-                                type="color"
-                                className="w-10 h-10 p-0 border-none bg-transparent"
-                                {...carouselSlideForm.register("accentColor")}
+                                placeholder="e.g., from-blue-500 to-purple-600"
+                                {...carouselSlideForm.register("bgGradient")}
                               />
                             </div>
                           ) : (
@@ -3028,13 +2886,6 @@ useEffect(() => {
                                     e.target.files?.[0] && setCarouselImageFile(e.target.files[0])
                                   }
                                 />
-                                 {carouselImagePreview && (
-                                   <img
-                                     src={carouselImagePreview}
-                                     alt="Desktop Preview"
-                                     className="mt-2 rounded-md h-32 object-cover"
-                                   />
-                                 )}
                               </div>
                               <div>
                                 <Label>Mobile Image</Label>
@@ -3046,35 +2897,14 @@ useEffect(() => {
                                     setCarouselMobileImageFile(e.target.files[0])
                                   }
                                 />
-                                 {carouselMobilePreview && (
-                                   <img
-                                     src={carouselMobilePreview}
-                                     alt="Mobile Preview"
-                                     className="mt-2 rounded-md h-32 object-cover"
-                                   />
-                                 )}
                               </div>
                             </>
                           )}
 
-                          <div className="space-y-2">
-                            <Label htmlFor="alt-text">Alt Text (Accessibility)</Label>
-                            <Input id="alt-text" {...carouselSlideForm.register("altText")}/>
-                            <Label htmlFor="link-href">Link (optional)</Label>
-                            <Input id="link-href" {...carouselSlideForm.register("linkHref")}/>
-                            <Label htmlFor="cta-label">CTA Label</Label>
-                            <Input id="cta-label" {...carouselSlideForm.register("ctaLabel")}/>
-                            <Label htmlFor="display-order">Order</Label>
-                            <Input id="display-order" type="number" {...carouselSlideForm.register("displayOrder", { valueAsNumber: true })}/>
-                            <div className="flex items-center gap-2 mt-2">
-                              <Label htmlFor="is-active">Active</Label>
-                              <Input id="is-active" type="checkbox" {...carouselSlideForm.register("isActive")}/>
-                            </div>
-                            <div className="flex justify-end space-x-2 mt-2">
-                              <Button type="submit">
-                                {editingCarouselSlide ? "Update Slide" : "Create Slide"}
-                              </Button>
-                            </div>
+                          <div className="flex justify-end space-x-2">
+                            <Button type="submit">
+                              {editingCarouselSlide ? "Update Slide" : "Create Slide"}
+                            </Button>
                           </div>
                         </form>
                       </DialogContent>
@@ -3093,7 +2923,6 @@ useEffect(() => {
                             <CardContent className="p-4">
                               <h4 className="font-semibold">{slide.title}</h4>
                               <p className="text-sm text-gray-600">{slide.subtitle}</p>
-                              <div className="text-xs text-gray-500 mb-1">Order: {slide.displayOrder} | {slide.isActive ? 'Active' : 'Inactive'}</div>
                               {slide.imageUrl ? (
                                 <img
                                   src={slide.imageUrl}
@@ -3102,13 +2931,9 @@ useEffect(() => {
                                 />
                               ) : (
                                 <div
-                                  className={`mt-2 h-32 rounded-md bg-gradient-to-${slide.bgGradient?.split('bg-gradient-to-')[1]?.[0]||'r'} from-[${slide.bgGradient?.match(/from-\[(.*?)\]/)?.[1]||'#3b82f6'}] to-[${slide.bgGradient?.match(/to-\[(.*?)\]/)?.[1]||'#a21caf'}]`}
+                                  className={`mt-2 h-32 rounded-md bg-gradient-to-r ${slide.bgGradient}`}
                                 />
                               )}
-                              <div className="text-xs mt-2">Accent: <span style={{background: slide.accentColor, color: '#fff', padding: '2px 8px', borderRadius: '4px'}}>{slide.accentColor}</span></div>
-                              {slide.linkHref && <div className="text-xs mt-1">Link: <a href={slide.linkHref} className="text-blue-600 underline">{slide.linkHref}</a></div>}
-                              {slide.ctaLabel && <div className="text-xs mt-1">CTA: {slide.ctaLabel}</div>}
-                              {slide.altText && <div className="text-xs mt-1">Alt: {slide.altText}</div>}
                               <div className="flex gap-2 mt-3">
                                 <Button
                                   size="sm"

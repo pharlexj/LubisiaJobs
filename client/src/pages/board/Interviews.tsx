@@ -59,9 +59,8 @@ export default function BoardInterviews() {
   const [statusFilter, setStatusFilter] = useState('shortlisted');
 const { data: applications = [], isLoading } = useQuery({
   queryKey: [
-    "/api/admin/applications",
+    "/api/board/applications",
     { status: statusFilter, jobId: jobFilter !== "all" ? jobFilter : undefined },
-    
   ],
   queryFn: getApplications,
   enabled: !!user && user.role === "board",
@@ -258,45 +257,44 @@ const { data: applications = [], isLoading } = useQuery({
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {upcomingInterviewList.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">No upcoming interviews scheduled.</div>
-                    ) : (
-                      upcomingInterviewList.map((interview: any) => (
-                        <div key={interview.id} className="border border-gray-200 rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <h4 className="font-semibold text-gray-900">{interview.jobTitle}</h4>
-                            <Badge variant="outline">
-                              {interview.candidates} candidates
-                            </Badge>
+                    {upcomingInterviews.map((interview) => (
+                      <div key={interview.id} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-semibold text-gray-900">{interview.jobTitle}</h4>
+                          <Badge variant="outline">
+                            {interview.candidates} candidates
+                          </Badge>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-3">
+                          <div className="flex items-center">
+                            <Calendar className="w-4 h-4 mr-2" />
+                            {new Date(interview.date).toLocaleDateString()}
                           </div>
-                          <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-3">
-                            <div className="flex items-center">
-                              <Calendar className="w-4 h-4 mr-2" />
-                              {new Date(interview.date).toLocaleDateString()}
-                            </div>
-                            <div className="flex items-center">
-                              <Clock className="w-4 h-4 mr-2" />
-                              {interview.time}
-                            </div>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-3">Venue: {interview.venue}</p>
-                          <div className="flex space-x-2">
-                            <Button size="sm" variant="outline">
-                              <FileText className="w-3 h-3 mr-1" />
-                              View List
-                            </Button>
-                            <Button size="sm" variant="outline">
-                              <Printer className="w-3 h-3 mr-1" />
-                              Print Sheets
-                            </Button>
-                            <Button size="sm" variant="outline">
-                              <Edit className="w-3 h-3 mr-1" />
-                              Edit
-                            </Button>
+                          <div className="flex items-center">
+                            <Clock className="w-4 h-4 mr-2" />
+                            {interview.time}
                           </div>
                         </div>
-                      ))
-                    )}
+                        
+                        <p className="text-sm text-gray-600 mb-3">Venue: {interview.venue}</p>
+                        
+                        <div className="flex space-x-2">
+                          <Button size="sm" variant="outline">
+                            <FileText className="w-3 h-3 mr-1" />
+                            View List
+                          </Button>
+                          <Button size="sm" variant="outline">
+                            <Printer className="w-3 h-3 mr-1" />
+                            Print Sheets
+                          </Button>
+                          <Button size="sm" variant="outline">
+                            <Edit className="w-3 h-3 mr-1" />
+                            Edit
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -316,7 +314,7 @@ const { data: applications = [], isLoading } = useQuery({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Sessions</SelectItem>
-                          {upcomingInterviewList.map((interview: any) => (
+                          {upcomingInterviews.map((interview) => (
                             <SelectItem key={interview.id} value={interview.id.toString()}>
                               {interview.jobTitle} - {new Date(interview.date).toLocaleDateString()}
                             </SelectItem>

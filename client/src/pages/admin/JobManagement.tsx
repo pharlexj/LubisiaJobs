@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -110,9 +109,6 @@ export default function AdminJobManagement() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<any>(null);
-  const [category, setCategory] = useState<"OPEN" | "INTERNAL">("OPEN");
-  const [serial, setSerial] = useState(0); // You should fetch last serial from DB
-  const advertNumber = generateAdvertNumber(category, serial);
 
 
   const { data: config, isLoading} = useQuery({
@@ -126,7 +122,6 @@ export default function AdminJobManagement() {
     queryKey: ['/api/admin/applications'],
     enabled: !!user && user.role === 'admin',
   });
-
 
   const departments = configData?.departments || [];
   const designations = configData?.designations || [];
@@ -156,7 +151,6 @@ export default function AdminJobManagement() {
 
     },
   });
-  console.log(jobs)
 
   const createJobMutation = useMutation({
     mutationFn: async (data: JobFormData) => {
@@ -281,12 +275,7 @@ export default function AdminJobManagement() {
       advertType: job.advertType || '',
       startDate: job.startDate || '',
       endDate: job.endDate || '',
-      isActive: job.isActive || false,
-      requiredSpecializationIds: Array.isArray(job.requiredSpecializationIds)
-        ? job.requiredSpecializationIds.map(Number)
-        : job.requiredSpecializationIds
-          ? [Number(job.requiredSpecializationIds)]
-          : []
+      isActive: job.isActive || false
     });
     setIsCreateModalOpen(true);
   };
@@ -413,28 +402,31 @@ export default function AdminJobManagement() {
                     Post New Job
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-green-700 border-yellow-600 shadow-lg rounded-xl">
-                  <DialogHeader className="bg-green-800 text-yellow-300 rounded-t-xl p-4 mb-4">
-                    <DialogTitle className="text-2xl font-bold text-yellow-300">
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                  {/* Debug: Show all form errors for inspection */}
+                  {Object.keys(form.formState.errors).length > 0 && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
+                      <div className="font-bold text-red-700 mb-2">Form Validation Errors:</div>
+                      <ul className="text-sm text-red-700">
+                        {Object.entries(form.formState.errors).map(([field, error]) => (
+                          <li key={field}><strong>{field}:</strong> {error?.message?.toString() || JSON.stringify(error)}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <DialogHeader>
+                    <DialogTitle>
                       {editingJob ? 'Edit Job Posting' : 'Create New Job Posting'}
                     </DialogTitle>
-                  </DialogHeader>
+                  </DialogHeader>                  
                   <form onSubmit={form.handleSubmit(handleCreateJob)} className="space-y-4">
                     <div className='grid grid-cols-3 gap-4'>
                       <div>
-                        <Label htmlFor='advertNumb' className="text-yellow-300">Advert Number:</Label>
-                        <Input
-                          id='advertNumb'
-                          {...form.register('advertNumb')}
-                          value={editingJob ? form.watch('advertNumb') : generateAdvertNumber(category, serial)}
-                          readOnly={!editingJob}
-                          disabled={!!editingJob}
-                          placeholder='e.g., TCPSB/OPEN/1/2025'
-                          className="bg-green-950 text-yellow-200 border-yellow-600"
-                        />
+                        <Label htmlFor='advertNumb'>Advert Number:</Label>
+                        <Input id='advertNumb' {...form.register('advertNumb')} placeholder='e.g., TCPSB/Open/1/2025' />
                         {form.formState.errors.advertNumb && (
-                          <p className='text-sm mt-1'>{form.formState.errors.advertNumb?.message}</p>
-                        )}
+                          <p className='text-sm text-red-600 mt-1'>{ form.formState.errors.advertNumb?.message}</p>
+                          )}
                       </div>
                       <div>
                         <Label htmlFor='startDate'> Job Application Start Date</Label>
@@ -509,13 +501,7 @@ export default function AdminJobManagement() {
                       </div>
                       <div>
                         <Label htmlFor="category">Category</Label>
-                        <Select
-                            value={form.watch("category") || ""}
-                            onValueChange={(value) => {
-                              form.setValue('category', value as "Open" | "Internal");
-                              setCategory(value === 'Open' ? 'OPEN' : 'INTERNAL');
-                            }}
-                          >
+                        <Select value={form.watch("category") || ""} onValueChange={(value) => form.setValue('category', value as "Open" | "Internal")}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select Category" />
                           </SelectTrigger>
@@ -631,11 +617,7 @@ export default function AdminJobManagement() {
                                   label: spec.name,
                                   value: spec.id,
                                 }))}
-                              values={Array.isArray(form.watch("requiredSpecializationIds"))
-                                ? form.watch("requiredSpecializationIds").map(Number)
-                                : form.watch("requiredSpecializationIds")
-                                  ? [Number(form.watch("requiredSpecializationIds"))]
-                                  : []}
+                              values={form.watch("requiredSpecializationIds") || []}
                               onChange={(vals) =>
                                 form.setValue(
                                   "requiredSpecializationIds",
@@ -653,11 +635,11 @@ export default function AdminJobManagement() {
 
                       {/* ✅ Progression Checkbox */}
                       <div className="col-span-2 flex items-center space-x-2">
-                        <Checkbox
-                          checked={form.watch("progressionAllowed") || false}
-                          onCheckedChange={(checked) =>
-                            form.setValue("progressionAllowed", checked === true)              
-                          }  
+                        <Input
+                          type="checkbox"
+                          id="progressionAllowed"
+                          {...form.register("progressionAllowed")}
+                          className="h-4 w-4"
                         />
                         <Label htmlFor="progressionAllowed" className="text-sm text-gray-700">
                           Allow Higher Education Levels (progression)
@@ -949,10 +931,4 @@ export default function AdminJobManagement() {
       </div>
     </div>
   );
-}
-function generateAdvertNumber(category: "OPEN" | "INTERNAL", lastSerial: number = 0): string {
-  const prefix = "TCPSB";
-  const year = new Date().getFullYear();
-  const serial = lastSerial + 1;
-  return `${prefix}/${category}/${serial}/${year}`;
 }

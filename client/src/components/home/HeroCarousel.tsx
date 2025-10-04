@@ -157,60 +157,20 @@ export default function HeroCarousel() {
             const IconComponent = iconMap[slide.iconName as keyof typeof iconMap] || Building;
             const bgGradient = slide.bgGradient || "from-[#1D523A] to-[#09CDE3]";
             const accentColor = slide.accentColor || "#EEF200";
-            // Compute gradient colors for inline style
-            let gradientStart = '#1D523A';
-            let gradientEnd = '#09CDE3';
-            if (bgGradient.includes('from-[')) {
-              const match = bgGradient.match(/from-\[(.*?)\]/);
-              if (match && match[1]) gradientStart = match[1];
-            }
-            if (bgGradient.includes('to-[')) {
-              const match = bgGradient.match(/to-\[(.*?)\]/);
-              if (match && match[1]) gradientEnd = match[1];
-            }
-            const gradientStyle = !slide.imageUrl && !slide.mobileImageUrl ? {
-              background: `linear-gradient(to right, ${gradientStart}, ${gradientEnd})`,
-              color: 'white',
-            } : {};
             return (
               <div key={slide.id} className="embla__slide flex-[0_0_100%] min-w-0">
-                {/* Responsive image display: mobileImageUrl for mobile, imageUrl for desktop, fallback to gradient/icon */}
-                <div className="relative min-h-[600px] flex items-center" style={gradientStyle}>
-                  {/* Show image if available */}
-                  {slide.imageUrl || slide.mobileImageUrl ? (
-                    <>
-                      {/* Desktop image */}
-                      <img
-                        src={slide.imageUrl}
-                        alt={slide.altText || slide.title}
-                        className="hidden lg:block absolute inset-0 w-full h-full object-cover z-0"
-                        style={{ borderRadius: '0.75rem' }}
-                      />
-                      {/* Mobile image */}
-                      <img
-                        src={slide.mobileImageUrl || slide.imageUrl}
-                        alt={slide.altText || slide.title}
-                        className="block lg:hidden absolute inset-0 w-full h-full object-cover z-0"
-                        style={{ borderRadius: '0.75rem' }}
-                      />
-                      {/* Overlay for text readability */}
-                      <div className="absolute inset-0 bg-black/30 z-0" />
-                    </>
-                  ) : (
-                    <>
-                      {/* Background Pattern Overlay */}
-                      <div className="absolute inset-0 opacity-10">
-                        <div className="absolute inset-0" style={{
-                          backgroundImage: `radial-gradient(circle at 20% 80%, ${accentColor}22 0%, transparent 50%), \
-                                           radial-gradient(circle at 80% 20%, ${accentColor}22 0%, transparent 50%),\
-                                           radial-gradient(circle at 40% 40%, ${accentColor}22 0%, transparent 50%)`,
-                        }}></div>
-                      </div>
-                    </>
-                  )}
+                <div className={`relative bg-gradient-to-r ${bgGradient} text-white min-h-[600px] flex items-center`}>
+                  {/* Background Pattern Overlay */}
+                  <div className="absolute inset-0 opacity-10">
+                    <div className="absolute inset-0" style={{
+                      backgroundImage: `radial-gradient(circle at 20% 80%, ${accentColor}22 0%, transparent 50%), 
+                                       radial-gradient(circle at 80% 20%, ${accentColor}22 0%, transparent 50%),
+                                       radial-gradient(circle at 40% 40%, ${accentColor}22 0%, transparent 50%)`,
+                    }}></div>
+                  </div>
 
                   {/* Content */}
-                  <div className="relative max-w-7xl mx-auto px-4 py-20 sm:px-6 lg:px-8 z-10">
+                  <div className="relative max-w-7xl mx-auto px-4 py-20 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                       {/* Text Content */}
                       <div className="text-center lg:text-left">

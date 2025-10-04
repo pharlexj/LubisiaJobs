@@ -263,7 +263,7 @@ const signupMutation = useMutation({
 
       // ✅ now login
       const data = await refreshSession();
-  const { user, redirectUrl } = data as any;
+      const { user, redirectUrl } = data;
       queryClient.setQueryData(["auth", "me"], user);
       await refreshSession()
       if (redirectUrl) {

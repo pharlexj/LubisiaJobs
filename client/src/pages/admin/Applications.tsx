@@ -23,8 +23,7 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  User,
-  Pin
+  User
 } from 'lucide-react';
 
 export default function AdminApplications() {
@@ -112,14 +111,16 @@ export default function AdminApplications() {
 
   const filteredApplications = applications.filter((app: any) => {
     const matchesSearch = 
-      app.applicantFirstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.applicantSurname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesJob = jobFilter === 'all' || app.jobIdRef?.toString() === jobFilter;
+      app.applicant?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.applicant?.surname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.job?.title?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesJob = jobFilter === 'all' || app.jobId?.toString() === jobFilter;
     const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
-    return matchesSearch && matchesJob && matchesStatus;    
+    
+    return matchesSearch && matchesJob && matchesStatus;
   });
-  
+ 
+  console.log('App',filteredApplications);
   const statusCounts = applications.reduce((acc: any, app: any) => {
     acc[app.status] = (acc[app.status] || 0) + 1;
     return acc;
@@ -298,23 +299,23 @@ export default function AdminApplications() {
                             <td className="py-3 px-4">
                               <div className="flex items-center space-x-3">
                                 <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-medium">
-                                  {application.applicantFirstName?.[0] || 'A'}
-                                  {application.applicantSurname?.[0] || ''}
+                                  {application.applicant?.firstName?.[0] || 'A'}
+                                  {application.applicant?.surname?.[0] || ''}
                                 </div>
                                 <div>
                                   <div className="font-medium text-gray-900">
-                                    {application.applicantFirstName} {application.applicantSurname}
+                                    {application.applicant?.firstName} {application.applicant?.surname}
                                   </div>
                                   <div className="text-sm text-gray-600">
-                                    {application.applicantPhoneNumber}
+                                    {application.applicant?.phoneNumber}
                                   </div>
                                 </div>
                               </div>
                             </td>
                             <td className="py-3 px-4">
-                              <div className="font-medium text-gray-900">{application.jobTitle}</div>
+                              <div className="font-medium text-gray-900">{application.job?.title}</div>
                               <div className="text-sm text-gray-600">
-                                {application.departmentName}
+                                {application.job?.department?.name}
                               </div>
                             </td>
                             <td className="py-3 px-4 text-gray-600">
@@ -345,7 +346,7 @@ export default function AdminApplications() {
                                   <DialogContent className="max-w-4xl">
                                     <DialogHeader>
                                       <DialogTitle>
-                                        Application Details - {selectedApplication?.applicantFirstName} {selectedApplication?.applicantSurname}
+                                        Application Details - {selectedApplication?.applicant?.firstName} {selectedApplication?.applicant?.surname}
                                       </DialogTitle>
                                     </DialogHeader>
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -354,19 +355,15 @@ export default function AdminApplications() {
                                         <div className="space-y-2 text-sm">
                                           <div className="flex items-center gap-2">
                                             <User className="w-4 h-4 text-gray-400" />
-                                            <span>{selectedApplication?.applicantFirstName} {selectedApplication?.applicantSurname}</span>
+                                            <span>{selectedApplication?.applicant?.firstName} {selectedApplication?.applicant?.surname}</span>
                                           </div>
                                           <div className="flex items-center gap-2">
                                             <Phone className="w-4 h-4 text-gray-400" />
-                                            <span>{selectedApplication?.phoneNumber}</span>
-                                          </div>
-                                          <div className="flex items-center gap-2">
-                                            <Pin className="w-4 h-4 text-gray-400" />
-                                            <span>{selectedApplication?.constituency}, {selectedApplication?.ward}</span>
+                                            <span>{selectedApplication?.applicant?.phoneNumber}</span>
                                           </div>
                                           <div className="flex items-center gap-2">
                                             <Mail className="w-4 h-4 text-gray-400" />
-                                            <span>{selectedApplication?.userEmail}</span>
+                                            <span>{selectedApplication?.user?.email}</span>
                                           </div>
                                         </div>
                                       </div>
@@ -374,9 +371,9 @@ export default function AdminApplications() {
                                       <div>
                                         <h4 className="font-semibold mb-3">Job Information</h4>
                                         <div className="space-y-2 text-sm">
-                                          <p><strong>Position:</strong> {selectedApplication?.jobTitle}</p>
-                                          <p><strong>Department:</strong> {selectedApplication?.departmentName}</p>
-                                          <p><strong>Job Group:</strong> {selectedApplication?.jobGroupName}</p>
+                                          <p><strong>Position:</strong> {selectedApplication?.job?.title}</p>
+                                          <p><strong>Department:</strong> {selectedApplication?.job?.department?.name}</p>
+                                          <p><strong>Job Group:</strong> {selectedApplication?.jobgroup?.jobGroup}</p>
                                           <p><strong>Applied Date:</strong> {selectedApplication?.submittedOn ? new Date(selectedApplication.submittedOn).toLocaleDateString() : 'Draft'}</p>
                                         </div>
                                       </div>

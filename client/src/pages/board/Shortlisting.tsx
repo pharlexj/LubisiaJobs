@@ -31,15 +31,14 @@ import {
   Briefcase,
   Star
 } from 'lucide-react';
-import { log } from 'console';
 
 export default function BoardShortlisting() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  // Set default filters to show all applications on load
   const [searchTerm, setSearchTerm] = useState('');
   const [jobFilter, setJobFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('submitted');
   const [statusFilter, setStatusFilter] = useState('submitted');
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [showRemarks, setShowRemarks] = useState(false);
@@ -48,19 +47,13 @@ export default function BoardShortlisting() {
   const [score, setScore] = useState('');
 
   const { data: applications = [], isLoading } = useQuery({
-    queryKey: [
-      "/api/admin/applications",
-      { status: statusFilter, jobId: jobFilter !== "all" ? jobFilter : undefined },
-    ],
-    queryFn: async ({ queryKey }) => {
-      const [_key, params] = queryKey as [string, any];
-      const searchParams = new URLSearchParams();
-      if (params.status) searchParams.append('status', params.status);
-      if (params.jobId) searchParams.append('jobId', params.jobId);
-      return await apiRequest('GET', `/api/admin/applications?${searchParams.toString()}`);
-    },
-    enabled: !!user && (user.role === 'board' || user.role === 'admin'),
-  });
+  queryKey: [
+    "/api/board/applications",
+    { status: statusFilter, jobId: jobFilter !== "all" ? jobFilter : undefined },
+  ],
+  queryFn: getApplications,
+  enabled: !!user && user.role === "board",
+});
 
   const { data: jobs = [] } = useQuery({
     queryKey: ['/api/public/jobs'],
@@ -122,17 +115,16 @@ export default function BoardShortlisting() {
       }
     });
   };
-  
-    const filteredApplications = applications.filter((app: any) => {
-    // Use correct field names and allow empty search to match all
-    const matchesSearch =
-      !searchTerm ||
-      app.applicantFirstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.applicantSurname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase());
-    // Use jobId (or jobIdRef) depending on backend response
-    const matchesJob = jobFilter === 'all' || app.jobIdRef?.toString() === jobFilter || app.jobId?.toString() === jobFilter;
-    const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
+
+  const filteredApplications = (applications as any[]).filter((app: any) => {
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = 
+      (app.applicant?.firstName ?? '').toLowerCase().includes(searchLower) ||
+      (app.applicant?.surname ?? '').toLowerCase().includes(searchLower) ||
+      (app.job?.title ?? '').toLowerCase().includes(searchLower);
+    const matchesJob = jobFilter === 'all' || app.jobId?.toString() === jobFilter;
+    const matchesStatus = app.status === statusFilter;
+    
     return matchesSearch && matchesJob && matchesStatus;
   });
 
@@ -294,16 +286,16 @@ export default function BoardShortlisting() {
                               <td className="py-3 px-4">
                                 <div className="flex items-center space-x-3">
                                   <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                                    {application.applicantFirstName?.[0] || 'A'}
-                                    {application.applicantSurname?.[0] || ''}
+                                    {application.applicant?.firstName?.[0] || 'A'}
+                                    {application.applicant?.surname?.[0] || ''}
                                   </div>
                                   <div>
                                     <div className="font-medium text-gray-900">
-                                      {application.applicantFirstName} {application.applicantSurname}
+                                      {application.applicant?.firstName} {application.applicant?.surname}
                                     </div>
                                     <div className="text-sm text-gray-600 flex items-center">
                                       <GraduationCap className="w-3 h-3 mr-1" />
-                                      {application.jobTitle}
+                                      {application.job?.title}
                                     </div>
                                   </div>
                                 </div>

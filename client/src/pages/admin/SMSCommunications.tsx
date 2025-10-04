@@ -63,13 +63,6 @@ export default function SMSCommunications() {
   // Fetch applicants based on job and type selection
   const { data: applicants = [], isLoading: applicantsLoading } = useQuery({
     queryKey: ['/api/admin/sms-applicants', selectedJobId, selectedApplicantType],
-    queryFn: async () => {
-      if (!selectedJobId || !selectedApplicantType) return [];
-      return await apiRequest(
-        'GET',
-        `/api/admin/sms-applicants?jobId=${selectedJobId}&applicantType=${selectedApplicantType}`
-      );
-    },
     enabled: !!user && user.role === 'admin' && !!selectedJobId && !!selectedApplicantType,
   });
 
@@ -78,7 +71,6 @@ export default function SMSCommunications() {
     queryKey: ['/api/admin/staff-list'],
     enabled: !!user && user.role === 'admin',
   });
-console.log("Applicants",applicants);
 
   // SMS mutation for applicants
   const sendApplicantSMSMutation = useMutation({
@@ -142,7 +134,7 @@ console.log("Applicants",applicants);
 
   const handleSelectAllApplicants = (checked: boolean) => {
     if (checked) {
-      setSelectedApplicants((applicants as any).map((app: Applicant) => app.id));
+      setSelectedApplicants(applicants.map((app: Applicant) => app.id));
     } else {
       setSelectedApplicants([]);
     }
@@ -211,14 +203,14 @@ console.log("Applicants",applicants);
   const generateApplicantMessage = () => {
     if (!selectedJobId || !selectedApplicantType) return;
     
-    const selectedJob = (jobs as any ).find((job: any) => job.id === parseInt(selectedJobId));
+    const selectedJob = jobs.find((job: any) => job.id === parseInt(selectedJobId));
     const jobTitle = selectedJob?.title || 'the position';
 
     let messageTemplate = '';
     
     switch (selectedApplicantType) {
       case 'shortlisted':
-        messageTemplate = `Trans-Nzoia County Public Service Board: Congratulations! You have been shortlisted for the interview for the position of ${jobTitle}. For more details please login to our portal and track your application. Thank you.`;
+        messageTemplate = `Trans-Nzoia County Public Service Board: Congratulations! You have been shortlisted for the interview for the position of ${jobTitle}. You will receive a call with further details. Thank you.`;
         break;
       case 'successful':
       case 'hired':
@@ -237,10 +229,10 @@ console.log("Applicants",applicants);
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
-      <Sidebar userRole="admin" />
-      <div className="flex-1 ml-1">
+      <Sidebar />
+      <div className="flex-1 ml-64">
         <Navigation />
-        <main className="p-2 pt-5">
+        <main className="p-6 pt-20">
           <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex items-center space-x-4">
               <MessageCircle className="w-8 h-8 text-blue-600" />
@@ -285,7 +277,7 @@ console.log("Applicants",applicants);
                             <SelectValue placeholder="Select a job position" />
                           </SelectTrigger>
                           <SelectContent>
-                            {(jobs as any).map((job: any) => (
+                            {jobs.map((job: any) => (
                               <SelectItem key={job.id} value={job.id.toString()}>
                                 {job.advertNumb} - {job.title}
                               </SelectItem>
@@ -336,16 +328,16 @@ console.log("Applicants",applicants);
                     </div>
 
                     {/* Applicants List */}
-                    {(applicants as any).length > 0 && (
+                    {applicants.length > 0 && (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <h3 className="text-lg font-semibold">
-                            Select Applicants ({(applicants as any).length} found)
+                            Select Applicants ({applicants.length} found)
                           </h3>
                           <div className="flex items-center space-x-2">
                             <Checkbox
                               id="select-all-applicants"
-                              checked={selectedApplicants.length === (applicants as any).length}
+                              checked={selectedApplicants.length === applicants.length}
                               onCheckedChange={handleSelectAllApplicants}
                               data-testid="checkbox-select-all-applicants"
                             />
@@ -354,7 +346,7 @@ console.log("Applicants",applicants);
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                          {(applicants as any).map((applicant: Applicant) => (
+                          {applicants.map((applicant: Applicant) => (
                             <Card key={applicant.id} className="p-4">
                               <div className="flex items-center space-x-3">
                                 <Checkbox
@@ -407,7 +399,7 @@ console.log("Applicants",applicants);
                       </div>
                     )}
 
-                    {(applicants as any).length === 0 && selectedJobId && selectedApplicantType && !applicantsLoading && (
+                    {applicants.length === 0 && selectedJobId && selectedApplicantType && !applicantsLoading && (
                       <div className="text-center py-8 text-gray-500">
                         <Briefcase className="w-16 h-16 mx-auto mb-4 text-gray-300" />
                         <p>No applicants found for the selected job and type.</p>

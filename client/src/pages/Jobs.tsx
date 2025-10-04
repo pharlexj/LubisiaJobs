@@ -21,15 +21,15 @@ export default function Jobs() {
   const { data: config, isLoading } = usePublicConfig();  
   const departments = config?.departments || [];
   const jobGroups = config?.jobGroups || [];
-  const jobs = config?.jobs || [];
-  const activeJobs = jobs.filter((job: any) => job.isActive);
+  const jobs = config?.jobs || [];  
   const counties = config?.counties || [];
   
-  const filteredJobs = activeJobs.filter(job => { 
+  const filteredJobs = jobs.filter(job => { 
     const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          job.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDepartment = selectedDepartment === 'all' || job.departmentId?.toString() === selectedDepartment;
     const matchesJobGroup = selectedJobGroup === 'all' || job.jg?.toString() === selectedJobGroup;
+    
     return matchesSearch && matchesDepartment && matchesJobGroup;
   });
   if (isLoading) {
@@ -76,7 +76,7 @@ export default function Jobs() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-3xl font-bold text-primary mb-2">{activeJobs.length}</div>
+              <div className="text-3xl font-bold text-primary mb-2">{jobs.length}</div>
               <div className="text-gray-600">Active Jobs</div>
             </CardContent>
           </Card>
