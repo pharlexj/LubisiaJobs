@@ -34,5 +34,13 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    proxy: {
+      // ✅ Forward /api calls to your backend
+      "/api": {
+        target: "http://localhost:5000", // change to your backend port
+        changeOrigin: true,
+      },
+    },
   },
 });
+

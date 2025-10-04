@@ -212,7 +212,6 @@ export const verifyOtp = (input: VerifyOtpInput): boolean => {
   
   if (isValid) {
     otpStore.delete(normalizedPhone); // Remove used OTP
-  }
-  
+  }  
   return isValid;
 };

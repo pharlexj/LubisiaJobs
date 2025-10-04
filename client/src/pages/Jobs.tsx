@@ -11,7 +11,7 @@ import { Search, Filter, MapPin, Briefcase } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { apiRequest } from '@/lib/queryClient';
-
+import { useAuthContext } from "@/context/AuthContext";
 export default function Jobs() {
   // const { isAuthenticated } = useAuth();
   const { isAuthenticated, user, applicantProfile,redirectUrl } = useAuth();
@@ -54,6 +54,9 @@ export default function Jobs() {
       </div>
     );
   }
+
+  const {handleClick } = useAuthContext();
+ 
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -178,7 +181,7 @@ export default function Jobs() {
                   <p className="text-gray-600 mb-6">
                     There are currently {activeJobs.length} active job postings. You can view all available jobs below. To apply, please log in or create an account.
                   </p>
-                  <Button size="lg" onClick={() => window.location.href = '/login'}>
+                  <Button size="lg" onClick={handleClick}>
                     Login or Create Account
                   </Button>
                 </div>
@@ -274,7 +277,7 @@ export default function Jobs() {
                 and build your profile for future opportunities.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg">
+                <Button size="lg" onClick={handleClick}>
                   Create Account
                 </Button>
                 <Button variant="outline" size="lg">

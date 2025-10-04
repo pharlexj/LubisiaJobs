@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { getApplications } from "@/lib/queryFns";
 import { isUnauthorizedError } from '@/lib/authUtils';
+import { usePublicConfig } from '@/hooks/usePublicConfig';
 import { 
   Search, 
   Filter, 
@@ -39,7 +40,7 @@ export default function BoardShortlisting() {
   // Set default filters to show all applications on load
   const [searchTerm, setSearchTerm] = useState('');
   const [jobFilter, setJobFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('submitted');
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [showRemarks, setShowRemarks] = useState(false);
   const [showShortlistDialog, setShowShortlistDialog] = useState(false);
@@ -64,7 +65,17 @@ export default function BoardShortlisting() {
   const { data: jobs = [] } = useQuery({
     queryKey: ['/api/public/jobs'],
   });
+  
+  const { data: config } = usePublicConfig();
+  
+  const configData = config || {} as any;
+  // Initializing api from config data
+  const departments = configData?.departments || [];
+  const userData = configData?.userData || [];
 
+
+  console.log(userData);
+  
   const updateApplicationMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
       return await apiRequest('PUT', `/api/board/applications/${id}`, data);
@@ -437,7 +448,7 @@ export default function BoardShortlisting() {
               <DialogContent className="max-w-4xl">
                 <DialogHeader>
                   <DialogTitle>
-                    Candidate Profile - {selectedApplication?.applicant?.firstName} {selectedApplication?.applicant?.surname}
+                    Candidate Profile - {selectedApplication?.applicantFirstName} {selectedApplication?.applicantSurname}
                   </DialogTitle>
                 </DialogHeader>
                 

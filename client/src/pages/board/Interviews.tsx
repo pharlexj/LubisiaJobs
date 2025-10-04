@@ -44,7 +44,7 @@ export default function BoardInterviews() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedSession, setSelectedSession] = useState('all');
+  const [selectedSession, setSelectedSession] = useState('shortlisted');
   const [showScoring, setShowScoring] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
   const [interviewScore, setInterviewScore] = useState<InterviewScore>({
@@ -56,11 +56,7 @@ export default function BoardInterviews() {
   });
 
   const [jobFilter, setJobFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('submitted');
-  // const { data: applications = [], isLoading } = useQuery({
-  //   queryKey: ['/api/board/applications', { status: 'shortlisted' }],
-  //   enabled: !!user && user.role === 'board',
-  // });
+  const [statusFilter, setStatusFilter] = useState('shortlisted');
 const { data: applications = [], isLoading } = useQuery({
   queryKey: [
     "/api/admin/applications",
@@ -69,12 +65,10 @@ const { data: applications = [], isLoading } = useQuery({
   ],
   queryFn: getApplications,
   enabled: !!user && user.role === "board",
-});
-  
+});  
   const { data: jobs = [] } = useQuery({
     queryKey: ['/api/public/jobs'],
   });
-
   // Use the selected candidate data directly for now - may need detailed API call later
   const candidateDetails = selectedCandidate;
 
@@ -142,14 +136,16 @@ const { data: applications = [], isLoading } = useQuery({
   };
 
   // Group applications by job and interview date for upcoming interviews
+  console.log(applications);
+  
   const upcomingInterviews = (applications as any[])
     .filter(app => app.interviewDate)
     .reduce((acc: any, app: any) => {
-      const key = `${app.job?.id || 'unknown'}_${app.interviewDate}`;
+      const key = `${app.jobIdRef || 'unknown'}_${app.interviewDate}`;
       if (!acc[key]) {
         acc[key] = {
           id: key,
-          jobTitle: app.job?.title || 'Unknown Position',
+          jobTitle: app.jobTitle || 'Unknown Position',
           date: app.interviewDate,
           time: app.interviewTime || '',
           candidates: 0,
@@ -236,7 +232,7 @@ const { data: applications = [], isLoading } = useQuery({
                       </div>
                       <div>
                         <Label>Venue</Label>
-                        <Input placeholder="e.g., Conference Room A" />
+                        <Input placeholder="e.g., CPSB Boardroom" />
                       </div>
                       <div className="flex justify-end space-x-2">
                         <Button variant="outline">Cancel</Button>
@@ -474,22 +470,22 @@ const { data: applications = [], isLoading } = useQuery({
                             <td className="py-3 px-4">
                               <div className="flex items-center space-x-3">
                                 <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                                  {application.applicant?.firstName?.[0] || 'A'}
-                                  {application.applicant?.surname?.[0] || ''}
+                                  {application?.applicantsFullName?.[0] || 'A'}
+                                  {application?.applicantSurname?.[0] || ''}
                                 </div>
                                 <div>
                                   <div className="font-medium text-gray-900">
-                                    {application.applicant?.firstName} {application.applicant?.surname}
+                                    {application?.applicantsFullName} {application.applicantSurname}
                                   </div>
                                   <div className="text-sm text-gray-600">
-                                    {application.applicant?.phoneNumber}
+                                    {application?.phoneNumber}
                                   </div>
                                 </div>
                               </div>
                             </td>
                             <td className="py-3 px-4">
-                              <div className="font-medium text-gray-900">{application.job?.title}</div>
-                              <div className="text-sm text-gray-600">Job Group {application.job?.designation?.jobGroup}</div>
+                              <div className="font-medium text-gray-900">{application.jobTitle}</div>
+                              <div className="text-sm text-gray-600">Job Group {application?.jobGroupName}</div>
                             </td>
                             <td className="py-3 px-4">
                               {application.interviewDate ? (
@@ -614,11 +610,11 @@ const { data: applications = [], isLoading } = useQuery({
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="text-gray-600">Full Name:</span>
-                        <p className="font-medium" data-testid="text-candidate-fullname">{selectedCandidate.applicant?.fullName || selectedCandidate.fullName || 'N/A'}</p>
+                        <p className="font-medium" data-testid="text-candidate-fullname">{selectedCandidate.applicant?.applicantsFullName || selectedCandidate.applicantsFullName || 'N/A'}</p>
                       </div>
                       <div>
                         <span className="text-gray-600">ID Number:</span>
-                        <p className="font-medium" data-testid="text-candidate-idnumber">{selectedCandidate.applicant?.idNumber || selectedCandidate.idNumber || 'N/A'}</p>
+                        <p className="font-medium" data-testid="text-candidate-idnumber">{selectedCandidate.applicant?.applicantNationalId || selectedCandidate.applicantNationalId || 'N/A'}</p>
                       </div>
                       <div>
                         <span className="text-gray-600">Phone:</span>
@@ -626,7 +622,15 @@ const { data: applications = [], isLoading } = useQuery({
                       </div>
                       <div>
                         <span className="text-gray-600">Email:</span>
-                        <p className="font-medium" data-testid="text-candidate-email">{selectedCandidate.applicant?.email || selectedCandidate.email || 'N/A'}</p>
+                        <p className="font-medium" data-testid="text-candidate-email">{selectedCandidate.applicant?.userEmail || selectedCandidate.userEmail || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Sub County:</span>
+                        <p className="font-medium" data-testid="text-candidate-constituency">{selectedCandidate.applicant?.constituency || selectedCandidate.constituency || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Ward:</span>
+                        <p className="font-medium" data-testid="text-candidate-ward">{selectedCandidate.applicant?.ward || selectedCandidate.ward || 'N/A'}</p>
                       </div>
                       <div>
                         <span className="text-gray-600">Gender:</span>

@@ -185,7 +185,6 @@ export const jobs = pgTable("jobs", {
   experience: varchar("experience"),
   posts: integer("posts"),
   venue: varchar("venue"),
-  // ✅ new fields
   requiredSpecializationIds: jsonb("required_specialization_ids")
     .$type<number[]>()
     .default(sql`'[]'::jsonb`), // multi-select

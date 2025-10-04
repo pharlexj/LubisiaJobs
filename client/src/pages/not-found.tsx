@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
+import {  } from "@/hooks/useAuth";
 
 const NotFound = () => {
   const { user } = useAuth();
@@ -23,7 +24,6 @@ const NotFound = () => {
         return "/";
     }
   };
-
   const handleRedirect = () => {
     setLocation(getRedirectPath());
   };
@@ -40,7 +40,7 @@ const NotFound = () => {
           <p className="mt-4 text-sm text-gray-600">
             {isLoggedIn
               ? `You are logged in as "${role}", but this page either doesn't exist or you don't have permission to access it.`
-              : `You are not logged in. This page either doesn't exist or requires authentication.`}
+              : `{onClick=(handleClick('login'))} You are not logged in. This page either doesn't exist or requires authentication.`}
           </p>
 
           <p className="mt-2 text-xs text-gray-500 italic">

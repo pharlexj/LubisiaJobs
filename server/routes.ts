@@ -183,9 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // --- Login ---
-  app.post("/api/auth/login",
-    passport.authenticate("local"),
-    (req, res) => {
+  app.post("/api/auth/login", passport.authenticate("local"),(req, res) => {
       res.json({ user: req.user });
     }
   );
@@ -332,7 +330,9 @@ switch (req.user?.role) {
 
   app.post("/api/auth/verify-otp", async (req: any, res) => {
     try {
-      const { phoneNumber, code } = req.body;
+      console.log('otp', req.body);
+      
+      const { phoneNumber, otp } = req.body;
       
       // Validate input
       if (!phoneNumber || typeof phoneNumber !== 'string') {
@@ -342,7 +342,7 @@ switch (req.user?.role) {
         });
       }
       
-      if (!code || typeof code !== 'string') {
+      if (!otp || typeof otp !== 'string') {
         return res.status(400).json({ 
           success: false, 
           message: 'Verification code is required' 
@@ -352,7 +352,7 @@ switch (req.user?.role) {
       // Verify OTP
       const isValid = verifyOtp({ 
         to: phoneNumber, 
-        otp: code.trim() 
+        otp: otp.trim() 
       });
 
       if (!isValid) {
@@ -853,7 +853,6 @@ switch (req.user?.role) {
       res.status(500).json({ message: 'Failed to fetch permissions' });
     }
   });
-
   // Get available roles (for admin role management)
   app.get('/api/admin/roles', isAuthenticated, async (req: any, res) => {
     try {
@@ -1173,8 +1172,9 @@ switch (req.user?.role) {
       res.status(500).json({ message: 'Failed to apply for job' });
     }
   });
-  // Protected admin routes  
+  // Protected admin (routes)
   // Get all applications (admin)
+  // This route allows admin and board ('applications/users.tsx') to ('view.tsx') all (job applications)
   app.get('/api/admin/applications', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);

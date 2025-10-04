@@ -7,23 +7,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Briefcase, 
-  Users, 
-  Clock, 
-  CheckCircle, 
-  TrendingUp, 
-  Calendar,
-  FileText,
-  UserCheck
-} from 'lucide-react';
-
+import {Briefcase, Users, Clock, CheckCircle, TrendingUp, Calendar, FileText, UserCheck} from 'lucide-react';
+import { usePublicConfig } from "@/hooks/usePublicConfig";
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+
+  const { data: config } = usePublicConfig();
   
   const { data: jobs = [] } = useQuery({
     queryKey: ['/api/public/jobs'],
+  });
+  const { data: department = [] } = useQuery({
+    queryKey: ['/api/public/config'],
   });
 
   const { data: applications = [] } = useQuery({
@@ -32,14 +28,14 @@ export default function AdminDashboard() {
   });
 
   // Calculate statistics
-  const activeJobs = jobs.filter(job => job.isActive).length;
-  const totalApplications = applications.length;
-  const pendingApplications = applications.filter(app => app.status === 'submitted').length;
-  const shortlistedApplications = applications.filter(app => app.status === 'shortlisted').length;
+  const activeJobs = (jobs as any).filter((job: any) => job.isActive).length;
+  const totalApplications = (applications as any).length;
+  const pendingApplications = (applications as any).filter((app: any) => app.status === 'submitted').length;
+  const shortlistedApplications = (applications as any).filter((app: any) => app.status === 'shortlisted').length;
 
   // Recent activity data
-  const recentJobs = jobs.slice(0, 5);
-  const recentApplications = applications.slice(0, 5);
+  const recentJobs = (jobs as any).slice(0, 5);
+  const recentApplications = (applications as any).slice(0, 5);
 
   // Monthly stats (mock data for demonstration)
   const monthlyStats = [
@@ -215,11 +211,11 @@ export default function AdminDashboard() {
                     <p className="text-gray-500 text-center py-4">No jobs posted yet</p>
                   ) : (
                     <div className="space-y-4">
-                      {recentJobs.map((job) => (
+                      {recentJobs.map((job:any) => (
                         <div key={job.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
                           <div className="flex-1">
                             <h4 className="font-medium text-gray-900">{job.title}</h4>
-                            <p className="text-sm text-gray-600">{job.department?.name}</p>
+                            <p className="text-sm text-gray-600">{((config as any)?.departments)?.find((dep:any) => dep.id ===job.departmentId)?.name}</p>
                             <p className="text-xs text-gray-500">
                               Deadline: {job.endDate 
                                 ? new Date(job.endDate).toLocaleDateString()
@@ -231,7 +227,7 @@ export default function AdminDashboard() {
                               {job.isActive ? 'Active' : 'Closed'}
                             </Badge>
                             <p className="text-sm text-gray-600 mt-1">
-                              {applications.filter(app => app.jobId === job.id).length} applications
+                              {(applications as any).filter((app:any) => app.jobId === job.id).length} applications
                             </p>
                           </div>
                         </div>
@@ -256,17 +252,17 @@ export default function AdminDashboard() {
                     <p className="text-gray-500 text-center py-4">No applications yet</p>
                   ) : (
                     <div className="space-y-4">
-                      {recentApplications.map((application) => (
+                      {recentApplications.map((application:any) => (
                         <div key={application.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
                           <div className="flex items-center space-x-3">
                             <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                              {application.applicant?.firstName?.[0] || 'A'}
+                              {application.applicantFirstName?.[0] || 'A'}
                             </div>
                             <div>
                               <h4 className="font-medium text-gray-900">
-                                {application.applicant?.firstName} {application.applicant?.surname}
+                                {application.applicantFirstName} {application.applicantSurname}
                               </h4>
-                              <p className="text-sm text-gray-600">{application.job?.title}</p>
+                              <p className="text-sm text-gray-600">{application.jobTitle}</p>
                               <p className="text-xs text-gray-500">
                                 {application.submittedOn
                                   ? new Date(application.submittedOn).toLocaleDateString()

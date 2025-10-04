@@ -520,6 +520,7 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
   return await db
     .select()
     .from(jobs)
+    // .leftJoin(departments,eq(jobs.departmentId,departments.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(jobs.createdAt));
 }
@@ -589,7 +590,9 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
       applicantNationalId: applicants.nationalId,
       ward: wards.name,
       constituency: constituencies.name,
-      jobGroupName: JG.name
+      jobGroupName: JG.name,
+      dateOfBirth: applicants.dateOfBirth,
+      gender: applicants.gender
     })
     .from(applications)
     .leftJoin(jobs, eq(applications.jobId, jobs.id))

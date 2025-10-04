@@ -35,33 +35,39 @@ import BoardInterviews from "@/pages/board/Interviews";
 import BoardScoring from "@/pages/board/Scoring";
 import BoardReports from "@/pages/board/Reports";
 import { useEffect } from "react";
+import { AuthProvider, useAuthContext } from "@/context/AuthContext";
+import AuthDrawer from "@/components/layout/AuthDrawer";
 
 function Router() {
   useEffect(() => {
     document.title = "County Website";
-    
+
     // Set favicon dynamically from uploads
     const setFavicon = () => {
       // Remove any existing favicon links
-      const existingLinks = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
-      existingLinks.forEach(link => link.remove());
-      
+      const existingLinks = document.querySelectorAll(
+        'link[rel="icon"], link[rel="shortcut icon"]'
+      );
+      existingLinks.forEach((link) => link.remove());
+
       // Create new favicon link
-      const link = document.createElement('link');
-      link.rel = 'icon';
-      link.type = 'image/x-icon';
-      link.href = '/uploads/favicon.ico';
-      
+      const link = document.createElement("link");
+      link.rel = "icon";
+      link.type = "image/x-icon";
+      link.href = "/uploads/favicon.ico";
+
       // Add fallback if favicon doesn't exist
       link.onerror = () => {
-        link.href = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🏛️</text></svg>';
+        link.href =
+          'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🏛️</text></svg>';
       };
-      
+
       document.head.appendChild(link);
     };
-    
+
     setFavicon();
   }, []);
+
   return (
     <Switch>
       {/* Public routes */}
@@ -73,30 +79,107 @@ function Router() {
       <Route path="/jobs" component={Jobs} />
 
       {/* Applicant routes */}
-      <ProtectedRoute path="/dashboard" component={ApplicantDashboard} allowedRoles={["applicant"]} />
-      <ProtectedRoute path="/profile" component={ApplicantProfile} allowedRoles={["applicant"]} />
-      <ProtectedRoute path="/applications" component={ApplicantApplications} allowedRoles={["applicant"]} />
-      <ProtectedRoute path="/documents" component={ApplicantDocuments} allowedRoles={["applicant"]} />
+      <ProtectedRoute
+        path="/dashboard"
+        component={ApplicantDashboard}
+        allowedRoles={["applicant"]}
+      />
+      <ProtectedRoute
+        path="/profile"
+        component={ApplicantProfile}
+        allowedRoles={["applicant"]}
+      />
+      <ProtectedRoute
+        path="/applications"
+        component={ApplicantApplications}
+        allowedRoles={["applicant"]}
+      />
+      <ProtectedRoute
+        path="/documents"
+        component={ApplicantDocuments}
+        allowedRoles={["applicant"]}
+      />
 
       {/* Admin routes */}
-      <ProtectedRoute path="/admin" component={AdminDashboard} allowedRoles={["admin"]} />
-      <ProtectedRoute path="/admin/jobs" component={AdminJobManagement} allowedRoles={["admin"]} />
-      <ProtectedRoute path="/admin/applications" component={AdminApplications} allowedRoles={["admin"]} />
-      <ProtectedRoute path="/admin/reports" component={AdminReports} allowedRoles={["admin"]} />
-      <ProtectedRoute path="/admin/notifications" component={AdminNotifications} allowedRoles={["admin"]} />
-      <ProtectedRoute path="/admin/sms" component={AdminSMSCommunications} allowedRoles={["admin"]} />
-      <ProtectedRoute path="/admin/settings" component={AdminSettings} allowedRoles={["admin"]} />
+      <ProtectedRoute
+        path="/admin"
+        component={AdminDashboard}
+        allowedRoles={["admin"]}
+      />
+      <ProtectedRoute
+        path="/admin/jobs"
+        component={AdminJobManagement}
+        allowedRoles={["admin"]}
+      />
+      <ProtectedRoute
+        path="/admin/applications"
+        component={AdminApplications}
+        allowedRoles={["admin"]}
+      />
+      <ProtectedRoute
+        path="/admin/reports"
+        component={AdminReports}
+        allowedRoles={["admin"]}
+      />
+      <ProtectedRoute
+        path="/admin/notifications"
+        component={AdminNotifications}
+        allowedRoles={["admin"]}
+      />
+      <ProtectedRoute
+        path="/admin/sms"
+        component={AdminSMSCommunications}
+        allowedRoles={["admin"]}
+      />
+      <ProtectedRoute
+        path="/admin/settings"
+        component={AdminSettings}
+        allowedRoles={["admin"]}
+      />
 
       {/* Board routes */}
-      <ProtectedRoute path="/board" component={BoardDashboard} allowedRoles={["board"]} />
-      <ProtectedRoute path="/board/shortlisting" component={BoardShortlisting} allowedRoles={["board"]} />
-      <ProtectedRoute path="/board/interviews" component={BoardInterviews} allowedRoles={["board"]} />
-      <ProtectedRoute path="/board/scoring" component={BoardScoring} allowedRoles={["board"]} />
-      <ProtectedRoute path="/board/reports" component={BoardReports} allowedRoles={["board"]} />
+      <ProtectedRoute
+        path="/board"
+        component={BoardDashboard}
+        allowedRoles={["board"]}
+      />
+      <ProtectedRoute
+        path="/board/shortlisting"
+        component={BoardShortlisting}
+        allowedRoles={["board"]}
+      />
+      <ProtectedRoute
+        path="/board/interviews"
+        component={BoardInterviews}
+        allowedRoles={["board"]}
+      />
+      <ProtectedRoute
+        path="/board/scoring"
+        component={BoardScoring}
+        allowedRoles={["board"]}
+      />
+      <ProtectedRoute
+        path="/board/reports"
+        component={BoardReports}
+        allowedRoles={["board"]}
+      />
 
       {/* Fallback */}
       <Route component={NotFound} />
     </Switch>
+  );
+}
+
+function AuthDrawerWrapper() {
+  const { open, closeAuth, mode, openAuth, handleClick } = useAuthContext();
+  return (
+    <AuthDrawer
+      open={open}
+      onOpenChange={(val) => (val ? null : closeAuth())}
+      mode={mode ?? "login"}
+      onModeChange={(m) => openAuth(m)}
+      handleClick={() => handleClick()}
+    />
   );
 }
 
@@ -105,10 +188,15 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Router />
+        <AuthProvider>
+          {/* ✅ Auth context now wraps everything */}
+          <Router />
+          <AuthDrawerWrapper />
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
 }
 
 export default App;
+

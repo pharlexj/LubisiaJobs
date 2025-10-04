@@ -1,26 +1,35 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+const API_BASE = import.meta.env.VITE_API_URL || "";
+
+/**
+ * Throw detailed error if response is not ok
+ */
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    let errorMessage = `${res.status}: ${res.statusText}`;
+    let extra: Record<string, any> = {};
+
+    try {
+      // ✅ clone so we don’t consume body permanently
+      const body = await res.clone().json();
+      errorMessage = body.error || body.message || errorMessage;
+      extra = body;
+    } catch {
+      // non-JSON response → ignore
+    }
+
+    throw Object.assign(new Error(errorMessage), {
+      status: res.status,
+      statusText: res.statusText,
+      ...extra,
+    });
   }
 }
 
-export async function apiRequests(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
-  await throwIfResNotOk(res);
-  return res.json();
-}
+/**
+ * Unified API request function
+ */
 export async function apiRequest<T = any>(
   method: string,
   url: string,
@@ -36,44 +45,37 @@ export async function apiRequest<T = any>(
     body = JSON.stringify(data);
   }
 
-  const res = await fetch(url, {
+  const res = await fetch(`${API_BASE}${url}`, {
     method,
     headers,
     body,
-    credentials: "include",
+    credentials: "include", // ✅ critical for cookies/session
   });
-  if (!res.ok) {
-    let errorMessage = "Request failed";
-    try {
-      const body = await res.json();
-      errorMessage = body.error || body.message || res.statusText;
-    } catch {
-      // fallback if response isn't JSON
-      errorMessage = res.statusText;
-    }
-    throw new Error(errorMessage);
-  }
 
   await throwIfResNotOk(res);
-  return res.json();
+  return res.json(); // ✅ safe because we only call once now
 }
 
+/**
+ * React Query fetch wrapper
+ */
 type UnauthorizedBehavior = "returnNull" | "throw";
+
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
+  ({ on401 }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const res = await fetch(`${API_BASE}${queryKey.join("/")}`, {
       credentials: "include",
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    if (on401 === "returnNull" && res.status === 401) {
+      return null as any;
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    return res.json();
   };
 
 export const queryClient = new QueryClient({
