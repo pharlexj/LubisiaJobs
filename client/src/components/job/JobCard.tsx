@@ -27,7 +27,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { toast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
-import { formatDeadline,formatJobText } from "@/lib/date-utils";
+import { formatDeadline, formatJobText } from "@/lib/date-utils";
+import { useInheritance } from '@/hooks/useInheritance';
 
 interface JobCardProps {
   job: any;
@@ -50,6 +51,7 @@ export default function JobCard({
   const certificateLevels = config?.certificateLevels || [];
 
   const [showDetails, setShowDetails] = useState(false);
+  const specialized = showDetails? job.requiredSpecializationIds: job.requiredSpecializationIds.slice(0, 2);
 
   const applyMutation = useMutation({
   mutationFn: () => applyToJob(job.id),
@@ -86,6 +88,88 @@ export default function JobCard({
   },
 });
 
+ // --- Intelligent Eligibility Check with Reason ---
+  function getEligibility() {
+    if (!isAuthenticated) {
+      return { eligible: false, reason: 'Please log in to check eligibility.' };
+    }
+    if (!applicantProfile?.education || applicantProfile.education.length === 0) {
+      return { eligible: false, reason: 'No education records found in your profile.' };
+    }
+    const requiredStudyArea = studyAreas.find((sa: any) => sa.id === job.requiredStudyAreaId);
+    const requiredCertLevel = certificateLevels.find((c: any) => c.id === job.certificateLevel);
+    if (!requiredStudyArea && !requiredCertLevel && !job.requiredSpecializationIds?.length) {
+      return { eligible: true, reason: 'No specific education requirements for this job.' };
+    }
+    // Scan all education records for a match
+    for (const edu of applicantProfile.education) {
+      if (requiredStudyArea && edu.studyAreaId !== requiredStudyArea.id) {
+        continue;
+      }
+      if (job.requiredSpecializationIds?.length > 0 && !job.requiredSpecializationIds.includes(edu.specializationId)) {
+        continue;
+      }
+      if (requiredCertLevel) {
+        // Use inheritance logic if progression allowed
+        if (job.progressionAllowed) {
+          // Map certificateLevelId to QualificationLevel string
+          const certMap: Record<number, import('@/lib/inheritanceUtils').QualificationLevel> = { 1: 'Certificate', 2: 'Ordinary Diploma', 3: 'Bachelor\'s Degree', 4: 'Master\'s Degree' };
+          const currentLevel: import('@/lib/inheritanceUtils').QualificationLevel = certMap[Number(edu.certificateLevelId)] || 'Certificate';
+          const targetLevel: import('@/lib/inheritanceUtils').QualificationLevel = certMap[Number(requiredCertLevel.id)] || 'Certificate';
+          // Comprehensive progression rules based on certificateLevel order
+          const certificateLevel = [
+            "Master's Degree",
+            "Bachelor's Degree",
+            "Diploma Higher",
+            "Advanced Diploma",
+            "Ordinary Diploma",
+            "Certificate",
+            "O-Level",
+            "A-Level",
+            "KCSE",
+            "KCPE",
+            "Craft Certificate",
+            "PhD",
+            "Certification"
+          ];
+          const rules: import('@/lib/inheritanceUtils').InheritanceRule[] = [];
+          for (let i = certificateLevel.length - 1; i > 0; i--) {
+            rules.push({
+              from: certificateLevel[i] as import('@/lib/inheritanceUtils').QualificationLevel,
+              to: certificateLevel[i - 1] as import('@/lib/inheritanceUtils').QualificationLevel,
+              minYears: 2 // You can customize minYears per transition
+            });
+          }
+          const result = useInheritance(
+            currentLevel,
+            targetLevel,
+            edu.doca ? new Date(edu.doca) : new Date(),
+            rules
+          );
+          if (!result.allowed) {
+            return { eligible: false, reason: result.reason || 'Progression not allowed.' };
+          } else {
+            if (edu.certificateLevelId !== requiredCertLevel.id) {
+              continue;
+            }
+          }
+        }
+        // If all checks pass
+        return { eligible: true, reason: 'You meet all education requirements.' };
+      }
+      // If no education record matches
+    let reason = 'You do not meet the required qualifications.';
+    if (requiredStudyArea && applicantProfile.education.every((edu: any) => edu.studyAreaId !== requiredStudyArea.id)) {
+      reason = `Required study area: ${requiredStudyArea.name}`;
+    } else if (job.requiredSpecializationIds?.length > 0 && applicantProfile.education.every((edu: any) => !job.requiredSpecializationIds.includes(edu.specializationId))) {
+      reason = 'Required specialization not found in your education records.';
+    } else if (requiredCertLevel && applicantProfile.education.every((edu: any) => edu.certificateLevelId !== (requiredCertLevel as any).id)) {
+      reason = `Required certificate level: ${(requiredCertLevel as any).name}`;
+    }
+    return { eligible: false, reason };
+  }
+  }    
+  const eligibility = getEligibility();
 
   // ----------------- Eligibility Check -----------------
   const isEligible = () => {
@@ -140,33 +224,18 @@ export default function JobCard({
 
     return (
       <div className="space-y-2">
-        {/* Study Area */}
-        {studyArea && (
-          <p className="text-sm text-gray-700">
-            <span className="font-medium">Study Area:</span> {studyArea.name}
-          </p>
-        )}
-
         {/* Specializations */}
         {job.requiredSpecializationIds && job.requiredSpecializationIds.length > 0 && (
           <div>
-            <p className="font-medium text-sm text-gray-700">Specializations:</p>
+            <p className="font-medium text-sm text-gray-700">{`${certLevel?.name} either ` } in :</p>
             <ul className="list-disc list-inside text-sm text-gray-600">
-              {job.requiredSpecializationIds.map((id: number) => {
+              {specialized.map((id: number) => {
                 const spec = specializations.find((s: any) => s.id === id);
-                return spec ? <li key={id}>{spec.name}</li> : null;
+                return spec ? <li key={id}>{spec.name}; </li> : null;
               })}
             </ul>
           </div>
         )}
-
-        {/* Certificate Level */}
-        {certLevel && (
-          <p className="text-sm text-gray-700">
-            <span className="font-medium">Certificate Level:</span> {certLevel.name}
-          </p>
-        )}
-
         {/* Progression Allowed */}
         {job.progressionAllowed && (
           <p className="text-sm text-green-700">
@@ -178,13 +247,13 @@ export default function JobCard({
   };
   // ----------------- Handle Apply -----------------
   const handleApply = () => {
-    if (!isAuthenticated) {
+     if (!eligibility?.eligible) {
       toast({
-        title: "Authentication Required",
-        description: "Please log in to apply for this position.",
-        variant: "destructive",
+        title: eligibility?.eligible ? "Eligible" : "Not Eligible",
+        description: eligibility?.reason,
+        variant: eligibility?.eligible ? "default" : "destructive",
       });
-      return;
+      if (!eligibility?.eligible) return;
     }
 
     if (!isEligible()) {
@@ -329,7 +398,7 @@ export default function JobCard({
 
                       {getRequiredQualifications()}
 
-                      {isAuthenticated && !isEligible() && (
+                      {isAuthenticated && !eligibility?.eligible && (
                         <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded text-sm text-yellow-800">
                           <AlertCircle className="w-4 h-4 inline mr-1" />
                           Your current qualifications may not meet these
@@ -396,7 +465,7 @@ export default function JobCard({
                 </div>
 
                 <div className="pt-4 border-t flex-shrink-0">
-                  {!isEligible() && isAuthenticated ? (
+                  {!eligibility?.eligible && isAuthenticated ? (
                     <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                       <p className="text-sm text-yellow-800">
                         <AlertCircle className="w-4 h-4 inline mr-1" />
@@ -412,7 +481,7 @@ export default function JobCard({
                       applyMutation.isPending ||
                       !job.isActive ||
                       isExpired ||
-                      (isAuthenticated && !isEligible())
+                      !eligibility?.eligible
                     }
                     data-testid="button-apply-modal"
                   >
@@ -422,7 +491,7 @@ export default function JobCard({
                       ? "Position Closed"
                       : isExpired
                       ? "Application Deadline Passed"
-                      : isAuthenticated && !isEligible()
+                      : isAuthenticated && !eligibility?.eligible
                       ? "Not Eligible"
                       : "Apply Now"}
                   </Button>
@@ -430,45 +499,53 @@ export default function JobCard({
               </div>
             </DialogContent>
           </Dialog>
-
-          <Button
-            onClick={handleApply}
-            disabled={
-              applyMutation.isPending ||
-              !job.isActive ||
-              isExpired ||
-              (isAuthenticated && !isEligible())
-            }
-            className="ml-2"
-            data-testid={`button-apply-${job.id}`}
-          >
-            {applyMutation.isPending ? (
-              <>
-                <Clock className="w-4 h-4 mr-2 animate-spin" />
-                Applying...
-              </>
-            ) : !job.isActive ? (
-              <>
-                <AlertCircle className="w-4 h-4 mr-2" />
-                Closed
-              </>
-            ) : isExpired ? (
-              <>
-                <AlertCircle className="w-4 h-4 mr-2" />
-                Expired
-              </>
-            ) : isAuthenticated && !isEligible() ? (
-              <>
-                <X className="w-4 h-4 mr-2" />
-                Not Eligible
-              </>
-            ) : (
-              <>
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Apply Now
-              </>
-            )}
-          </Button>
+           {/* Eligibility summary block */}
+          <div className="flex flex-col items-end space-y-2">
+            <div className={`text-sm ${eligibility?.eligible ? 'text-green-700' : 'text-red-600'} font-medium mb-1`}>
+              {eligibility?.eligible ? 'You qualify for this job.' : 'You do not qualify.'}
+            </div>
+            <div className="text-xs text-gray-500 mb-2 max-w-xs text-right">
+              {eligibility?.reason}
+            </div>
+            <Button
+              onClick={handleApply}
+              disabled={
+                applyMutation.isPending ||
+                !job.isActive ||
+                isExpired ||
+                !eligibility?.eligible
+              }
+              className="ml-2"
+              data-testid={`button-apply-${job.id}`}
+            >
+              {applyMutation.isPending ? (
+                <>
+                  <Clock className="w-4 h-4 mr-2 animate-spin" />
+                  Applying...
+                </>
+              ) : !job.isActive ? (
+                <>
+                  <AlertCircle className="w-4 h-4 mr-2" />
+                  Closed
+                </>
+              ) : isExpired ? (
+                <>
+                  <AlertCircle className="w-4 h-4 mr-2" />
+                  Expired
+                </>
+              ) : !eligibility?.eligible ? (
+                <>
+                  <X className="w-4 h-4 mr-2" />
+                  Not Eligible
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Apply Now
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

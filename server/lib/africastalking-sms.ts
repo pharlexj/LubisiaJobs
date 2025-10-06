@@ -1,3 +1,4 @@
+import { storage } from "../storage";
 /**
  * Server-side Africa's Talking SMS Utility
  * ----------------------------------------
@@ -192,6 +193,7 @@ export const sendOtp = async (input: SendOtpInput): Promise<string> => {
   try {
     // Send SMS
     await sendSms({ to: normalizedPhone, message });
+    await storage.createOtp(normalizedPhone, code);
     return code; // In production, don't return the code
   } catch (error) {
     // Remove OTP if SMS failed

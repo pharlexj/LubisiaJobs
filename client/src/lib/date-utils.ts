@@ -46,6 +46,9 @@ export const formatDeadline = (deadline: string | null | undefined) => {
     color: "text-gray-600",
   };
 };
+/**
+ * Formats plain text with bulleting back to if was being bulleted
+*/
 export const formatJobText = (text: string | null | undefined) => {
     if (!text) return "";
 

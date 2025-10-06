@@ -460,7 +460,7 @@ const isFieldLocked = (field: keyof typeof profile.employee | string) => {
         </div>
         <div>
           <Label>KRA Pin</Label>
-          <Input {...form.register("kraPin")} disabled={!form.watch("isPwd")} />
+          <Input {...form.register("kraPin")} disabled={!!profile.kraPin} />
         </div>
         <div className="flex items-center space-x-2 mt-6">
           <Checkbox

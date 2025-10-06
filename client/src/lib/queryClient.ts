@@ -34,7 +34,7 @@ export async function apiRequest<T = any>(
   method: string,
   url: string,
   data?: unknown
-): Promise<Response> {
+): Promise<T> {
   let headers: HeadersInit = {};
   let body: BodyInit | undefined;
 

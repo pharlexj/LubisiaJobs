@@ -47,6 +47,7 @@ type Jobs = {
   experienceLevel: string;
   salaryRange: string;
   postedDate: string;
+  isActive: boolean;
 }
 type Applications = {
   id: number;

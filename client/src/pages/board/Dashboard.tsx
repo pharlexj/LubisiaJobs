@@ -7,29 +7,34 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Clock, 
-  CheckCircle, 
-  Calendar, 
-  UserCheck, 
-  Users, 
-  TrendingUp,
-  FileText,
-  Award
-} from 'lucide-react';
+import { Clock, CheckCircle, Calendar, UserCheck, Users, TrendingUp, FileText, Award} from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
+import React from 'react';
 
 export default function BoardDashboard() {
   const { user } = useAuth();
 
-  const { data: applications = [] } = useQuery({
+  // Real API queries using react-query (no axios)
+  const { data: applications = [], isLoading: loadingApps } = useQuery<any[]>({
     queryKey: ['/api/board/applications'],
+    queryFn: () => apiRequest<any[]>('GET', '/api/board/applications'),
+    enabled: !!user && (user.role === 'board' || user.role === 'admin'),
+  });
+
+  const { data: boardMembers = [], isLoading: loadingMembers } = useQuery({
+    queryKey: ['/api/public/board-members'],
+    queryFn: () => apiRequest('GET', '/api/public/board-members'),
+  });
+const { data: scoringStats, isLoading: loadingScoring } = useQuery({
+    queryKey: ['/api/board/scoring-statistics'],
+    queryFn: () => apiRequest('GET', '/api/board/scoring-statistics'),
     enabled: !!user && user.role === 'board',
-  });
-
-  const { data: jobs = [] } = useQuery({
-    queryKey: ['/api/public/jobs'],
-  });
-
+});
+  const { data: interviewStats, isLoading: loadingInterview } = useQuery({
+    queryKey: ['/api/board/interview-statistics'],
+    queryFn: () => apiRequest('GET', '/api/board/interview-statistics'),
+    enabled: !!user && user.role === 'board',
+  }); 
   // Calculate statistics
   const pendingReview = (applications as any).filter((app:any) => app.status === 'submitted').length;
   const shortlisted = (applications as any).filter((app: any) => app.status === 'shortlisted').length;
@@ -296,17 +301,17 @@ export default function BoardDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">Application Review Progress</h4>
-                    <Progress value={75} className="mb-2" />
-                    <p className="text-sm text-gray-600">75% of applications reviewed</p>
+                     <Progress value={(scoringStats as any)?.reviewProgress || 75} className="mb-2" />
+                    <p className="text-sm text-gray-600">{(scoringStats as any)?.reviewProgress || 75}% of applications reviewed</p>
                   </div>
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">Average Interview Score</h4>
-                    <div className="text-2xl font-bold text-primary mb-1">82/100</div>
+                   <div className="text-2xl font-bold text-primary mb-1">{(scoringStats as any)?.avgGeneralScore || 'N/A'}/100</div>
                     <p className="text-sm text-gray-600">Based on completed interviews</p>
                   </div>
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">Time to Complete Process</h4>
-                    <div className="text-2xl font-bold text-secondary mb-1">18 days</div>
+                    <div className="text-2xl font-bold text-secondary mb-1">{(interviewStats as any)?.avgProcessingTime || 'N/A'} days</div>
                     <p className="text-sm text-gray-600">Average processing time</p>
                   </div>
                 </div>

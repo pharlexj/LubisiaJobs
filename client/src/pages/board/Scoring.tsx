@@ -188,7 +188,7 @@ export default function BoardScoring() {
 
   const filteredApplications = (applications as any[]).filter((app: any) => {
     if (selectedJobFilter === 'all') return true;
-    return app.jobId?.toString() === selectedJobFilter;
+    return app.jobIdRef?.toString() === selectedJobFilter;
   });
 
   if (isLoading) {
@@ -252,10 +252,10 @@ export default function BoardScoring() {
                     <div className="flex items-start justify-between">
                       <div>
                         <CardTitle className="text-lg">
-                          {application.applicant?.firstName} {application.applicant?.surname}
+                          {application.applicantFirstName} {application.applicantSurname}
                         </CardTitle>
                         <p className="text-sm text-gray-600" data-testid={`text-job-${application.id}`}>
-                          {application.job?.title}
+                          {application.jobTitle}
                         </p>
                       </div>
                       <Badge variant="outline" className="bg-green-50 text-green-700">
@@ -276,20 +276,20 @@ export default function BoardScoring() {
                             </Badge>
                           </div>
                           <div className="grid grid-cols-2 gap-2 text-sm">
-                            <div>Academic: {(panelScoresData as any).averageScores.avgAcademicScore?.toFixed(1) || '0.0'}</div>
-                            <div>Experience: {(panelScoresData as any).averageScores.avgExperienceScore?.toFixed(1) || '0.0'}</div>
-                            <div>Skills: {(panelScoresData as any).averageScores.avgSkillsScore?.toFixed(1) || '0.0'}</div>
-                            <div>Leadership: {(panelScoresData as any).averageScores.avgLeadershipScore?.toFixed(1) || '0.0'}</div>
+                            <div>Academic: {Number((panelScoresData as any).averageScores.avgAcademicScore).toFixed(2) || '0.0'}</div>
+                            <div>Experience: {Number((panelScoresData as any).averageScores.avgExperienceScore).toFixed(2) || '0.0'}</div>
+                            <div>Skills: {Number((panelScoresData as any).averageScores.avgSkillsScore).toFixed(2) || '0.0'}</div>
+                            <div>Leadership: {Number((panelScoresData as any).averageScores.avgLeadershipScore).toFixed(2) || '0.0'}</div>
                           </div>
                           <div className="mt-2 pt-2 border-t border-blue-200">
                             <div className="font-semibold">
                               Total Average: {(
-                                ((panelScoresData as any).averageScores.avgAcademicScore || 0) +
-                                ((panelScoresData as any).averageScores.avgExperienceScore || 0) +
-                                ((panelScoresData as any).averageScores.avgSkillsScore || 0) +
-                                ((panelScoresData as any).averageScores.avgLeadershipScore || 0) +
-                                ((panelScoresData as any).averageScores.avgGeneralScore || 0)
-                              ).toFixed(1)}
+                                Number((panelScoresData as any).averageScores.avgAcademicScore || 0) +
+                                Number((panelScoresData as any).averageScores.avgExperienceScore || 0) +
+                                Number((panelScoresData as any).averageScores.avgLeadershipScore || 0) +
+                                Number((panelScoresData as any).averageScores.avgSkillsScore || 0) +
+                                Number((panelScoresData as any).averageScores.avgGeneralScore || 0)
+                              ).toFixed(2)}
                             </div>
                           </div>
                         </div>
@@ -529,19 +529,19 @@ export default function BoardScoring() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label className="text-sm font-semibold text-gray-600">Full Name</Label>
-                        <p>{selectedApplication.applicant?.firstName} {selectedApplication.applicant?.surname}</p>
+                        <p>{selectedApplication.applicantsFullName}</p>
                       </div>
                       <div>
                         <Label className="text-sm font-semibold text-gray-600">Email</Label>
-                        <p>{selectedApplication.applicant?.email}</p>
+                        <p>{selectedApplication?.userEmail}</p>
                       </div>
                       <div>
                         <Label className="text-sm font-semibold text-gray-600">Phone Number</Label>
-                        <p>{selectedApplication.applicant?.phoneNumber}</p>
+                        <p>{selectedApplication?.phoneNumber}</p>
                       </div>
                       <div>
                         <Label className="text-sm font-semibold text-gray-600">Date of Birth</Label>
-                        <p>{selectedApplication.applicant?.dateOfBirth || 'Not provided'}</p>
+                        <p>{selectedApplication?.dateOfBirth || 'Not provided'}</p>
                       </div>
                     </div>
                   </CardContent>

@@ -41,7 +41,7 @@ export const applicationStatusEnum = pgEnum("application_status", [
 // Counties
 export const counties = pgTable("counties", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(),
+  name: varchar("name", { length: 100 }).unique().notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -87,7 +87,10 @@ export const specializations = pgTable("specializations", {
   name: varchar("name", { length: 100 }).notNull(),
   studyAreaId:integer('study_area_id').notNull().references(() => studyArea.id),
   createdAt: timestamp("created_at").defaultNow(),
-});
+},
+  (table) => ({
+    uniqueNameStudyArea: uniqueIndex("unique_specialization_name_studyarea").on(table.name, table.studyAreaId),
+  }));;
 
 // Ethnicity
 export const ethnicity = pgTable("ethnicity", {
@@ -170,7 +173,7 @@ export const users = pgTable("users", {
 // Jobs
 export const jobs = pgTable("jobs", {
   id: serial("id").primaryKey(),
-  advertNumb: varchar("code"),
+  advertNumb: varchar("code").unique(),
   title: varchar("title", { length: 250 }).notNull(),
   description: text("description"),
   departmentId: integer("department_id").notNull().references(() => departments.id),
@@ -187,7 +190,7 @@ export const jobs = pgTable("jobs", {
     .default(sql`'[]'::jsonb`), // multi-select
   certificateLevel: integer("cert_level_id").references(() => certificateLevel.id),
   requiredStudyAreaId: integer("required_study_area_id").references(() => studyArea.id),
-
+ progressionAllowed:boolean("is_progression_allowed").default(false),
   isReleased: integer("is_released"),
   advertType: varchar("advert_type"),
   status: varchar("status"),
@@ -231,23 +234,6 @@ export const education = pgTable("education_records", {
   studyAreaId: integer("study_area_id")
     .notNull()
     .references(() => studyArea.id),                 // ✅ normalized instead of varchar
-  institution: varchar("institution", { length: 255 }).notNull(),
-  grade: varchar("grade", { length: 50 }),
-  yearFrom: integer("year_from").notNull(),
-  yearCompleted: integer("year_completed").notNull(),
-  certificatePath: varchar("certificate_path", { length: 500 }),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Education records
-export const educationz = pgTable("education_records", {
-  id: serial("id").primaryKey(),
-  applicantId: integer("applicant_id").notNull().references(() => applicants.id),
-  courseId: integer("course_id").references(() => coursesOffered.id),
-  courseName: varchar("course_name", { length: 255 }),
-  certificateLevelId: integer("certificate_level_id").notNull().references(() => awards.id),
-  specializationId: integer("specialization_id").notNull().references(() => specializations.id),
-  studyArea: varchar("study_area", { length: 255 }).notNull(),
   institution: varchar("institution", { length: 255 }).notNull(),
   grade: varchar("grade", { length: 50 }),
   yearFrom: integer("year_from").notNull(),

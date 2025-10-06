@@ -23,8 +23,9 @@ export default function Jobs() {
   const jobGroups = config?.jobGroups || [];
   const jobs = config?.jobs || [];  
   const counties = config?.counties || [];
+  const activeJobs = jobs.filter(jobs => jobs.isActive);
   
-  const filteredJobs = jobs.filter(job => { 
+  const filteredJobs = activeJobs.filter(job => { 
     const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          job.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDepartment = selectedDepartment === 'all' || job.departmentId?.toString() === selectedDepartment;
@@ -76,7 +77,7 @@ export default function Jobs() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-3xl font-bold text-primary mb-2">{jobs.length}</div>
+              <div className="text-3xl font-bold text-primary mb-2">{activeJobs.length}</div>
               <div className="text-gray-600">Active Jobs</div>
             </CardContent>
           </Card>
@@ -225,7 +226,7 @@ export default function Jobs() {
           <>
             <div className="flex justify-between items-center mb-6">
               <p className="text-gray-600">
-                Showing {filteredJobs.length} of {jobs.length} jobs
+                Showing {filteredJobs.length} of {activeJobs.length} jobs
               </p>
               <Select defaultValue="newest">
                 <SelectTrigger className="w-48">
