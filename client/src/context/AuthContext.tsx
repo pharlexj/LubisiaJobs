@@ -1,7 +1,7 @@
 // src/context/AuthContext.tsx
 import { createContext, useContext, useState, ReactNode } from "react";
 
-type AuthMode = "login" | "signup" | "otp" | null;
+type AuthMode = "login" | "signup" | "otp" | "mobile" | null;
 
 interface AuthContextType {
   open: boolean;

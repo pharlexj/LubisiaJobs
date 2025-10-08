@@ -63,8 +63,8 @@ const otpSchema = z.object({
 interface AuthDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mode: 'login' | 'signup' | 'otp';
-  onModeChange: (mode: 'login' | 'signup' | 'otp') => void;
+  mode: 'login' | 'signup' | 'otp' | 'mobile';
+  onModeChange: (mode: 'login' | 'signup' | 'otp' | 'mobile') => void;
   handleClick: (mode: 'login') => void;
 }
 
@@ -82,7 +82,7 @@ export default function AuthDrawer({ open, onOpenChange, mode, onModeChange, han
 // --- inside AuthDrawer.tsx ---
 
   // 1) make handleAuthError set pendingPhoneNumber too
-  function handleAuthError(err: any, openAuth: (mode: "login" | "signup" | "otp", phone?: string) => void) {
+  function handleAuthError(err: any, openAuth: (mode: "login" | "signup" | "mobile" | "otp", phone?: string) => void) {
   // Normalize the structure
   const payload = err?.body || err;
   const topStatus = err?.status || payload?.status;
@@ -167,34 +167,73 @@ export default function AuthDrawer({ open, onOpenChange, mode, onModeChange, han
 const loginMutation = useMutation({
   mutationFn: async (data: LoginInput) =>
     apiRequest("POST", "/api/auth/login", data),
-  
+
   onSuccess: async () => {
-  try {
-    const data = await apiRequest("GET", "/api/auth/me");
-    queryClient.setQueryData(["auth", "me"], data.user || data);
-
-    toast({ title: "Login Successful", description: `Welcome, ${data.user?.firstName || "user"}!` });
-    closeAuth();
-    if (data.redirectUrl) setLocation(data.redirectUrl);
-  } catch (err: any) {
-    // Try to parse JSON body if possible
-    let parsed = err;
     try {
-      if (err?.json) parsed = err.json;
-      else if (typeof err === "string") parsed = JSON.parse(err);
-      else if (err?.response?.data) parsed = err.response.data;
-    } catch (e) {
-      parsed = err;
-    }
-    handleAuthError(parsed, openAuth);
-  }
-},
+      // Small delay ensures cookies and session are synced before fetching
+      await new Promise((r) => setTimeout(r, 400));
 
+      // Get the full session payload (includes verifiedPhone)
+      const session = await apiRequest("GET", "/api/auth/me");
+      const user = session?.user;
+      const verifiedPhone = session?.verifiedPhone;
+
+      // Cache user session globally
+      queryClient.setQueryData(["auth", "me"], session);
+
+      // ✅ Determine if user’s phone is verified
+      const phoneVerified = verifiedPhone?.verified === true;
+
+      if (!phoneVerified) {
+        toast({
+          title: "Phone Verification Required",
+          description:
+            "Please verify your phone number using the 6-digit code sent to your phone.",
+        });
+
+        // Open the OTP drawer prefilled with user’s number
+        setPhoneNumber(
+          verifiedPhone?.phoneNumber || user?.phoneNumber || ""
+        );
+        setShowOtpStep(true);
+        onModeChange("otp"); // show OTP step within drawer
+        return;
+      }
+
+      // ✅ If verified, close auth and redirect properly
+      toast({
+        title: "Login Successful",
+        description: `Welcome, ${user?.firstName || "User"}!`,
+      });
+
+      closeAuth();
+
+      // Redirect (default /dashboard)
+      const redirectUrl = session.redirectUrl || "/dashboard";
+      window.location.href = redirectUrl;
+    } catch (err: any) {
+      console.error("Login flow error:", err);
+
+      let parsed = err;
+      try {
+        if (err?.json) parsed = err.json;
+        else if (typeof err === "string") parsed = JSON.parse(err);
+        else if (err?.response?.data) parsed = err.response.data;
+      } catch {
+        parsed = err;
+      }
+
+      handleAuthError(parsed, openAuth);
+    }
+  },
 
   onError: (err: any) => {
+    console.error("Login failed:", err);
     handleAuthError(err, openAuth);
   },
 });
+
+
  // --- Signup Mutation ---
 const signupMutation = useMutation({
   mutationFn: async (formData: FormData) => {
@@ -250,8 +289,6 @@ const signupMutation = useMutation({
       });
     },
   });
-
-    console.error("Login phone number:");
   const handleSendOtp = () => {
   // Prefer phoneNumber, but fall back to form fields
   const phone =
@@ -816,7 +853,7 @@ const strength = getPasswordStrength(passwordValue);
                       type="button"
                       variant="link"
                       className="ml-4"
-                      onClick={() => setShowOtpStep(false)}
+                      onClick={() => onModeChange("mobile")}
                     >
                       Change Phone Number
                     </Button>
@@ -894,6 +931,8 @@ const strength = getPasswordStrength(passwordValue);
               </div>
             </form>
           </div>
+        ) : mode === "mobile" ? (
+          <div>No mode selected</div>        
         ) : null}
       </div>
     </SheetContent>

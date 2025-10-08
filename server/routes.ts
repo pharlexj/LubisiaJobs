@@ -229,7 +229,7 @@ switch (req.user?.role) {
     break;
 }
 
-  res.json({ user: req.user, redirectUrl, applicantProfile });
+  res.json({ user: req.user, redirectUrl, applicantProfile, verifiedPhone });
 });
 // Employee verification routes
   app.post('/api/employee/verify', async (req:any, res) => {

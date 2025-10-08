@@ -79,7 +79,7 @@ import {
   type Ethnicity,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, like, sql, lt, PromiseOf, or, ne, isNull, isNotNull } from "drizzle-orm";
+import { eq, desc, and, like, sql, lt, PromiseOf, or, ne } from "drizzle-orm";
 import { Fullscreen } from "lucide-react";
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
