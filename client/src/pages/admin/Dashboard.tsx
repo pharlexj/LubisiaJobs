@@ -227,7 +227,7 @@ export default function AdminDashboard() {
                               {job.isActive ? 'Active' : 'Closed'}
                             </Badge>
                             <p className="text-sm text-gray-600 mt-1">
-                              {(applications as any).filter((app:any) => app.jobId === job.id).length} applications
+                              {(applications as any).filter((app:any) => app.job.id === job.id).length} applications
                             </p>
                           </div>
                         </div>
@@ -256,13 +256,13 @@ export default function AdminDashboard() {
                         <div key={application.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
                           <div className="flex items-center space-x-3">
                             <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                              {application.applicantFirstName?.[0] || 'A'}
+                              {application.firstName?.[0] || 'A'}
                             </div>
                             <div>
                               <h4 className="font-medium text-gray-900">
-                                {application.applicantFirstName} {application.applicantSurname}
+                                {application.fullName}
                               </h4>
-                              <p className="text-sm text-gray-600">{application.jobTitle}</p>
+                              <p className="text-sm text-gray-600">{application.job.title}</p>
                               <p className="text-xs text-gray-500">
                                 {application.submittedOn
                                   ? new Date(application.submittedOn).toLocaleDateString()

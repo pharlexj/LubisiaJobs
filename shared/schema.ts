@@ -204,7 +204,7 @@ export const jobs = pgTable("jobs", {
 //Certificate Level
 export const certificateLevel = pgTable("certificate_level", {
   id: serial('id').primaryKey(),
-  name: varchar("name"),
+  name: varchar("name").notNull().unique(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 // Applications
@@ -225,15 +225,14 @@ export const education = pgTable("education_records", {
   id: serial("id").primaryKey(),
   applicantId: integer("applicant_id").notNull().references(() => applicants.id),
   courseName: varchar("course_name", { length: 255 }),
-  certificateLevelId: integer("certificate_level_id")
-    .notNull()
-    .references(() => certificateLevel.id),          // ✅ fix ref
+  certificateLevelId: integer("certificate_level_id").notNull()
+    .references(() => certificateLevel.id),          
   specializationId: integer("specialization_id")
     .notNull()
     .references(() => specializations.id),
   studyAreaId: integer("study_area_id")
     .notNull()
-    .references(() => studyArea.id),                 // ✅ normalized instead of varchar
+    .references(() => studyArea.id),
   institution: varchar("institution", { length: 255 }).notNull(),
   grade: varchar("grade", { length: 50 }),
   yearFrom: integer("year_from").notNull(),
@@ -252,12 +251,12 @@ export const studyArea = pgTable("study_area", {
 });
 export const JG = pgTable("jg", {
   id: serial("id").primaryKey(),
-  name: varchar('name',{ length: 250 }).notNull().unique(),
+  name: varchar('name',{ length: 10 }).notNull().unique(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 export const religion = pgTable("religions", {
   id: serial("id").primaryKey(),
-  name: varchar('name',{ length: 250 }).notNull().unique(),
+  name: varchar('name',{ length: 25 }).notNull().unique(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 //Payroll Employees

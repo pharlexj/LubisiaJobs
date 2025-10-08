@@ -91,7 +91,7 @@ export default function BoardReports() {
 
   // Filter applications based on selected filters
   const filteredApplications = applicationsData.filter((app: any) => {
-    if (selectedJobFilter !== 'all' && app.jobIdRef?.toString() !== selectedJobFilter) return false;
+    if (selectedJobFilter !== 'all' && app.job.id?.toString() !== selectedJobFilter) return false;
     if (selectedStatusFilter !== 'all' && app.status !== selectedStatusFilter) return false;
     return true;
   });
@@ -104,8 +104,7 @@ export default function BoardReports() {
 
   // Job-wise application distribution
   const jobDistribution = applicationsData.reduce((acc: any, app: any) => {
-    const job = jobsData.find((j: any) => j.id === app.jobId);
-    const jobTitle = job?.title || 'Unknown';
+    const jobTitle = app?.job?.title || 'Unknown';
     acc[jobTitle] = (acc[jobTitle] || 0) + 1;
     return acc;
   }, {});
@@ -163,7 +162,7 @@ export default function BoardReports() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Jobs</SelectItem>
-                {jobsData.map((job: any) => (
+                {jobsData?.map((job: any) => (
                   <SelectItem key={job.id} value={job.id.toString()}>
                     {job.title}
                   </SelectItem>
@@ -504,8 +503,8 @@ export default function BoardReports() {
                         <div className="flex-1">
                           <div className="flex items-center gap-3">
                             <div>
-                              <p className="font-medium">{application.applicantsFullName}</p>
-                              <p className="text-sm text-gray-600">{application?.jobTitle || 'Unknown Position'}</p>
+                              <p className="font-medium">{application.fullName}</p>
+                              <p className="text-sm text-gray-600">{application?.job.title || 'Unknown Position'}</p>
                             </div>
                           </div>
                         </div>

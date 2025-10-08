@@ -11,6 +11,7 @@ interface AuthContextType {
   closeAuth: () => void;
   changeMode: (mode: AuthMode) => void;
   handleClick: () => void;
+  setPhoneNumber: (phone: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,15 +24,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const openAuth = (newMode: AuthMode, phone?: string) => {
     setMode(newMode);
     setOpen(true);
-    setPhoneNumber(phone || ""); // always reset if not provided
+    if (phone !== undefined) setPhoneNumber(phone);
   };
-  const handleClick = () => {
-    openAuth("login");
-  };
+  const handleClick = () => openAuth("login");
   const closeAuth = () => {
     setOpen(false);
     setMode(null);
-    setPhoneNumber("");
   };
 
   const changeMode = (newMode: AuthMode) => {
@@ -40,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ open, mode, phoneNumber, openAuth, closeAuth, changeMode, handleClick }}
+      value={{ open, mode, phoneNumber, openAuth, closeAuth, changeMode, handleClick, setPhoneNumber }}
     >
       {children}
     </AuthContext.Provider>

@@ -72,44 +72,46 @@ interface AuthDrawerProps {
 export default function AuthDrawer({ open, onOpenChange, mode, onModeChange, handleClick }: AuthDrawerProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showOtpStep, setShowOtpStep] = useState(false);
-  const [pendingPhoneNumber, setPendingPhoneNumber] = useState('');
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [,setLocation] = useLocation();
-  const { phoneNumber,openAuth, closeAuth } = useAuthContext();
+  const { phoneNumber, setPhoneNumber, openAuth, closeAuth } = useAuthContext();
 
+// --- inside AuthDrawer.tsx ---
 
-function handleAuthError(
-  err: any,
-  openAuth: (mode: "login" | "signup" | "otp", phone?: string) => void
-) {
-  if (
-    err?.status === "phone_verification_required" ||
-    err?.phoneNumber ||
-    err?.code === "PHONE_VERIFICATION_REQUIRED"
-  ) {
-    openAuth("otp", err.phoneNumber);
+  // 1) make handleAuthError set pendingPhoneNumber too
+  function handleAuthError(err: any, openAuth: (mode: "login" | "signup" | "otp", phone?: string) => void) {
+  // Normalize the structure
+  const payload = err?.body || err;
+  const topStatus = err?.status || payload?.status;
+  const phone = payload?.phoneNumber || err?.phoneNumber;
 
+  if (topStatus === "phone_verification_required") {
+    // ✅ Set phone so resend + OTP form use correct number
+    if (phone) setPhoneNumber(phone);
     toast({
-      title: "Phone Verification Required",
+      title: "Verification Required",
       description:
-        err.instructions ||
-        err.message ||
-        "Please verify your phone number with the OTP we sent.",
+        payload?.instructions ||
+        payload?.message ||
+        "Please verify your phone number to continue.",
     });
+    
+    openAuth("otp", phone);
     return;
   }
-  if (err?.status === 401 || err?.statusText === "Unauthorized") {
+
+  if (topStatus === 401 || err?.statusText === "Unauthorized") {
     openAuth("login");
     return;
   }
 
-  // ✅ Fallback
+  // Default fallback
   toast({
-    title: "Login Error",
-    description: err?.message || "Something went wrong while logging in.",
+    title: "Authentication Error",
+    description: payload?.message || err?.message || "Unexpected authentication error.",
     variant: "destructive",
   });
 }
@@ -123,8 +125,7 @@ function handleAuthError(
     },
   });
   // Types
-type SignupData = z.infer<typeof signupSchema>;
-
+  type SignupData = z.infer<typeof signupSchema>;
   type OtpData = z.infer<typeof otpSchema>;
  // --- Helper: refresh session ---
   const refreshSession = async () => {
@@ -166,24 +167,29 @@ type SignupData = z.infer<typeof signupSchema>;
 const loginMutation = useMutation({
   mutationFn: async (data: LoginInput) =>
     apiRequest("POST", "/api/auth/login", data),
-
+  
   onSuccess: async () => {
+  try {
+    const data = await apiRequest("GET", "/api/auth/me");
+    queryClient.setQueryData(["auth", "me"], data.user || data);
+
+    toast({ title: "Login Successful", description: `Welcome, ${data.user?.firstName || "user"}!` });
+    closeAuth();
+    if (data.redirectUrl) setLocation(data.redirectUrl);
+  } catch (err: any) {
+    // Try to parse JSON body if possible
+    let parsed = err;
     try {
-      const data = await apiRequest("GET", "/api/auth/me");
-      queryClient.setQueryData(["auth", "me"], data.user || data);
-
-      toast({
-        title: "Login Successful",
-        description: `Welcome, ${data.user?.firstName || "user"}!`,
-      });
-      closeAuth();
-
-      if (data.redirectUrl) setLocation(data.redirectUrl);
-    } catch (err: any) {
-      // If backend returns "phone_verification_required"
-      handleAuthError(err, openAuth);
+      if (err?.json) parsed = err.json;
+      else if (typeof err === "string") parsed = JSON.parse(err);
+      else if (err?.response?.data) parsed = err.response.data;
+    } catch (e) {
+      parsed = err;
     }
-  },
+    handleAuthError(parsed, openAuth);
+  }
+},
+
 
   onError: (err: any) => {
     handleAuthError(err, openAuth);
@@ -244,12 +250,50 @@ const signupMutation = useMutation({
       });
     },
   });
-  
+
+    console.error("Login phone number:");
   const handleSendOtp = () => {
-    if (pendingPhoneNumber) {
-      sendOtpMutation.mutate(pendingPhoneNumber);
+  // Prefer phoneNumber, but fall back to form fields
+  const phone =
+    phoneNumber ||
+    signupForm.watch("phoneNumber") ||
+    otpForm.watch("phoneNumber");
+
+  if (!phone) {
+    toast({
+      title: "Missing Phone Number",
+      description: "We could not determine your phone number. Please go back and enter it again.",
+      variant: "destructive",
+    });
+    console.warn("handleSendOtp(): Missing phone number, cannot send OTP");
+    return;
+  }
+
+  sendOtpMutation.mutate(phone, {
+    onSuccess: () => {
+      toast({
+        title: "OTP Sent",
+        description: `A verification code was sent to ${phone}.`,
+      });
+    },
+    onError: (err: any) => {
+      console.error(" Resend OTP failed:", err);
+      toast({
+        title: "Failed to Send OTP",
+        description: err.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+  
+  const handleSendOtpz = () => {
+    if (phoneNumber) {
+      sendOtpMutation.mutate(phoneNumber);
     }
   };
+  
   // --- Verify OTP Mutation ---
   const verifyOtpMutation = useMutation({
     mutationFn: async (data: OtpData) => {
@@ -302,18 +346,17 @@ const signupMutation = useMutation({
   };
 
 const handleOtpVerification = (data: z.infer<typeof otpSchema>) => {
-  if (!pendingPhoneNumber) {
+  if (!phoneNumber) {
     toast({
       title: "Missing Phone",
       description: "We couldn't find your phone number. Please sign up again.",
       variant: "destructive",
     });
     return;
-  }
-
+  }  
   verifyOtpMutation.mutate({
     otp: data.otp,
-    phoneNumber: pendingPhoneNumber,
+    phoneNumber: phoneNumber,
   });
 };
 
@@ -387,7 +430,9 @@ const strength = getPasswordStrength(passwordValue);
         <SheetTitle>
           {mode === "login"
             ? "Login to Your Account"
-            : "Create Your Account"}
+            : mode === "signup"
+            ? "Create Your Account"
+            : "Verify Your Phone"}
         </SheetTitle>
       </SheetHeader>
 
@@ -399,7 +444,6 @@ const strength = getPasswordStrength(passwordValue);
               Welcome back! Please sign in to continue.
             </p>
 
-            {/* LOGIN FORM */}
             <form
               onSubmit={loginForm.handleSubmit(handleLogin)}
               className="space-y-4 max-h-none"
@@ -514,7 +558,7 @@ const strength = getPasswordStrength(passwordValue);
               </p>
             </div>
           </div>
-        ) : (
+        ) : mode === "signup" ? (
           // ===================== SIGNUP =====================
           <div>
             <p className="text-gray-600 mb-6">
@@ -525,7 +569,10 @@ const strength = getPasswordStrength(passwordValue);
 
             {!showOtpStep ? (
               // ---------- SIGNUP FORM ----------
-              <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4 max-h-none"              >
+              <form
+                onSubmit={signupForm.handleSubmit(handleSignup)}
+                className="space-y-4 max-h-none"
+              >
                 {/* Name */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -702,7 +749,9 @@ const strength = getPasswordStrength(passwordValue);
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={signupMutation.isPending || sendOtpMutation.isPending}
+                  disabled={
+                    signupMutation.isPending || sendOtpMutation.isPending
+                  }
                 >
                   {signupMutation.isPending || sendOtpMutation.isPending
                     ? "Sending OTP..."
@@ -718,7 +767,7 @@ const strength = getPasswordStrength(passwordValue);
                     Verify Your Phone
                   </h3>
                   <p className="text-gray-600 text-sm">
-                    We've sent a 6-digit code to {pendingPhoneNumber}
+                    We've sent a 6-digit code to {phoneNumber}
                   </p>
                 </div>
 
@@ -740,10 +789,12 @@ const strength = getPasswordStrength(passwordValue);
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={verifyOtpMutation.isPending || !otpForm.watch("otp")}
-                    onClick={() => {
-                      otpForm.setValue("phoneNumber", pendingPhoneNumber);
-                    }}
+                    disabled={
+                      verifyOtpMutation.isPending || !otpForm.watch("otp")
+                    }
+                    onClick={() =>
+                      otpForm.setValue("phoneNumber", phoneNumber)
+                    }
                   >
                     {verifyOtpMutation.isPending
                       ? "Verifying..."
@@ -757,7 +808,9 @@ const strength = getPasswordStrength(passwordValue);
                       onClick={handleSendOtp}
                       disabled={sendOtpMutation.isPending}
                     >
-                      {sendOtpMutation.isPending ? "Sending..." : "Resend Code"}
+                      {sendOtpMutation.isPending
+                        ? "Sending..."
+                        : "Resend Code"}
                     </Button>
                     <Button
                       type="button"
@@ -786,7 +839,62 @@ const strength = getPasswordStrength(passwordValue);
               </p>
             </div>
           </div>
-        )}
+        ) : mode === "otp" ? (
+          // ===================== STANDALONE OTP MODE =====================
+          <div className="space-y-4">
+            <div className="text-center">
+              <Shield className="w-12 h-12 mx-auto text-primary mb-4" />
+              <h3 className="text-lg font-semibold mb-2">
+                Verify Your Phone
+              </h3>
+              <p className="text-gray-600 text-sm">
+                We've sent a 6-digit code to {phoneNumber}
+              </p>
+            </div>
+
+            <form
+              onSubmit={otpForm.handleSubmit(handleOtpVerification)}
+              className="space-y-4"
+            >
+              <div>
+                <Label htmlFor="otp">Verification Code</Label>
+                <Input
+                  id="otp"
+                  type="text"
+                  placeholder="Enter 6-digit code"
+                  maxLength={6}
+                  {...otpForm.register("otp")}
+                />
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={
+                  verifyOtpMutation.isPending || !otpForm.watch("otp")
+                }
+                onClick={() =>
+                  otpForm.setValue("phoneNumber", phoneNumber)
+                }
+              >
+                {verifyOtpMutation.isPending
+                  ? "Verifying..."
+                  : "Verify & Continue"}
+              </Button>
+
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={handleSendOtp}
+                  disabled={sendOtpMutation.isPending}
+                >
+                  {sendOtpMutation.isPending ? "Sending..." : "Resend Code"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        ) : null}
       </div>
     </SheetContent>
   </Sheet>

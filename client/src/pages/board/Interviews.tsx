@@ -134,17 +134,15 @@ const { data: applications = [], isLoading } = useQuery({
     });
   };
 
-  // Group applications by job and interview date for upcoming interviews
-  console.log(applications);
-  
+  // Group applications by job and interview date for upcoming interviews  
   const upcomingInterviews = (applications as any[])
     .filter(app => app.interviewDate)
     .reduce((acc: any, app: any) => {
-      const key = `${app.jobIdRef || 'unknown'}_${app.interviewDate}`;
+      const key = `${app.job.id || 'unknown'}_${app.interviewDate}`;
       if (!acc[key]) {
         acc[key] = {
           id: key,
-          jobTitle: app.jobTitle || 'Unknown Position',
+          jobTitle: app.job.title || 'Unknown Position',
           date: app.interviewDate,
           time: app.interviewTime || '',
           candidates: 0,
@@ -470,12 +468,12 @@ const { data: applications = [], isLoading } = useQuery({
                             <td className="py-3 px-4">
                               <div className="flex items-center space-x-3">
                                 <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                                  {application?.applicantsFullName?.[0] || 'A'}
-                                  {application?.applicantSurname?.[0] || ''}
+                                  {application?.firstName?.[0] || 'A'}
+                                  {application?.surname?.[0] || ''}
                                 </div>
                                 <div>
                                   <div className="font-medium text-gray-900">
-                                    {application?.applicantsFullName} {application.applicantSurname}
+                                    {application?.fullName}
                                   </div>
                                   <div className="text-sm text-gray-600">
                                     {application?.phoneNumber}
@@ -484,8 +482,8 @@ const { data: applications = [], isLoading } = useQuery({
                               </div>
                             </td>
                             <td className="py-3 px-4">
-                              <div className="font-medium text-gray-900">{application.jobTitle}</div>
-                              <div className="text-sm text-gray-600">Job Group {application?.jobGroupName}</div>
+                              <div className="font-medium text-gray-900">{application.job.title}</div>
+                              <div className="text-sm text-gray-600">Job Group {application?.job.jobGroupName}</div>
                             </td>
                             <td className="py-3 px-4">
                               {application.interviewDate ? (
@@ -610,51 +608,51 @@ const { data: applications = [], isLoading } = useQuery({
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="text-gray-600">Full Name:</span>
-                        <p className="font-medium" data-testid="text-candidate-fullname">{selectedCandidate.applicant?.applicantsFullName || selectedCandidate.applicantsFullName || 'N/A'}</p>
+                        <p className="font-medium" data-testid="text-candidate-fullname">{selectedCandidate?.fullName || selectedCandidate.fullName || 'N/A'}</p>
                       </div>
                       <div>
                         <span className="text-gray-600">ID Number:</span>
-                        <p className="font-medium" data-testid="text-candidate-idnumber">{selectedCandidate.applicant?.applicantNationalId || selectedCandidate.applicantNationalId || 'N/A'}</p>
+                        <p className="font-medium" data-testid="text-candidate-idnumber">{selectedCandidate?.nationalId || selectedCandidate.applicantNationalId || 'N/A'}</p>
                       </div>
                       <div>
                         <span className="text-gray-600">Phone:</span>
-                        <p className="font-medium" data-testid="text-candidate-phone">{selectedCandidate.applicant?.phoneNumber || selectedCandidate.phoneNumber || 'N/A'}</p>
+                        <p className="font-medium" data-testid="text-candidate-phone">{selectedCandidate?.phoneNumber || selectedCandidate.phoneNumber || 'N/A'}</p>
                       </div>
                       <div>
                         <span className="text-gray-600">Email:</span>
-                        <p className="font-medium" data-testid="text-candidate-email">{selectedCandidate.applicant?.userEmail || selectedCandidate.userEmail || 'N/A'}</p>
+                        <p className="font-medium" data-testid="text-candidate-email">{selectedCandidate?.email || selectedCandidate.userEmail || 'N/A'}</p>
                       </div>
                       <div>
                         <span className="text-gray-600">Sub County:</span>
-                        <p className="font-medium" data-testid="text-candidate-constituency">{selectedCandidate.applicant?.constituency || selectedCandidate.constituency || 'N/A'}</p>
+                        <p className="font-medium" data-testid="text-candidate-constituency">{selectedCandidate?.constituency || 'N/A'}</p>
                       </div>
                       <div>
                         <span className="text-gray-600">Ward:</span>
-                        <p className="font-medium" data-testid="text-candidate-ward">{selectedCandidate.applicant?.ward || selectedCandidate.ward || 'N/A'}</p>
+                        <p className="font-medium" data-testid="text-candidate-ward">{selectedCandidate?.ward || 'N/A'}</p>
                       </div>
                       <div>
                         <span className="text-gray-600">Gender:</span>
-                        <p className="font-medium" data-testid="text-candidate-gender">{selectedCandidate.applicant?.gender || selectedCandidate.gender || 'N/A'}</p>
+                        <p className="font-medium" data-testid="text-candidate-gender">{selectedCandidate?.gender || selectedCandidate.gender || 'N/A'}</p>
                       </div>
                       <div>
                         <span className="text-gray-600">Date of Birth:</span>
                         <p className="font-medium" data-testid="text-candidate-dob">
-                          {selectedCandidate.applicant?.dateOfBirth || selectedCandidate.dateOfBirth ? 
-                            new Date(selectedCandidate.applicant?.dateOfBirth || selectedCandidate.dateOfBirth).toLocaleDateString() : 'N/A'}
+                          {selectedCandidate?.dateOfBirth || selectedCandidate.dateOfBirth ? 
+                            new Date(selectedCandidate?.dateOfBirth || selectedCandidate.dateOfBirth).toLocaleDateString() : 'N/A'}
                         </p>
                       </div>
                     </div>
                   </div>
 
                   {/* Education History */}
-                  {candidateDetails?.educationRecords && candidateDetails.educationRecords.length > 0 && (
+                  {candidateDetails?.education && candidateDetails?.education.length > 0 && (
                     <div className="mb-6" data-testid="section-education-history">
                       <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
                         <GraduationCap className="h-4 w-4 mr-2" />
                         Education History
                       </h4>
                       <div className="space-y-3">
-                        {candidateDetails.educationRecords.map((edu: any, index: number) => (
+                        {candidateDetails?.education.map((edu: any, index: number) => (
                           <div key={index} className="border border-gray-200 rounded-lg p-3" data-testid={`education-record-${index}`}>
                             <div className="flex justify-between items-start mb-2">
                               <div>
@@ -666,8 +664,8 @@ const { data: applications = [], isLoading } = useQuery({
                                 <p className="font-medium text-blue-600" data-testid={`text-education-grade-${index}`}>{edu.grade}</p>
                               </div>
                             </div>
-                            {edu.fieldOfStudy && (
-                              <p className="text-sm text-gray-600" data-testid={`text-education-field-${index}`}>Field: {edu.fieldOfStudy}</p>
+                            {edu.courseName && (
+                              <p className="text-sm text-gray-600" data-testid={`text-education-field-${index}`}>Field: {edu.courseName}</p>
                             )}
                           </div>
                         ))}
@@ -715,7 +713,7 @@ const { data: applications = [], isLoading } = useQuery({
                           <div key={index} className="flex items-center justify-between p-2 border border-gray-200 rounded" data-testid={`document-${index}`}>
                             <div className="flex items-center">
                               <FileText className="h-4 w-4 mr-2 text-gray-400" />
-                              <span className="text-sm font-medium" data-testid={`text-document-type-${index}`}>{doc.documentType}</span>
+                              <span className="text-sm font-medium" data-testid={`text-document-type-${index}`}>{doc.type}</span>
                             </div>
                             <Button variant="ghost" size="sm" data-testid={`button-view-document-${index}`}>
                               <Download className="h-3 w-3 mr-1" />

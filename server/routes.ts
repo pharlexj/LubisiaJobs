@@ -8,7 +8,7 @@ import multer from "multer";
 import path from "path";
 import bcrypt from "bcrypt";
 import passport from "passport";
-import { sendOtp, verifyOtp } from "./lib/africastalking-sms";
+import { sendOtp, verifyOtp, normalizePhone } from "./lib/africastalking-sms";
 import { ApplicantService } from "./applicantService";
 import { z } from "zod";
 import { createInsertSchema } from 'drizzle-zod';
@@ -38,9 +38,8 @@ function generateOtp(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Simulate SMS sending (in production, integrate with SMS provider like Twilio)
+// Simulate SMS sending (in production, integrate with SMS provider like Africa'stalking Twilio)
 function sendSms(phoneNumber: string, message: string): Promise<boolean> {
-  console.log(`SMS to ${phoneNumber}: ${message}`);
   // In development, just log the OTP
   return Promise.resolve(true);
 }
@@ -183,7 +182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // --- Login ---
-  app.post("/api/auth/login", passport.authenticate("local"),(req, res) => {
+  app.post("/api/auth/login", passport.authenticate("local"), (req, res) => {    
       res.json({ user: req.user });
     }
   );
@@ -194,14 +193,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Logged out" });
     });
   });
-  app.get("/api/auth/me", async (req:any, res) => {
+  
+  app.get("/api/auth/me", async (req: any, res) => {
   if (!req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
+    const phone = normalizePhone(req.user.phoneNumber);  
   // Decide redirectUrl based on role or other logic
   // --- Get current session user ---
-    let redirectUrl = "/"; // default
+    let redirectUrl = "/";
     let applicantProfile = null;
+    let verifiedPhone = null;
 
 switch (req.user?.role) {
   case "admin":
@@ -210,12 +212,13 @@ switch (req.user?.role) {
   case "applicant":
     redirectUrl = "/dashboard";
     applicantProfile = await storage.getApplicant(req.user?.id); 
-    if (!applicantProfile?.phoneVerified) {
+    verifiedPhone = await storage.getVerifiedPhone(phone);
+    if (!verifiedPhone?.verified) {
         return res.status(403).json({
           status: "phone_verification_required",
           message: "Phone number not verified.",
           instructions: "Please enter the 6-digit code sent to your phone. If you did not receive it, you can resend the code.",
-          phoneNumber: applicantProfile.phoneNumber || req.user.phoneNumber || null,
+          phoneNumber: verifiedPhone.phoneNumber || req.user.phoneNumber || null,
           resendCodeEndpoint: "/api/auth/send-otp",
           enterCodeAt: "/auth/otp"
         });
@@ -284,6 +287,39 @@ switch (req.user?.role) {
   // OTP routes using AfricaTalking SMS service
   // Server-side OTP routes with proper validation and security
   app.post("/api/auth/send-otp", async (req: any, res) => {
+  try {
+    const { phoneNumber, purpose = 'authentication' } = req.body;
+
+    if (!phoneNumber || typeof phoneNumber !== 'string') {
+      return res.status(400).json({ success: false, message: 'Phone number is required' });
+    }
+
+    const validPurposes = ['authentication', 'password-reset', 'phone-verification'];
+    if (!validPurposes.includes(purpose)) {
+      return res.status(400).json({ success: false, message: 'Invalid purpose specified' });
+    }
+
+    const clientIP = req.ip || req.connection.remoteAddress;
+
+    // call your lib sendOtp — ensure it handles normalization internally
+    try {
+      await sendOtp({
+        to: phoneNumber,
+        template: `Your ${purpose} code is {{CODE}}. Valid for 10 minutes. Do not share this code with anyone.`
+      });
+    } catch (err) {
+      // log detailed for debugging
+      console.error('sendOtp() failed for', phoneNumber, err);
+      return res.status(500).json({ success: false, message: 'Failed to send verification code' });
+    }
+    res.json({ success: true, message: 'Verification code sent successfully' });
+  } catch (error: any) {
+    console.error('Send OTP error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to send verification code' });
+  }
+});
+
+  app.post("/api/auth/send-otp", async (req: any, res) => {
     try {
       const { phoneNumber, purpose = 'authentication' } = req.body;
       
@@ -310,11 +346,7 @@ switch (req.user?.role) {
       await sendOtp({ 
         to: phoneNumber,
         template: `Your ${purpose} code is {{CODE}}. Valid for 10 minutes. Do not share this code with anyone.`
-      });
-      
-      // Log OTP send attempt (without the actual code)
-      console.log(`OTP sent to ${phoneNumber} for ${purpose} from IP ${clientIP}`);
-      
+      });    
       res.json({ 
         success: true, 
         message: 'Verification code sent successfully' 
@@ -327,11 +359,9 @@ switch (req.user?.role) {
       });
     }
   });
-
+  // Verify OTP endpoint
   app.post("/api/auth/verify-otp", async (req: any, res) => {
-    try {
-      console.log('otp', req.body);
-      
+    try {      
       const { phoneNumber, otp } = req.body;
       
       // Validate input
@@ -348,27 +378,23 @@ switch (req.user?.role) {
           message: 'Verification code is required' 
         });
       }
+      const normalized = normalizePhone(phoneNumber);
 
       // Verify OTP
-      const isValid = verifyOtp({ 
-        to: phoneNumber, 
+      const isValid = await verifyOtp({ 
+        to: normalized, 
         otp: otp.trim() 
       });
-
+      
       if (!isValid) {
-        // Log failed verification attempt
         const clientIP = req.ip || req.connection.remoteAddress;
         console.log(`Failed OTP verification for ${phoneNumber} from IP ${clientIP}`);
-        
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Invalid or expired verification code' 
-        });
-      }
-
-      // Log successful verification
-      console.log(`Successful OTP verification for ${phoneNumber}`);
-      
+      return res.status(400).json({
+        success: false,
+        status: "invalid_otp",
+        message: "Invalid or expired OTP code.",
+      });
+    }    
       res.json({ 
         success: true, 
         message: 'Code verified successfully' 
@@ -1100,12 +1126,6 @@ switch (req.user?.role) {
           currentReferees: applicant.referees?.length || 0
         });
       }
-      
-      // ✅ Eligibility Check 3: Study area requirement (if job has one)
-      console.log(`job`, job);
-      console.log(`appliacant`, applicant.education);
-
-
       
       // ✅ Eligibility Check 3: Study area & specialization
       if (job.jobs?.requiredStudyAreaId) {
@@ -1911,9 +1931,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
   // Create specialization (admin)
   app.post('/api/admin/specializations', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.id);
-      console.log("Specialized", req.body);
-      
+      const user = await storage.getUser(req.user.id);      
       if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
       }
@@ -2387,9 +2405,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
 
       const jobId = req.query.jobId ? parseInt(req.query.jobId as string) : undefined;
       const status = req.query.status as string | undefined;
-      
-      console.log("Fetching applications with jobId:", jobId, "and status:", status);
-      
+          
       const applications = await storage.getApplications({ jobId, status });
       res.json(applications);
     } catch (error) {

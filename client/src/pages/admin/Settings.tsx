@@ -551,7 +551,6 @@ useEffect(() => {
   };
 
   const handleCreateSpecialization = (data: SpecializationFormData) => {
-    console.log("Submitting specialization", data);
     const studyAreaId = data.studyAreaId ? parseInt(data.studyAreaId, 10) : undefined;
     if (!studyAreaId || isNaN(studyAreaId)) {
       toast({
@@ -565,9 +564,7 @@ useEffect(() => {
       title: 'Saving...',
       description: 'Adding specialization, please wait.',
       duration: 1500,
-    });
-    console.log(data);
-    
+    });    
     createMutation.mutate({ 
       endpoint: '/api/admin/specializations', 
        data: { ...data, studyAreaId }

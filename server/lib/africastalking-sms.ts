@@ -169,51 +169,64 @@ const generateOtp = (len = 6): string => {
 };
 
 /** Send OTP via SMS */
-export const sendOtp = async (input: SendOtpInput): Promise<string> => {
+/** Send OTP via SMS (DB + Africa's Talking + memory cache for rate limit) */
+export const sendOtp = async (input: SendOtpInput): Promise<void> => {
   const { to, length = 6, template = "Your verification code is {{CODE}}. Valid for 10 minutes." } = input;
   const normalizedPhone = normalizePhone(to);
-  
-  // Check rate limiting (don't send OTP more than once per minute)
+
+  // Check rate limiting (no resend within 1 minute)
   const existing = otpStore.get(normalizedPhone);
-  if (existing && (Date.now() - existing.lastSentAt) < 60000) {
-    throw new Error('Please wait before requesting another code');
+  if (existing && Date.now() - existing.lastSentAt < 60_000) {
+    throw new Error("Please wait before requesting another code");
   }
 
   const code = generateOtp(length);
-  const message = template.replace('{{CODE}}', code);
-  const expiresAt = Date.now() + (10 * 60 * 1000); // 10 minutes
+  const message = template.replace("{{CODE}}", code);
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-  // Store OTP
+  // Store in memory for rate-limiting only
   otpStore.set(normalizedPhone, {
     code,
-    expiresAt,
-    lastSentAt: Date.now()
+    expiresAt: expiresAt.getTime(),
+    lastSentAt: Date.now(),
   });
 
   try {
-    // Send SMS
+    // 1️⃣ Send SMS via Africa's Talking
     await sendSms({ to: normalizedPhone, message });
+    // Persist OTP in DB for verification
     await storage.createOtp(normalizedPhone, code);
-    return code; // In production, don't return the code
+    console.log(`OTP sent to ${normalizedPhone} (code stored in DB)`);
   } catch (error) {
-    // Remove OTP if SMS failed
     otpStore.delete(normalizedPhone);
-    throw error;
+    console.error(` Failed to send OTP to ${normalizedPhone}:`, error);
+    throw new Error("Failed to send verification code");
   }
 };
 
+
 /** Verify OTP */
-export const verifyOtp = (input: VerifyOtpInput): boolean => {
+/** Verify OTP using persistent DB storage */
+export const verifyOtp = async (input: VerifyOtpInput): Promise<boolean> => {
   const { to, otp } = input;
   const normalizedPhone = normalizePhone(to);
-  
-  const stored = otpStore.get(normalizedPhone);
-  if (!stored) return false;
-  
-  const isValid = stored.code === otp && Date.now() <= stored.expiresAt;
-  
-  if (isValid) {
-    otpStore.delete(normalizedPhone); // Remove used OTP
-  }  
-  return isValid;
+
+  try {
+    // Delegate to your DB-layer verification logic
+    const success = await storage.verifyOtp(normalizedPhone, otp);
+
+    // Cleanup memory store (for rate limiting consistency)
+    otpStore.delete(normalizedPhone);
+
+    if (success) {
+      console.log(`OTP verified for ${normalizedPhone}`);
+      return true;
+    } else {
+      console.warn(`Invalid or expired OTP for ${normalizedPhone}`);
+      return false;
+    }
+  } catch (err) {
+    console.error(`Error verifying OTP for ${normalizedPhone}:`, err);
+    return false;
+  }
 };

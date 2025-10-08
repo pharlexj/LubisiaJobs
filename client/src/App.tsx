@@ -32,6 +32,7 @@ import AdminSMSCommunications from "@/pages/admin/SMSCommunications";
 import BoardDashboard from "@/pages/board/Dashboard";
 import BoardShortlisting from "@/pages/board/Shortlisting";
 import BoardInterviews from "@/pages/board/Interviews";
+import BoardScheduling from "@/pages/board/Scheduling";
 import BoardScoring from "@/pages/board/Scoring";
 import BoardReports from "@/pages/board/Reports";
 import { useEffect } from "react";
@@ -141,6 +142,11 @@ function Router() {
       <ProtectedRoute
         path="/board"
         component={BoardDashboard}
+        allowedRoles={["board"]}
+      />
+      <ProtectedRoute
+        path="/board/schedule"
+        component={BoardScheduling}
         allowedRoles={["board"]}
       />
       <ProtectedRoute

@@ -79,7 +79,7 @@ import {
   type Ethnicity,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, like, sql, lt, PromiseOf, or, ne } from "drizzle-orm";
+import { eq, desc, and, like, sql, lt, PromiseOf, or, ne, isNull, isNotNull } from "drizzle-orm";
 import { Fullscreen } from "lucide-react";
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -398,7 +398,6 @@ async getApplicantById(id: number): Promise<any | undefined> {
 
 async updateApplicant(applicantId: number, data: any, step:number) {
   // ✅ Update base applicant row
-  console.log('Profile data',data);
   
   await db
     .update(applicants)
@@ -549,8 +548,8 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
 
   // Application operations
   async getApplications(
-  filters?: { applicantId?: number; jobId?: number; status?: string }
-): Promise<Application[]> {
+  filters?: { applicantId?: number | null; jobId?: number | null; status?: string | null }
+): Promise<any[]> {
   const conditions = [];
 
   if (filters?.applicantId) {
@@ -563,11 +562,10 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
     conditions.push(eq(applications.status, filters.status as any));
   }
 
-  const applicationsResult = await db
+  // Step 1: Get the applications with basic joins
+  const rawApplications = await db
     .select({
       id: applications.id,
-      jobId: applications.jobId,
-      applicantId: applications.applicantId,
       status: applications.status,
       submittedOn: applications.submittedOn,
       remarks: applications.remarks,
@@ -575,28 +573,32 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
       interviewScore: applications.interviewScore,
       createdAt: applications.createdAt,
       updatedAt: applications.updatedAt,
-      phoneNumber:users.phoneNumber,
-      jobIdRef: jobs.id,
-      jobTitle: jobs.title,
-      jobDescription: jobs.description,
-      jobJgId: jobs.jg,
-      departmentId: departments.id,
-      departmentName: departments.name,
-      userEmail: users.email,
-      applicantFirstName: applicants.firstName,
-      applicantSurname: applicants.surname,
-      applicantsFullName: sql<string>`CONCAT(${applicants.firstName}, ' ', ${applicants.surname})`,
-      applicantNationalId: applicants.nationalId,
+      applicantId: applicants.id,
+      applicantUserId: applicants.userId,
+      firstName: applicants.firstName,
+      surname: applicants.surname,
+      nationalId: applicants.nationalId,
+      dateOfBirth: applicants.dateOfBirth,
+      gender: applicants.gender,
       ward: wards.name,
       constituency: constituencies.name,
+
+      email: users.email,
+      phoneNumber: users.phoneNumber,
+
+      jobId: jobs.id,
+      jobTitle: jobs.title,
+      jobDescription: jobs.description,
+      jgId: jobs.jg,
       jobGroupName: JG.name,
-      dateOfBirth: applicants.dateOfBirth,
-      gender: applicants.gender
+
+      departmentId: departments.id,
+      departmentName: departments.name,
     })
     .from(applications)
     .leftJoin(jobs, eq(applications.jobId, jobs.id))
     .leftJoin(departments, eq(jobs.departmentId, departments.id))
-    .leftJoin(applicants, eq(applicants.id, applications.applicantId))
+    .leftJoin(applicants, eq(applications.applicantId, applicants.id))
     .leftJoin(users, eq(users.id, applicants.userId))
     .leftJoin(JG, eq(JG.id, jobs.jg))
     .leftJoin(wards, eq(wards.id, applicants.wardId))
@@ -604,7 +606,82 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(applications.createdAt));
 
-    return applicationsResult;
+  // Step 2: Fetch full applicant details for each application
+  const applicationsWithFullApplicant = await Promise.all(
+    rawApplications.map(async (app) => {
+      const applicantId = app.applicantId;
+      const userId = app.applicantUserId;
+
+      // Get employee or payroll
+      const [employeeRecord] = await db.select()
+        .from(employees)
+        .where(eq((employees.applicantId), applicantId));
+
+      // Get all arrays related to the applicant
+      const [
+        educationRecordsArr,
+        shortCourseRecords,
+        qualificationRecords,
+        employmentRecords,
+        refereeRecords,
+        documentRecords,
+      ] = await Promise.all([
+        db.select().from(educationRecords).where(eq((educationRecords.applicantId), applicantId)),
+        db.select().from(shortCourse).where(eq((shortCourse.applicantId), applicantId)),
+        db.select().from(professionalQualifications).where(eq((professionalQualifications.applicantId), applicantId)),
+        db.select().from(employmentHistory).where(eq((employmentHistory.applicantId), applicantId)),
+        db.select().from(referees).where(eq((referees.applicantId), applicantId)),
+        db.select().from(documents).where(eq((documents.applicantId), applicantId)),
+      ]);
+
+      const fullApplicant = {
+        id: applicantId,
+        userId: userId,
+        firstName: app.firstName,
+        surname: app.surname,
+        fullName: `${app.firstName} ${app.surname}`,
+        nationalId: app.nationalId,
+        gender: app.gender,
+        dateOfBirth: app.dateOfBirth,
+        email: app.email,
+        phoneNumber: app.phoneNumber,
+        ward: app.ward,
+        constituency: app.constituency,
+        employee: employeeRecord || null,
+        education: educationRecordsArr,
+        shortCourses: shortCourseRecords,
+        professionalQualifications: qualificationRecords,
+        employmentHistory: employmentRecords,
+        referees: refereeRecords,
+        documents: documentRecords,
+      };
+
+      return {
+        // id: app.id,
+        status: app.status,
+        submittedOn: app.submittedOn,
+        remarks: app.remarks,
+        interviewDate: app.interviewDate,
+        interviewScore: app.interviewScore,
+        createdAt: app.createdAt,
+        updatedAt: app.updatedAt,
+        job: {
+          id: app.jobId,
+          title: app.jobTitle,
+          description: app.jobDescription,
+          jgId: app.jgId,
+          jobGroupName: app.jobGroupName,
+          department: {
+            id: app.departmentId,
+            name: app.departmentName,
+          },
+        },
+        ...fullApplicant,
+      };
+    })
+  );
+
+  return applicationsWithFullApplicant;
 }
   async createApplication(application: Omit<Application, 'id' | 'createdAt' | 'updatedAt'>): Promise<Application> {
     const [newApplication] = await db
@@ -1183,7 +1260,8 @@ async getFaq() {
     
     return newOtp;
   }
-
+// ✅ Get user record by phone (for rehydrating session)
+  
   async verifyEmail(email: string): Promise<boolean> {
     const [emailRet] = await db
       .select()
@@ -1334,7 +1412,11 @@ async getFaq() {
   async getUserByEmail(email: string):Promise<User> {
   const [user] = await db.select().from(users).where(eq(users.email, email));
   return user;
-}
+  }
+  async getVerifiedPhone(phoneNumber: string) {
+    const [phone] = await db.select().from(otpVerification).where(eq(otpVerification.phoneNumber, phoneNumber));
+    return phone;
+  }
   async verifyOtp(phoneNumber: string, otp: string): Promise<boolean> {
     const [otpRecord] = await db
       .select()

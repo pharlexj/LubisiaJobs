@@ -14,10 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { getApplications } from "@/lib/queryFns";
 import { isUnauthorizedError } from '@/lib/authUtils';
 import { usePublicConfig } from '@/hooks/usePublicConfig';
-import ApplicantDocument from "@/components/common/Documents"; 
 import { 
   Search, 
   Filter, 
@@ -32,15 +30,14 @@ import {
   Briefcase,
   Star
 } from 'lucide-react';
-import { log } from 'console';
 
-export default function BoardShortlisting() {
+export default function BoardScheduling() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [jobFilter, setJobFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('submitted');
+  const [statusFilter, setStatusFilter] = useState('shortlisted');
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [showRemarks, setShowRemarks] = useState(false);
   const [showShortlistDialog, setShowShortlistDialog] = useState(false);
@@ -128,7 +125,7 @@ export default function BoardShortlisting() {
       app.applicantSurname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase());
   
-    const matchesJob = jobFilter === 'all' || app.job.id?.toString() === jobFilter || app.jobId?.toString() === jobFilter;
+    const matchesJob = jobFilter === 'all' || app.job.id?.toString() === jobFilter;
      const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
      return matchesSearch && matchesJob && matchesStatus;
   });
@@ -146,8 +143,6 @@ export default function BoardShortlisting() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'submitted':
-        return 'bg-blue-100 text-blue-800';
       case 'shortlisted':
         return 'bg-green-100 text-green-800';
       case 'rejected':
@@ -186,9 +181,9 @@ export default function BoardShortlisting() {
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Shortlisting Panel</h1>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Scheduling Panel</h1>
                 <p className="text-gray-600">
-                  Review applications and select candidates for interviews.
+                  Schedule candidates for interviews.
                 </p>
               </div>
               
@@ -240,7 +235,6 @@ export default function BoardShortlisting() {
                         <SelectValue placeholder="Status" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="submitted">Submitted</SelectItem>
                         <SelectItem value="shortlisted">Shortlisted</SelectItem>
                         <SelectItem value="rejected">Rejected</SelectItem>
                       </SelectContent>
@@ -258,15 +252,15 @@ export default function BoardShortlisting() {
             {/* Applications Table */}
             <Card>
               <CardHeader>
-                <CardTitle>Applications for Review ({filteredApplications.length})</CardTitle>
+                <CardTitle>Shortlist for Review ({filteredApplications.length})</CardTitle>
               </CardHeader>
               <CardContent>
                 {filteredApplications.length === 0 ? (
                   <div className="text-center py-12">
                     <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Applications Found</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Shortlist Found</h3>
                     <p className="text-gray-600">
-                      No applications match your current filters.
+                      No Shortlist match your current filters.
                     </p>
                   </div>
                 ) : (
@@ -276,8 +270,6 @@ export default function BoardShortlisting() {
                         <tr className="border-b border-gray-200">
                           <th className="text-left py-3 px-4 font-medium text-gray-600">Applicant</th>
                           <th className="text-left py-3 px-4 font-medium text-gray-600">Qualification Match</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Documents</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Score</th>
                           <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
                           <th className="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
                         </tr>
@@ -315,26 +307,6 @@ export default function BoardShortlisting() {
                                 <div className="text-xs text-gray-500 mt-1">
                                   Education, Experience verified
                                 </div>
-                              </td>
-                              <td className="py-3 px-4">
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  className="bg-blue-50 text-blue-700 hover:bg-blue-100"
-                                >
-                                  <FileText className="w-3 h-3 mr-1" />
-                                  View PDF
-                                </Button>
-                              </td>
-                              <td className="py-3 px-4">
-                                <Input 
-                                  type="number" 
-                                  placeholder="0-100" 
-                                  max="100"
-                                  className="w-20 text-sm"
-                                  value={score}
-                                  onChange={(e) => setScore(e.target.value)}
-                                />
                               </td>
                               <td className="py-3 px-4">
                                 <Badge className={getStatusColor(application.status)}>

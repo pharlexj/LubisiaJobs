@@ -68,7 +68,7 @@ const specializations: Record<string, string[]> = {
     ],
   "Law": ["Law"],
   "Science": [],
-  "Mathematics, Actuarial Science & Economics": [],
+  "Mathematics, Actuarial Science & Economics": ["Economics"],
   "Textile Technology, Clothing and Fashion Design": [],
   "Physical Eduation": [],
   "Human Health Sciences": [

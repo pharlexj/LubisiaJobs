@@ -362,7 +362,7 @@ export default function AdminJobManagement() {
   });
 
   const getApplicationCount = (jobId: number) => {
-    return applications.filter(app => app.jobId === jobId).length;
+    return applications.filter(app => app.job.id === jobId).length;
   };
 
   if (isLoading) {

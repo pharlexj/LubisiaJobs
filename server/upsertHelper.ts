@@ -49,7 +49,7 @@ export async function upsertByPKAndFK<T extends Record<string, any>>({
     );
       if (idsToDelete.length > 0) {
         console.log(`🗑️ Deleting ${idsToDelete.length} IDs from ${tableLabel}`);
-      //   await trx.delete(table).where(inArray(primaryKey, idsToDelete));
+        await trx.delete(table).where(inArray(primaryKey, idsToDelete));
       if (diagnostics) console.log("🗑️ Deleted IDs:", idsToDelete);
     }
 
@@ -66,11 +66,11 @@ export async function upsertByPKAndFK<T extends Record<string, any>>({
       if (r.id && existingIds.has(r.id)) {
         await trx.update(table).set(payload).where(eq(primaryKey, r.id));
         updated++;
-        if (diagnostics) console.log(`✏️ Updated row id=${r.id}`, payload);
+        if (diagnostics) console.log(`Updated row id=${r.id}`, payload);
       } else {
         await trx.insert(table).values(payload);
         inserted++;
-        if (diagnostics) console.log(`➕ Inserted new row ${table}`, payload);
+        if (diagnostics) console.log(`Inserted new row ${table}`, payload);
       }
     }
 

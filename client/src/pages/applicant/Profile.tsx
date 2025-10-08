@@ -148,10 +148,7 @@ export default function Profile() {
 
   // ✅ Mutation for saving
   const updateProfileMutation = useMutation({
-    mutationFn: async (payload: any) => {
-
-      // return console.log(payload);
-      
+    mutationFn: async (payload: any) => {      
       const { method, applicantId, step, data } = payload;
       if (step ===8) return await apiRequest("POST","/api/applicant/documents",{data,applicantId})
       if (method === "POST") {

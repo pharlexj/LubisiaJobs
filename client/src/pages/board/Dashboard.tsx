@@ -206,12 +206,12 @@ const { data: scoringStats, isLoading: loadingScoring } = useQuery({
                         <div key={application.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
                           <div className="flex items-center space-x-3">
                             <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                              {application.applicant?.firstName?.[0] || 'A'}
-                              {application.applicant?.surname?.[0] || ''}
+                              {application?.firstName?.[0] || 'A'}
+                              {application?.surname?.[0] || ''}
                             </div>
                             <div>
                               <h4 className="font-medium text-gray-900">
-                                {application.applicant?.firstName} {application.applicant?.surname}
+                                {application?.firstName} {application?.surname}
                               </h4>
                               <p className="text-sm text-gray-600">{application.job?.title}</p>
                               <p className="text-xs text-gray-500">
@@ -246,7 +246,7 @@ const { data: scoringStats, isLoading: loadingScoring } = useQuery({
                   <div className="flex items-center justify-between">
                     <CardTitle>Upcoming Interviews</CardTitle>
                     <Button asChild variant="outline" size="sm" data-testid="button-schedule-new-interview">
-                      <Link href="/board/interviews">
+                      <Link href="/board/schedule">
                         Schedule New
                       </Link>
                     </Button>
@@ -270,7 +270,7 @@ const { data: scoringStats, isLoading: loadingScoring } = useQuery({
                             </Badge>
                           </div>
                           <p className="text-sm text-gray-600 mb-2">
-                            Candidate: {application.applicant?.firstName} {application.applicant?.surname}
+                            Candidate: {application?.firstName} {application?.surname}
                           </p>
                           <div className="flex space-x-2">
                             <Button asChild size="sm" variant="outline" data-testid={`button-view-profile-${application.id}`}>
@@ -279,7 +279,7 @@ const { data: scoringStats, isLoading: loadingScoring } = useQuery({
                               </Link>
                             </Button>
                             <Button asChild size="sm" variant="outline" data-testid={`button-reschedule-${application.id}`}>
-                              <Link href="/board/interviews">
+                              <Link href="/board/schedule">
                                 Reschedule
                               </Link>
                             </Button>

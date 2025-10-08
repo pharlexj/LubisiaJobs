@@ -188,7 +188,7 @@ export default function BoardScoring() {
 
   const filteredApplications = (applications as any[]).filter((app: any) => {
     if (selectedJobFilter === 'all') return true;
-    return app.jobIdRef?.toString() === selectedJobFilter;
+    return app.job.id?.toString() === selectedJobFilter;
   });
 
   if (isLoading) {
@@ -252,7 +252,7 @@ export default function BoardScoring() {
                     <div className="flex items-start justify-between">
                       <div>
                         <CardTitle className="text-lg">
-                          {application.applicantFirstName} {application.applicantSurname}
+                          {application.firstName} {application.surname}
                         </CardTitle>
                         <p className="text-sm text-gray-600" data-testid={`text-job-${application.id}`}>
                           {application.jobTitle}
@@ -364,7 +364,7 @@ export default function BoardScoring() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              Score Candidate: {selectedApplication?.applicant?.firstName} {selectedApplication?.applicant?.surname}
+              Score Candidate: {selectedApplication?.firstName} {selectedApplication?.surname}
             </DialogTitle>
           </DialogHeader>
 
@@ -510,7 +510,7 @@ export default function BoardScoring() {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              Candidate Details: {selectedApplication?.applicant?.firstName} {selectedApplication?.applicant?.surname}
+              Candidate Details: {selectedApplication?.firstName} {selectedApplication?.surname}
             </DialogTitle>
           </DialogHeader>
 
@@ -529,11 +529,11 @@ export default function BoardScoring() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label className="text-sm font-semibold text-gray-600">Full Name</Label>
-                        <p>{selectedApplication.applicantsFullName}</p>
+                        <p>{selectedApplication.fullName}</p>
                       </div>
                       <div>
                         <Label className="text-sm font-semibold text-gray-600">Email</Label>
-                        <p>{selectedApplication?.userEmail}</p>
+                        <p>{selectedApplication?.email}</p>
                       </div>
                       <div>
                         <Label className="text-sm font-semibold text-gray-600">Phone Number</Label>
@@ -557,11 +557,11 @@ export default function BoardScoring() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {selectedApplication.applicant?.educationRecords?.length > 0 ? (
+                    {selectedApplication?.education?.length > 0 ? (
                       <div className="space-y-4">
-                        {selectedApplication.applicant.educationRecords.map((edu: any, index: number) => (
+                        {selectedApplication?.education.map((edu: any, index: number) => (
                           <div key={index} className="border rounded-lg p-4">
-                            <h4 className="font-semibold">{edu.courseName}</h4>
+                            <h4 className="font-semibold">{ edu?.certificateLevelId} {edu.courseName}</h4>
                             <p className="text-gray-600">{edu.institution}</p>
                             <div className="flex justify-between items-center mt-2">
                               <span className="text-sm text-gray-500">{edu.yearFrom} - {edu.yearCompleted}</span>
@@ -586,9 +586,9 @@ export default function BoardScoring() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {selectedApplication.applicant?.employmentHistory?.length > 0 ? (
+                    {selectedApplication?.employmentHistory?.length > 0 ? (
                       <div className="space-y-4">
-                        {selectedApplication.applicant.employmentHistory.map((emp: any, index: number) => (
+                        {selectedApplication?.employmentHistory.map((emp: any, index: number) => (
                           <div key={index} className="border rounded-lg p-4">
                             <h4 className="font-semibold">{emp.position}</h4>
                             <p className="text-gray-600">{emp.employer}</p>
@@ -620,9 +620,9 @@ export default function BoardScoring() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {selectedApplication.applicant?.documents?.length > 0 ? (
+                    {selectedApplication?.documents?.length > 0 ? (
                       <div className="grid grid-cols-2 gap-4">
-                        {selectedApplication.applicant.documents.map((doc: any, index: number) => (
+                        {selectedApplication?.documents.map((doc: any, index: number) => (
                           <div key={index} className="border rounded-lg p-4">
                             <h4 className="font-semibold capitalize">{doc.type}</h4>
                             <p className="text-sm text-gray-600">{doc.fileName}</p>

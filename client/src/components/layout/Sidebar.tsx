@@ -132,6 +132,12 @@ export default function Sidebar({ userRole }: SidebarProps) {
       description: 'Review & shortlist' 
     },
     { 
+      href: '/board/schedule', 
+      icon: Calendar, 
+      label: 'Schedule', 
+      description: 'Schedule for Interviews' 
+    },
+    { 
       href: '/board/interviews', 
       icon: Calendar, 
       label: 'Interviews', 

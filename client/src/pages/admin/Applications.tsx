@@ -54,7 +54,7 @@ export default function AdminApplications() {
         title: 'Application Updated',
         description: 'Application status has been updated successfully.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/applications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/board/applications'] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -109,19 +109,17 @@ export default function AdminApplications() {
         return <Clock className="w-4 h-4" />;
     }
   };
-
   const filteredApplications = applications.filter((app: any) => {
     const matchesSearch = 
-      app.applicantFirstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.applicantSurname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesJob = jobFilter === 'all' || app.jobIdRef?.toString() === jobFilter;
+      app.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.surname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.job.title?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesJob = jobFilter === 'all' || app.job.id?.toString() === jobFilter;
     const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
     
     return matchesSearch && matchesJob && matchesStatus;
   });
  
-  console.log('App',filteredApplications);
   const statusCounts = applications.reduce((acc: any, app: any) => {
     acc[app.status] = (acc[app.status] || 0) + 1;
     return acc;
@@ -300,23 +298,23 @@ export default function AdminApplications() {
                             <td className="py-3 px-4">
                               <div className="flex items-center space-x-3">
                                 <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-medium">
-                                  {application.applicantFirstName?.[0] || 'A'}
-                                  {application.applicantSurname?.[0] || ''}
+                                  {application.firstName?.[0] || 'A'}
+                                  {application.surname?.[0] || ''}
                                 </div>
                                 <div>
                                   <div className="font-medium text-gray-900">
-                                    {application.applicantFirstName} {application.applicantSurname}
+                                    {application.fullName}
                                   </div>
                                   <div className="text-sm text-gray-600">
-                                    {application.applicantPhoneNumber}
+                                    {application.phoneNumber}
                                   </div>
                                 </div>
                               </div>
                             </td>
                             <td className="py-3 px-4">
-                              <div className="font-medium text-gray-900">{application.jobTitle}</div>
+                              <div className="font-medium text-gray-900">{application.job.title}</div>
                               <div className="text-sm text-gray-600">
-                                {application.departmentName}
+                                {application?.job?.department.name}
                               </div>
                             </td>
                             <td className="py-3 px-4 text-gray-600">
@@ -347,7 +345,7 @@ export default function AdminApplications() {
                                   <DialogContent className="max-w-4xl">
                                     <DialogHeader>
                                       <DialogTitle>
-                                        Application Details - {selectedApplication?.applicantFirstName} {selectedApplication?.applicantSurname}
+                                        Application Details - {selectedApplication?.firstName} {selectedApplication?.surname}
                                       </DialogTitle>
                                     </DialogHeader>
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -356,11 +354,11 @@ export default function AdminApplications() {
                                         <div className="space-y-2 text-sm">
                                           <div className="flex items-center gap-2">
                                             <User className="w-4 h-4 text-gray-400" />
-                                            <span>{selectedApplication?.applicantFirstName} {selectedApplication?.applicantSurname}</span>
+                                            <span>{selectedApplication?.firstName} {selectedApplication?.surname}</span>
                                           </div>
                                           <div className="flex items-center gap-2">
                                             <Phone className="w-4 h-4 text-gray-400" />
-                                            <span>{selectedApplication?.applicantPhoneNumber}</span>
+                                            <span>{selectedApplication?.phoneNumber}</span>
                                           </div>
                                           <div className="flex items-center gap-2">
                                             <Pin className="w-4 h-4 text-gray-400" />
@@ -368,7 +366,7 @@ export default function AdminApplications() {
                                           </div>
                                           <div className="flex items-center gap-2">
                                             <Mail className="w-4 h-4 text-gray-400" />
-                                            <span>{selectedApplication?.userEmail}</span>
+                                            <span>{selectedApplication?.email}</span>
                                           </div>
                                         </div>
                                       </div>
@@ -376,9 +374,9 @@ export default function AdminApplications() {
                                       <div>
                                         <h4 className="font-semibold mb-3">Job Information</h4>
                                         <div className="space-y-2 text-sm">
-                                          <p><strong>Position:</strong> {selectedApplication?.jobTitle}</p>
-                                          <p><strong>Department:</strong> {selectedApplication?.departmentName}</p>
-                                          <p><strong>Job Group:</strong> {selectedApplication?.jobGroup}</p>
+                                          <p><strong>Position:</strong> {selectedApplication?.job.title}</p>
+                                          <p><strong>Department:</strong> {selectedApplication?.job?.department.name}</p>
+                                          <p><strong>Job Group:</strong> {selectedApplication?.job.jobGroupName}</p>
                                           <p><strong>Applied Date:</strong> {selectedApplication?.submittedOn ? new Date(selectedApplication.submittedOn).toLocaleDateString() : 'Draft'}</p>
                                         </div>
                                       </div>
