@@ -79,7 +79,7 @@ export const designations = pgTable("designations", {
 // Awards (education levels)
 export const awards = pgTable("awards", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -137,7 +137,7 @@ export const applicants = pgTable("applicants", {
   phoneVerifiedAt: date("phone_verified_at"),
   altPhoneNumber: varchar("alt_phone_number", { length: 20 }),
   nationalId: varchar("national_id", { length: 50 }).unique(),
-  idPassportType: varchar("id_passport_type", { length: 20 }), // 'national_id', 'passport', 'alien_id'
+  idPassportType: varchar("id_passport_type", { length: 20 }),
   dateOfBirth: date("date_of_birth"),
   gender: varchar("gender", { length: 10 }),
   nationality: varchar("nationality", { length: 100 }),
@@ -227,14 +227,9 @@ export const education = pgTable("education_records", {
   id: serial("id").primaryKey(),
   applicantId: integer("applicant_id").notNull().references(() => applicants.id),
   courseName: varchar("course_name", { length: 255 }),
-  certificateLevelId: integer("certificate_level_id").notNull()
-    .references(() => certificateLevel.id),          
-  specializationId: integer("specialization_id")
-    .notNull()
-    .references(() => specializations.id),
-  studyAreaId: integer("study_area_id")
-    .notNull()
-    .references(() => studyArea.id),
+  certificateLevelId: integer("certificate_level_id").notNull().references(() => certificateLevel.id),          
+  specializationId: integer("specialization_id").notNull().references(() => specializations.id),
+  studyAreaId: integer("study_area_id").notNull().references(() => studyArea.id),
   institution: varchar("institution", { length: 255 }).notNull(),
   grade: varchar("grade", { length: 50 }),
   yearFrom: integer("year_from").notNull(),

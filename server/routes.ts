@@ -166,7 +166,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         profileImageUrl: fileUrl,
         nationalId
       });
-
       // Immediately log the user in
       req.login(newUser, (err) => {
         if (err) {
