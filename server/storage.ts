@@ -1580,7 +1580,7 @@ async seedWard(ward: Omit<Ward, 'id'>): Promise<Ward> {
     .insert(wards)
     .values(ward)
     .onConflictDoUpdate({
-      target: wards.name,
+      target: [wards.name, wards.constituencyId],
       set: { ...ward }
     })
     .returning();
@@ -1592,7 +1592,7 @@ async seedAward(award: Omit<Award, 'id'>): Promise<Award> {
     .insert(awards)
     .values(award)
     .onConflictDoUpdate({
-      target: awards.name,
+      target: [awards.name],
       set: { ...award }
     })
     .returning();
@@ -1642,7 +1642,7 @@ async seedStudy(studyA: Omit<StudyArea, 'id'>): Promise<StudyArea> {
         .insert(constituencies)
         .values(subCounty)
         .onConflictDoUpdate({
-          target: constituencies.name,
+          target: [constituencies.name, constituencies.countyId],
           set: { ...subCounty }
         })
         .returning();
