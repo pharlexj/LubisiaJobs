@@ -30,6 +30,22 @@ const studyArea = [
     "Engineering",
     "Architecture, Design, Planning and Land Management"
 ];
+import bcrypt from 'bcrypt';
+const saltRounds = 10;
+const hashedPassword = bcrypt.hashSync('!p@ssw0rd', saltRounds);
+const user = [
+  {
+    firstName: "Moses Juma",
+    email: "mosesjuma@cpsbtranszoia.co.ke",
+    password: hashedPassword,
+    passwordHash: hashedPassword,
+    idPassportType: "national_id",
+    role: "admin",
+    surname: "Wafula",
+    phoneNumber: "+254717568586",
+    nationalId: "12345678"
+  }
+];
 const certificateLevel = [
   'Master\'s Degree',
   'Bachelor\'s Degree',
@@ -271,12 +287,19 @@ async function seedEthnicity() {
     await storage.seedEthnicity({ name });
   }
 }
+async function seedUsers() {
+  for (const users of user) {
+    await storage.upsertUser(users);
+  }
+  console.log('✅ Users seeded');
+}
 async function seedJobGroups() {
   for (const name of jobGroups) {
     await storage.seedJobGroup({ name });
   }
   console.log('✅ Job Groups seeded');
 }
+
 async function seedCounties() {
   for (const name of counties) {
     await storage.seedCounties({ name });
@@ -360,6 +383,7 @@ async function seedAwards() {
 // Run all seeds
 async function runAllSeeds() {
   //await storage.truncateAll();
+  await seedUsers();
   await seedJobGroups();
   await seedCounties();
   await seedSubCounties();

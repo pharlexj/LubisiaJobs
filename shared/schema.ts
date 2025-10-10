@@ -36,8 +36,6 @@ export const applicationStatusEnum = pgEnum("application_status", [
   "draft", "submitted", "shortlisted", "interviewed", "rejected", "hired","interview_scheduled"
 ]);
 
-
-
 // Counties
 export const counties = pgTable("counties", {
   id: serial("id").primaryKey(),
@@ -50,26 +48,30 @@ export const constituencies = pgTable("constituencies", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   countyId: integer("county_id").notNull().references(() => counties.id),
-});
+}, (table) => [
+   uniqueIndex("unique_constituency_name_county").on(table.name, table.countyId),
+]);
 
 // Wards
 export const wards = pgTable("wards", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   constituencyId: integer("constituency_id").notNull().references(() => constituencies.id),
-});
+}, (table) => [
+  uniqueIndex("unique_ward_name_constituency").on(table.name, table.constituencyId),
+]);
 
 // Departments
 export const departments = pgTable("departments", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 250 }),
+  name: varchar("name", { length: 250 }).notNull().unique(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Designations
 export const designations = pgTable("designations", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 250 }).notNull(),
+  name: varchar("name", { length: 250 }).notNull().unique(),
   jobGroup: varchar("job_group", { length: 4 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -88,9 +90,9 @@ export const specializations = pgTable("specializations", {
   studyAreaId:integer('study_area_id').notNull().references(() => studyArea.id),
   createdAt: timestamp("created_at").defaultNow(),
 },
-  (table) => ({
-    uniqueNameStudyArea: uniqueIndex("unique_specialization_name_studyarea").on(table.name, table.studyAreaId),
-  }));;
+  (table) => [
+    uniqueIndex("unique_specialization_name_studyarea").on(table.name, table.studyAreaId),
+  ]);
 
 // Ethnicity
 export const ethnicity = pgTable("ethnicity", {
