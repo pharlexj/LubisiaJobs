@@ -32,18 +32,18 @@ const studyArea = [
 ];
 import bcrypt from 'bcrypt';
 const saltRounds = 10;
-const hashedPassword = bcrypt.hashSync('!p@ssw0rd', saltRounds);
+const hashedPassword = bcrypt.hashSync('!p@ssw0rD', saltRounds);
 const user = [
   {
-    firstName: "Moses Juma",
-    email: "mosesjuma@cpsbtranszoia.co.ke",
+    firstName: "Peter",
+    email: "peterwamoto@cpsbtranszoia.co.ke",
     password: hashedPassword,
     passwordHash: hashedPassword,
     idPassportType: "national_id",
     role: "admin",
-    surname: "Wafula",
-    phoneNumber: "+254717568586",
-    nationalId: "12345678"
+    surname: "Wamoto",
+    phoneNumber: "+254768415671",
+    nationalId: "023456780"
   }
 ];
 const certificateLevel = [
