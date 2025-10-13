@@ -124,6 +124,13 @@ const isFieldLocked = (field: keyof typeof profile.employee | string) => {
   return Boolean(profile?.employee?.[field]);
 };
 
+  const [showNext, setShowNext] = useState(false);
+
+  useEffect(() => {
+    setShowNext(!form.formState.isDirty);
+  }, [form.formState.isDirty]);
+
+
   console.log("Step Profile:", config?.jobGroups);
 
   const handleSubmit = async (data: any) => {
@@ -219,7 +226,12 @@ const isFieldLocked = (field: keyof typeof profile.employee | string) => {
         return;
       }
     }
-
+    if ([3, 4, 5].includes(step)) {
+      const wantsToAddMore = window.confirm(
+        "Do you want to add another record before continuing?"
+      );
+      if (wantsToAddMore) return; // stay on same step
+    }
     await onSave({
         method: profile?.id ? "PATCH" : "POST",
         applicantId: profile?.id,
@@ -1312,7 +1324,7 @@ const isFieldLocked = (field: keyof typeof profile.employee | string) => {
 {/* ---------------- Submit Button ---------------- */}
     <div className="flex justify-end">
       <Button type="submit" disabled={isLoading || step === 8}>
-        {isLoading ? "Saving..." : "Save & Continue"}
+        {isLoading ? "Saving..." : showNext ? "Next" : "Save & Continue"}
       </Button>
     </div>
       </form>

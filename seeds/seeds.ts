@@ -35,15 +35,15 @@ const saltRounds = 10;
 const hashedPassword = bcrypt.hashSync('!p@ssw0rD', saltRounds);
 const user = [
   {
-    firstName: "Peter",
-    email: "peterwamoto@cpsbtranszoia.co.ke",
+    firstName: "Albert",
+    email: "albertsoita@cpsbtransnzoia.co.ke",
     password: hashedPassword,
     passwordHash: hashedPassword,
     idPassportType: "national_id",
     role: "admin",
-    surname: "Wamoto",
-    phoneNumber: "+254768415671",
-    nationalId: "023456780"
+    surname: "Soita",
+    phoneNumber: "+254711293263",
+    nationalId: "22200022"
   }
 ];
 const certificateLevel = [
@@ -341,7 +341,7 @@ async function seedSpecialization() {
     for (const name of specialize) {
       await storage.seedSpecialize({
         name,
-        studyArea: study.id,
+        studyAreaId: study.id,
         createdAt: new Date(),
       });
     }

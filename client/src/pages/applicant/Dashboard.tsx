@@ -9,6 +9,7 @@ import { FileText, CheckCircle, Calendar } from "lucide-react";
 import ProgressIndicator from "@/components/applicant/ProgressIndicator";
 import type { Application } from "@shared/schema";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
+import { useEffect } from "react";
 
 export default function ApplicantDashboard() {
   const { user } = useAuth();
@@ -53,6 +54,12 @@ export default function ApplicantDashboard() {
       profile?.applicantProfile?.completedSteps?.includes(step.id as number) ??
       false,
   }));
+  // Calculate completion percentage
+const completion = profile?.applicantProfile?.profileCompletionPercentage || 0;
+
+// Determine button caption and behavior
+const isComplete = completion >= 100;
+const buttonLabel = isComplete ? "View Your Profile" : "Continue Profile Setup";
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -100,22 +107,25 @@ console.log(applications);
             <div className="mt-6">
               <Button
                 onClick={() => {
-                  const completed = profile?.applicantProfile?.completedSteps || [];
-                  const lastStep = completed.length > 0 ? completed[completed.length - 1] : 1;
+                  if (isComplete) {
+                    // ✅ Profile complete → Go to step 1
+                    navigate("/profile?step=1");
+                  } else {
+                    // ✅ Continue where they left off
+                    const completed = profile?.applicantProfile?.completedSteps || [];
+                    const lastStep = completed.length > 0 ? completed[completed.length - 1] : 1;
+                    const isEmployeeVerified = profile?.applicantProfile?.isEmployee;
 
-                  const isEmployeeVerified = profile?.applicantProfile?.isEmployee;
+                    let nextStep: number | 1.5 = lastStep < 8 ? lastStep + 1 : 8;
+                    if (lastStep === 1 && isEmployeeVerified) nextStep = 1.5;
+                    if (lastStep === 1 && !isEmployeeVerified) nextStep = 1;
 
-                  // Logic to decide next step
-                  let nextStep: number | 1.5 = lastStep < 8 ? lastStep + 1 : 8;
-                  if (lastStep === 1 && isEmployeeVerified) nextStep = 1.5;
-                  if (lastStep === 1 && !isEmployeeVerified) nextStep = 1;
-
-                  navigate(`/profile?step=${nextStep}`);
+                    navigate(`/profile?step=${nextStep}`);
+                  }
                 }}
               >
-                Continue Profile Setup
+                {buttonLabel}
               </Button>
-
             </div>
           </CardContent>
         </Card>

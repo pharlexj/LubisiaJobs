@@ -86,7 +86,7 @@ export const awards = pgTable("awards", {
 // Specializations
 export const specializations = pgTable("specializations", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(),
+  name: varchar("name", { length: 100 }),
   studyAreaId:integer('study_area_id').notNull().references(() => studyArea.id),
   createdAt: timestamp("created_at").defaultNow(),
 },
