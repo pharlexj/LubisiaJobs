@@ -36,7 +36,8 @@ export default function Profile() {
     enabled: !!user,
   });
 
-  const isEmployeeVerified = profile?.applicantProfile?.isEmployee;
+  const isEmployeeVerified = !!profile?.applicantProfile?.isEmployee;
+
 
   // ✅ Helper to get next allowed step based on completion
   const getNextAllowedStep = (completedSteps: number[], isEmployee: boolean): Step => {
@@ -199,15 +200,14 @@ export default function Profile() {
         let nextStep: Step;
         
         if (currentStep === 1) {
-          // Use fresh payload data for employee status
           nextStep = payload.data.isEmployee ? 1.5 : 2;
+        } else if (currentStep === 1.5) {
+          nextStep = 2;
         } else if (currentStep < 8) {
-          // For other steps, use current getNextStep logic
-          nextStep = getNextStep(currentStep);
+          nextStep = (currentStep + 1) as Step;
         } else {
-          return; // Don't advance from step 8
-        }
-        
+          return; // end
+        }        
         setTimeout(() => setCurrentStep(nextStep), 500);
       },
     });

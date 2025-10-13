@@ -107,22 +107,30 @@ console.log(applications);
             <div className="mt-6">
               <Button
                 onClick={() => {
-                  if (isComplete) {
-                    // ✅ Profile complete → Go to step 1
-                    navigate("/profile?step=1");
-                  } else {
-                    // ✅ Continue where they left off
-                    const completed = profile?.applicantProfile?.completedSteps || [];
-                    const lastStep = completed.length > 0 ? completed[completed.length - 1] : 1;
-                    const isEmployeeVerified = profile?.applicantProfile?.isEmployee;
+                if (isComplete) {
+                  // ✅ Profile complete → View profile at step 1
+                  navigate("/profile?step=1");
+                  return;
+                }
 
-                    let nextStep: number | 1.5 = lastStep < 8 ? lastStep + 1 : 8;
-                    if (lastStep === 1 && isEmployeeVerified) nextStep = 1.5;
-                    if (lastStep === 1 && !isEmployeeVerified) nextStep = 1;
+                const completed = profile?.applicantProfile?.completedSteps || [];
+                const lastStep = completed.length > 0 ? completed[completed.length - 1] : 1;
+                const isEmployeeVerified = profile?.applicantProfile?.isEmployee;
 
-                    navigate(`/profile?step=${nextStep}`);
-                  }
-                }}
+                // ✅ Fix loop at step 1
+                let nextStep: number | 1.5 = 1;
+                if (lastStep === 1) {
+                  nextStep = isEmployeeVerified ? 1.5 : 2;
+                } else if (lastStep === 1.5) {
+                  nextStep = 2;
+                } else if (lastStep < 8) {
+                  nextStep = lastStep + 1;
+                } else {
+                  nextStep = 8; // Max step
+                }
+
+                navigate(`/profile?step=${nextStep}`);
+              }}
               >
                 {buttonLabel}
               </Button>
