@@ -206,7 +206,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 switch (req.user?.role) {
   case "admin":
-    redirectUrl = "/admin";
+  case "board":
+  case "accounts":
+  
+    redirectUrl = `/${req.user?.role}`;
     break;
   case "applicant":
     redirectUrl = "/dashboard";

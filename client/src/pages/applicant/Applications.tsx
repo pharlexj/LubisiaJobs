@@ -77,8 +77,6 @@ export default function ApplicantApplications() {
     }
   };
   const { data: config } = usePublicConfig();
-  const jobGroups = config?.jobGroups || [];
-
   const filteredApplications = (applications as any).filter((app:any) => {
     const matchesSearch = app.job?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          app.job?.department?.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -266,7 +264,7 @@ export default function ApplicantApplications() {
                             <div>
                               <span className="font-medium">Job Group:</span>
                               <br />
-                              {(jobGroups).find((d: any) => d.id === application?.job.jgId)?.name}
+                              {application?.job?.jobGroupName}
                             </div>
                             <div>
                               <span className="font-medium">Applied:</span>

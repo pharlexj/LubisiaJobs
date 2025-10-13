@@ -70,6 +70,7 @@ export default function ApplicantDashboard() {
         return "bg-gray-100 text-gray-800";
     }
   };
+console.log(applications);
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -220,7 +221,6 @@ export default function ApplicantDashboard() {
                   </thead>
                   <tbody>
                     {applications.slice(0, 5).map((application: any) => {
-                      const jobMatch = jobs.find((j: any) => j.id === application.jobId);
                       return (
                         <tr
                           key={application.id}
@@ -228,23 +228,20 @@ export default function ApplicantDashboard() {
                         >
                           <td className="py-3 px-4">
                             <div className="font-medium text-gray-900">
-                              {jobMatch?.title || "—"}
+                              {application?.job?.title || "—"}
                             </div>
                             <div className="text-sm text-gray-600">
-                              {application?.job?.designation?.jobGroup || ""}
+                              {`Job Group '${application?.job?.jobGroupName}'`}
                             </div>
                           </td>
                           <td className="py-3 px-4">
                             <div className="font-medium text-gray-900">
-                              {jobMatch?.title || "—"}
+                              {application?.job?.department?.name || "—"}
                             </div>
-                            <div className="text-sm text-gray-600">
-                            {(() => {
-                            const jobMatch = jobs.find((j) => j.id === application.jobId);
-                            const departments = config?.departments || [];
-                            const department = departments.find((d: any) => d.id === jobMatch?.departmentId);
-                            return department ? department.name : "—";
-                            })()}
+                            <div className="text-sm text-gray-600">                            
+                            {application?.interviewDate 
+                            ? `Interview Date ${new Date(application.interviewDate).toLocaleDateString()}`
+                              : "-"}
                             </div>
                             </td>
                           <td className="py-3 px-4 text-gray-600">

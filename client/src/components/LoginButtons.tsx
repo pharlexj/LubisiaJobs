@@ -1,5 +1,6 @@
 // components/LoginButtons.tsx
 import { useEffect } from "react";
+import { useAuth } from "@/store/auth";
 
 export default function LoginButtons() {
   useEffect(() => {

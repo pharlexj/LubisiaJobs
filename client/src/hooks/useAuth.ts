@@ -24,10 +24,10 @@ export function useAuth() {
   };
 
   return {
-    applicantProfile: data?.applicantProfile ?? null, 
-    user: data?.user ?? null,
-    redirectUrl: data?.redirectUrl,
-    isAuthenticated: !!data?.user,
+    applicantProfile: (data as any)?.applicantProfile ?? null, 
+    user: (data as any)?.user ?? null,
+    redirectUrl: (data as any)?.redirectUrl,
+    isAuthenticated: !!(data as any)?.user,
     isLoading,
     error,
     logout,

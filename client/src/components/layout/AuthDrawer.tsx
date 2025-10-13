@@ -103,8 +103,20 @@ export default function AuthDrawer({ open, onOpenChange, mode, onModeChange, han
     return;
   }
 
-  if (topStatus === 401 || err?.statusText === "Unauthorized") {
-    openAuth("login");
+    if (topStatus === 401 || err?.statusText === "Unauthorized") {
+      closeAuth();
+    // 🔥 Invalid credentials
+    toast({
+      title: "Invalid Credentials",
+      description: "The email or password you entered is incorrect.",
+      variant: "destructive",
+    });
+    loginForm.reset({
+    email: "",
+    password: "",
+    rememberMe: false,
+  });
+  setPasswordValue("");
     return;
   }
 
@@ -165,9 +177,7 @@ export default function AuthDrawer({ open, onOpenChange, mode, onModeChange, han
   rememberMe: boolean;
 };
 const loginMutation = useMutation({
-  mutationFn: async (data: LoginInput) =>
-    apiRequest("POST", "/api/auth/login", data),
-
+  mutationFn: async (data: LoginInput) => apiRequest("POST", "/api/auth/login", data),
   onSuccess: async () => {
     try {
       // Small delay ensures cookies and session are synced before fetching
@@ -184,7 +194,7 @@ const loginMutation = useMutation({
       // ✅ Determine if user’s phone is verified
       const phoneVerified = verifiedPhone?.verified === true;
 
-      if (!phoneVerified) {
+      if (!phoneVerified && user?.role === "applicant") {
         toast({
           title: "Phone Verification Required",
           description:
@@ -201,13 +211,11 @@ const loginMutation = useMutation({
       }
 
       // ✅ If verified, close auth and redirect properly
+      closeAuth();
       toast({
         title: "Login Successful",
         description: `Welcome, ${user?.firstName || "User"}!`,
       });
-
-      closeAuth();
-
       // Redirect (default /dashboard)
       const redirectUrl = session.redirectUrl || "/dashboard";
       window.location.href = redirectUrl;
@@ -229,6 +237,7 @@ const loginMutation = useMutation({
 
   onError: (err: any) => {
     console.error("Login failed:", err);
+    // 🔥 Distinguish between invalid credentials (401 from /login)
     handleAuthError(err, openAuth);
   },
 });
@@ -323,13 +332,6 @@ const signupMutation = useMutation({
     },
   });
 };
-
-  
-  const handleSendOtpz = () => {
-    if (phoneNumber) {
-      sendOtpMutation.mutate(phoneNumber);
-    }
-  };
   
   // --- Verify OTP Mutation ---
   const verifyOtpMutation = useMutation({
