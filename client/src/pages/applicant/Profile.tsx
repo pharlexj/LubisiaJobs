@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 import Navigation from "@/components/layout/Navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import ProgressIndicator from "@/components/applicant/ProgressIndicator";
@@ -29,8 +30,8 @@ export default function Profile() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location, setLocation] = useLocation(); // ✅ Wouter navigation
 
-  // ✅ Fetch profile from backend
   const { data: profile, isLoading } = useQuery<ProfileResponse>({
     queryKey: ["/api/auth/user"],
     enabled: !!user,
@@ -38,27 +39,16 @@ export default function Profile() {
 
   const isEmployeeVerified = !!profile?.applicantProfile?.isEmployee;
 
-
-  // ✅ Helper to get next allowed step based on completion
   const getNextAllowedStep = (completedSteps: number[], isEmployee: boolean): Step => {
-    if (completedSteps.length === 0) return 1; // Start at step 1
-    
+    if (completedSteps.length === 0) return 1;
     const highestCompleted = Math.max(...completedSteps) as Step;
-    
-    // Map next allowed step based on highest completed
-    if (highestCompleted === 1) {
-      return isEmployee ? 1.5 : 2;
-    } else if (highestCompleted === 1.5) {
-      return 2;
-    } else {
-      return Math.min(8, (highestCompleted + 1)) as Step;
-    }
+    if (highestCompleted === 1) return isEmployee ? 1.5 : 2;
+    if (highestCompleted === 1.5) return 2;
+    return Math.min(8, highestCompleted + 1) as Step;
   };
 
-  // ✅ Calculate correct step based on data (will be computed in useEffect)
   const calculateCorrectStep = (): Step => {
     if (!profile?.applicantProfile) return 1;
-    
     const searchParams = new URLSearchParams(window.location.search);
     const stepParam = searchParams.get("step");
     const completed = profile?.applicantProfile?.completedSteps || [];
@@ -66,85 +56,72 @@ export default function Profile() {
 
     if (stepParam) {
       const requestedStep = parseFloat(stepParam) as Step;
-      // Validate requested step and clamp to allowed range
-      if (requestedStep >= 1 && requestedStep <= 8 && [1, 1.5, 2, 3, 4, 5, 6, 7, 8].includes(requestedStep)) {
+      if (requestedStep >= 1 && requestedStep <= 8) {
         return Math.min(requestedStep, maxAllowedStep) as Step;
-      } else {
-        return maxAllowedStep; // Invalid step requested, use max allowed
       }
-    } else {
       return maxAllowedStep;
     }
+
+    return maxAllowedStep;
   };
 
-  const [currentStep, setCurrentStep] = useState<Step>(1);
+  const [currentStep, setCurrentStep] = useState<Step>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const saved = parseFloat(params.get("step") || "1");
+    return (saved >= 1 && saved <= 8 ? saved : 1) as Step;
+  });
 
-  // ✅ Steps definition (with completed flag driven by DB)
+  // ✅ Keep URL in sync when step changes
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const currentParam = parseFloat(params.get("step") || "1");
+
+    if (currentParam !== currentStep) {
+      params.set("step", currentStep.toString());
+      setLocation(`/profile?${params.toString()}`);
+    }
+  }, [currentStep, setLocation]);
+
+  // ✅ Prevent reload from resetting step
+  useEffect(() => {
+    if (!profile?.applicantProfile) return;
+    const params = new URLSearchParams(window.location.search);
+    const stepParam = params.get("step");
+    if (!stepParam) {
+      const next = calculateCorrectStep();
+      setCurrentStep(next);
+    }
+  }, [profile]);
+
+  // ✅ Optional: persist step for mobile users
+  useEffect(() => {
+    localStorage.setItem("profile_step", currentStep.toString());
+  }, [currentStep]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("profile_step");
+    if (saved) setCurrentStep(Number(saved) as Step);
+  }, []);
+
   const steps = [
-    {
-      id: 1,
-      name: "Personal Details",
-      required: true,
-      completed:
-        profile?.applicantProfile?.completedSteps?.includes(1) ?? false,
-    },
-    {
-      id: 1.5,
-      name: "Employee Details",
-      required: true,
-      conditional: true,
-      completed:
-        profile?.applicantProfile?.completedSteps?.includes(1.5) ?? false,
-    },
-    {
-      id: 2,
-      name: "Address Information",
-      required: true,
-      completed:
-        profile?.applicantProfile?.completedSteps?.includes(2) ?? false,
-    },
-    {
-      id: 3,
-      name: "Educational Background",
-      required: true,
-      completed:
-        profile?.applicantProfile?.completedSteps?.includes(3) ?? false,
-    },
-    {
-      id: 4,
-      name: "Short Courses",
-      required: false,
-      completed:
-        profile?.applicantProfile?.completedSteps?.includes(4) ?? false,
-    },
-    {
-      id: 5,
-      name: "Professional Qualifications",
-      required: false,
-      completed:
-        profile?.applicantProfile?.completedSteps?.includes(5) ?? false,
-    },
-    {
-      id: 6,
-      name: "Employment History",
-      required: true,
-      completed:
-        profile?.applicantProfile?.completedSteps?.includes(6) ?? false,
-    },
-    {
-      id: 7,
-      name: "Referees",
-      required: true,
-      completed:
-        profile?.applicantProfile?.completedSteps?.includes(7) ?? false,
-    },
-    {
-      id: 8,
-      name: "Document Uploads",
-      required: true,
-      completed:
-        profile?.applicantProfile?.completedSteps?.includes(8) ?? false,
-    },
+    { id: 1, name: "Personal Details", required: true,
+      completed: profile?.applicantProfile?.completedSteps?.includes(1) ?? false },
+    { id: 1.5, name: "Employee Details", required: true, conditional: true,
+      completed: profile?.applicantProfile?.completedSteps?.includes(1.5) ?? false },
+    { id: 2, name: "Address Information", required: true,
+      completed: profile?.applicantProfile?.completedSteps?.includes(2) ?? false },
+    { id: 3, name: "Educational Background", required: true,
+      completed: profile?.applicantProfile?.completedSteps?.includes(3) ?? false },
+    { id: 4, name: "Short Courses", required: false,
+      completed: profile?.applicantProfile?.completedSteps?.includes(4) ?? false },
+    { id: 5, name: "Professional Qualifications", required: false,
+      completed: profile?.applicantProfile?.completedSteps?.includes(5) ?? false },
+    { id: 6, name: "Employment History", required: true,
+      completed: profile?.applicantProfile?.completedSteps?.includes(6) ?? false },
+    { id: 7, name: "Referees", required: true,
+      completed: profile?.applicantProfile?.completedSteps?.includes(7) ?? false },
+    { id: 8, name: "Document Uploads", required: true,
+      completed: profile?.applicantProfile?.completedSteps?.includes(8) ?? false },
   ];
 
   // ✅ Mutation for saving
@@ -192,27 +169,118 @@ export default function Profile() {
     },
   });
 
-  // ✅ Save handler with automatic progression
-  const handleSaveSteps = (payload: any) => {
-    updateProfileMutation.mutate(payload, {
-      onSuccess: () => {
-        // Determine next step based on current step and fresh payload data
-        let nextStep: Step;
-        
-        if (currentStep === 1) {
-          nextStep = payload.data.isEmployee ? 1.5 : 2;
-        } else if (currentStep === 1.5) {
-          nextStep = 2;
-        } else if (currentStep < 8) {
-          nextStep = (currentStep + 1) as Step;
-        } else {
-          return; // end
-        }        
-        setTimeout(() => setCurrentStep(nextStep), 500);
-      },
-    });
+  // ✅ Save handler with automatic progression  
+  const handleSaveStepz = (payload: any) => {
+  // 🚀 Handle "Next" (no save, just go forward)
+  if (payload.method === "SKIP") {
+    const nextStep = getNextAllowedStep(
+      profile?.applicantProfile?.completedSteps || [],
+      !!isEmployeeVerified
+    );
+
+    // Update step and URL
+    setCurrentStep(nextStep);
+    setLocation(`/profile?step=${nextStep}`);
+    return;
+  }
+
+  // ✅ Normal save process
+  updateProfileMutation.mutate(payload, {
+    onSuccess: async () => {
+      // Refresh profile data
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+
+      // Decide next step based on current one
+      let nextStep: Step;
+
+      if (currentStep === 1) {
+        nextStep = payload.data.isEmployee ? 1.5 : 2;
+      } else if (currentStep === 1.5) {
+        nextStep = 2;
+      } else if (currentStep < 8) {
+        nextStep = (currentStep + 1) as Step;
+      } else {
+        nextStep = 8; // End of profile
+      }
+
+      // ✅ Move to next step and update URL
+      setCurrentStep(nextStep);
+      setLocation(`/profile?step=${nextStep}`);
+
+      toast({
+        title: "Saved Successfully",
+        description: `Step ${currentStep} completed.`,
+      });
+    },
+    onError: (error: any) => {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Error saving data",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
   };
   const handleSaveStep = (payload: any) => {
+  // 🚀 Handle "Next" (no save, just go forward)
+  if (payload.method === "SKIP") {
+    // ✅ Move to the next step directly from the current one
+    let nextStep: Step;
+
+    if (currentStep === 1) {
+      nextStep = isEmployeeVerified ? 1.5 : 2;
+    } else if (currentStep === 1.5) {
+      nextStep = 2;
+    } else if (currentStep < 8) {
+      nextStep = (currentStep + 1) as Step;
+    } else {
+      nextStep = 8; // Stay on final step
+    }
+
+    setCurrentStep(nextStep);
+    setLocation(`/profile?step=${nextStep}`);
+    return;
+  }
+
+  // ✅ Normal save process
+  updateProfileMutation.mutate(payload, {
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+
+      let nextStep: Step;
+
+      if (currentStep === 1) {
+        nextStep = payload.data.isEmployee ? 1.5 : 2;
+      } else if (currentStep === 1.5) {
+        nextStep = 2;
+      } else if (currentStep < 8) {
+        nextStep = (currentStep + 1) as Step;
+      } else {
+        nextStep = 8;
+      }
+
+      setCurrentStep(nextStep);
+      setLocation(`/profile?step=${nextStep}`);
+
+      toast({
+        title: "Saved Successfully",
+        description: `Step ${currentStep} completed.`,
+      });
+    },
+    onError: (error: any) => {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Error saving data",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+
+  const handleSaveSteps = (payload: any) => {
   // 🚀 Handle “Next” (no save needed)
   if (payload.method === "SKIP") {
     const nextStep = getNextStep(currentStep);

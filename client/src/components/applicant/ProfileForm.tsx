@@ -1024,7 +1024,7 @@ const isFieldLocked = (field: keyof typeof profile.employee | string) => {
                       <SelectValue placeholder="Select award" />
                     </SelectTrigger>
                     <SelectContent>
-                      {((config as any)?.awards).map((award: any) => (
+                      {((config as any)?.awards)?.map((award: any) => (
                         <SelectItem key={award.id} value={award.id.toString()}>
                           {award.name}
                         </SelectItem>
