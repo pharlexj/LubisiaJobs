@@ -147,6 +147,7 @@ export default function AuthDrawer({ open, onOpenChange, mode, onModeChange, han
   };
   const [loading, setLoading] = useState(false);
   const [passwordValue, setPasswordValue] = useState("");
+  const [showPasswordTips, setShowPasswordTips] = useState(false);
   const signupForm = useForm({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -502,14 +503,13 @@ const strength = getPasswordStrength(passwordValue);
                   </p>
                 )}
               </div>
-
               {/* Password */}
               <div>
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter password"
+                  placeholder="Create password"
                   {...loginForm.register("password")}
                   onChange={(e) => {
                     loginForm.setValue("password", e.target.value);
@@ -518,10 +518,11 @@ const strength = getPasswordStrength(passwordValue);
                 />
 
                 {passwordValue && (
-                  <div className="mt-2">
+                  <div className="mt-3 space-y-2">
+                    {/* Strength bar */}
                     <Progress value={strength.value} className="h-2" />
                     <p
-                      className={`text-xs mt-1 font-medium ${
+                      className={`text-xs font-medium ${
                         strength.label === "Weak"
                           ? "text-red-600"
                           : strength.label === "Medium"
@@ -531,6 +532,58 @@ const strength = getPasswordStrength(passwordValue);
                     >
                       {strength.label} password
                     </p>
+
+                    {/* Toggle link */}
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordTips((prev) => !prev)}
+                      className="text-xs text-blue-600 underline hover:text-blue-800 transition"
+                    >
+                      {showPasswordTips ? "Hide password tips" : "Show password tips"}
+                    </button>
+
+                    {/* ✅ Password requirements checklist */}
+                    {showPasswordTips && (
+                      <ul className="text-xs text-gray-600 space-y-1 border border-gray-200 rounded-md p-2 bg-gray-50">
+                        <li
+                          className={`flex items-center gap-1 ${
+                            passwordValue.length >= 8 ? "text-green-600" : "text-gray-500"
+                          }`}
+                        >
+                          {passwordValue.length >= 8 ? "✅" : "❌"} At least 8 characters
+                        </li>
+                        <li
+                          className={`flex items-center gap-1 ${
+                            /[A-Z]/.test(passwordValue) ? "text-green-600" : "text-gray-500"
+                          }`}
+                        >
+                          {/[A-Z]/.test(passwordValue) ? "✅" : "❌"} One uppercase letter (A–Z)
+                        </li>
+                        <li
+                          className={`flex items-center gap-1 ${
+                            /[a-z]/.test(passwordValue) ? "text-green-600" : "text-gray-500"
+                          }`}
+                        >
+                          {/[a-z]/.test(passwordValue) ? "✅" : "❌"} One lowercase letter (a–z)
+                        </li>
+                        <li
+                          className={`flex items-center gap-1 ${
+                            /[0-9]/.test(passwordValue) ? "text-green-600" : "text-gray-500"
+                          }`}
+                        >
+                          {/[0-9]/.test(passwordValue) ? "✅" : "❌"} One number (0–9)
+                        </li>
+                        <li
+                          className={`flex items-center gap-1 ${
+                            /[\W_]/.test(passwordValue)
+                              ? "text-green-600"
+                              : "text-gray-500"
+                          }`}
+                        >
+                          {/[\W_]/.test(passwordValue) ? "✅" : "❌"} One special character (!@#$%)
+                        </li>
+                      </ul>
+                    )}
                   </div>
                 )}
               </div>
@@ -649,7 +702,7 @@ const strength = getPasswordStrength(passwordValue);
                   <Input
                     id="phoneNumber"
                     type="tel"
-                    placeholder="0711234567"
+                    placeholder="0711293263"
                     {...signupForm.register("phoneNumber")}
                   />
                 </div>
@@ -686,34 +739,89 @@ const strength = getPasswordStrength(passwordValue);
 
                 {/* Password */}
                 <div>
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Create password"
-                    {...signupForm.register("password")}
-                    onChange={(e) => {
-                      signupForm.setValue("password", e.target.value);
-                      setPasswordValue(e.target.value);
-                    }}
-                  />
-                  {passwordValue && (
-                    <div className="mt-2">
-                      <Progress value={strength.value} className="h-2" />
-                      <p
-                        className={`text-xs mt-1 font-medium ${
-                          strength.label === "Weak"
-                            ? "text-red-600"
-                            : strength.label === "Medium"
-                            ? "text-yellow-600"
-                            : "text-green-600"
-                        }`}
-                      >
-                        {strength.label} password
-                      </p>
-                    </div>
-                  )}
-                </div>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Create password"
+                  {...signupForm.register("password")}
+                  onChange={(e) => {
+                    signupForm.setValue("password", e.target.value);
+                    setPasswordValue(e.target.value);
+                  }}
+                />
+
+                {passwordValue && (
+                  <div className="mt-3 space-y-2">
+                    {/* Strength bar */}
+                    <Progress value={strength.value} className="h-2" />
+                    <p
+                      className={`text-xs font-medium ${
+                        strength.label === "Weak"
+                          ? "text-red-600"
+                          : strength.label === "Medium"
+                          ? "text-yellow-600"
+                          : "text-green-600"
+                      }`}
+                    >
+                      {strength.label} password
+                    </p>
+
+                    {/* Toggle link */}
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordTips((prev) => !prev)}
+                      className="text-xs text-blue-600 underline hover:text-blue-800 transition"
+                    >
+                      {showPasswordTips ? "Hide password tips" : "Show password tips"}
+                    </button>
+
+                    {/* ✅ Password requirements checklist */}
+                    {showPasswordTips && (
+                      <ul className="text-xs text-gray-600 space-y-1 border border-gray-200 rounded-md p-2 bg-gray-50">
+                        <li
+                          className={`flex items-center gap-1 ${
+                            passwordValue.length >= 8 ? "text-green-600" : "text-gray-500"
+                          }`}
+                        >
+                          {passwordValue.length >= 8 ? "✅" : "❌"} At least 8 characters
+                        </li>
+                        <li
+                          className={`flex items-center gap-1 ${
+                            /[A-Z]/.test(passwordValue) ? "text-green-600" : "text-gray-500"
+                          }`}
+                        >
+                          {/[A-Z]/.test(passwordValue) ? "✅" : "❌"} One uppercase letter (A–Z)
+                        </li>
+                        <li
+                          className={`flex items-center gap-1 ${
+                            /[a-z]/.test(passwordValue) ? "text-green-600" : "text-gray-500"
+                          }`}
+                        >
+                          {/[a-z]/.test(passwordValue) ? "✅" : "❌"} One lowercase letter (a–z)
+                        </li>
+                        <li
+                          className={`flex items-center gap-1 ${
+                            /[0-9]/.test(passwordValue) ? "text-green-600" : "text-gray-500"
+                          }`}
+                        >
+                          {/[0-9]/.test(passwordValue) ? "✅" : "❌"} One number (0–9)
+                        </li>
+                        <li
+                          className={`flex items-center gap-1 ${
+                            /[\W_]/.test(passwordValue)
+                              ? "text-green-600"
+                              : "text-gray-500"
+                          }`}
+                        >
+                          {/[\W_]/.test(passwordValue) ? "✅" : "❌"} One special character (!@#$%)
+                        </li>
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+
 
                 {/* Confirm Password */}
                 <div>
