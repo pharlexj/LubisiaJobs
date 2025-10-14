@@ -193,7 +193,7 @@ export default function Profile() {
   });
 
   // ✅ Save handler with automatic progression
-  const handleSaveStep = (payload: any) => {
+  const handleSaveSteps = (payload: any) => {
     updateProfileMutation.mutate(payload, {
       onSuccess: () => {
         // Determine next step based on current step and fresh payload data
@@ -212,6 +212,34 @@ export default function Profile() {
       },
     });
   };
+  const handleSaveStep = (payload: any) => {
+  // 🚀 Handle “Next” (no save needed)
+  if (payload.method === "SKIP") {
+    const nextStep = getNextStep(currentStep);
+    setCurrentStep(nextStep);
+    return;
+  }
+
+  // Normal save logic
+  updateProfileMutation.mutate(payload, {
+    onSuccess: () => {
+      let nextStep: Step;
+
+      if (currentStep === 1) {
+        nextStep = payload.data.isEmployee ? 1.5 : 2;
+      } else if (currentStep === 1.5) {
+        nextStep = 2;
+      } else if (currentStep < 8) {
+        nextStep = (currentStep + 1) as Step;
+      } else {
+        return; // Stop at last step
+      }
+
+      setTimeout(() => setCurrentStep(nextStep), 300);
+    },
+  });
+};
+
 
   // ✅ Step navigation
   const getNextStep = (current: Step): Step => {

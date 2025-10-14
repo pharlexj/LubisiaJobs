@@ -131,8 +131,6 @@ const isFieldLocked = (field: keyof typeof profile.employee | string) => {
   }, [form.formState.isDirty]);
 
 
-  console.log("Step Profile:", config?.jobGroups);
-
   const handleSubmit = async (data: any) => {
     let stepData: any = {};
     try {
@@ -162,7 +160,7 @@ const isFieldLocked = (field: keyof typeof profile.employee | string) => {
               doca: sanitizeDate(data.employee.doca),
             },
           };
-          break;
+          break;  
         case 3:
           // validate education explicitly
           educationStepSchema.parse({ education: data.education });
@@ -226,6 +224,7 @@ const isFieldLocked = (field: keyof typeof profile.employee | string) => {
         return;
       }
     }
+    
     if ([3, 4, 5].includes(step)) {
       const wantsToAddMore = window.confirm(
         "Do you want to add another record before continuing?"
@@ -1322,11 +1321,20 @@ const isFieldLocked = (field: keyof typeof profile.employee | string) => {
 })()}
 
 {/* ---------------- Submit Button ---------------- */}
-    <div className="flex justify-end">
-      <Button type="submit" disabled={isLoading || step === 8}>
-        {isLoading ? "Saving..." : showNext ? "Next" : "Save & Continue"}
-      </Button>
-    </div>
+      <div className="flex justify-end">
+          <Button
+            type={showNext ? "button" : "submit"}
+            disabled={isLoading || step === 8}
+            onClick={() => {
+              if (showNext && typeof onSave === "function") {
+                // 🚀 Trigger parent handler to move to next step
+                onSave({ method: "SKIP", step });
+              }
+            }}
+          >
+            {isLoading ? "Saving..." : showNext ? "Next" : "Save & Continue"}
+          </Button>
+      </div>
       </form>
 
       <EmployeeVerificationDialog
