@@ -113,6 +113,7 @@ export default function AdminJobManagement() {
   // allow empty string so select can start blank
   const [category, setCategory] = useState<"OPEN" | "INTERNAL" | "">("");
   const [serial, setSerial] = useState(0); // You should fetch last serial from DB
+  const [serials, setSerials] = useState({ OPEN: 0, INTERNAL: 0 });
   const advertNumber = generateAdvertNumber(category, serial);
 
   const { data: config, isLoading} = useQuery({
@@ -140,20 +141,26 @@ export default function AdminJobManagement() {
 
 useEffect(() => {
   if (jobs && jobs.length > 0) {
-    // Find the last used serial number in the job advert numbers
-    const serials = jobs
-      .map((job: any) => {
-        const match = job.advertNumb?.match(/\/(\d+)\/\d{4}$/);
-        return match ? parseInt(match[1], 10) : 0;
-      })
-      .filter((num: number) => !isNaN(num));
+    // Group serials by category
+    const serialMap = { OPEN: 0, INTERNAL: 0 };
 
-    if (serials.length > 0) {
-      const lastSerial = Math.max(...serials);
-      setSerial(lastSerial);
-    } else {
-      setSerial(0);
-    }
+    jobs.forEach((job: any) => {
+      // Match advert number pattern: TCPSB/OPEN/5/2025
+      const year = new Date().getFullYear();
+      const match = job.advertNumb?.match(new RegExp(`TCPSB\\/(OPEN|INTERNAL)\\/(\\d+)\\/${year}$`, "i"));
+
+      if (match) {
+        const category = match[1].toUpperCase() as "OPEN" | "INTERNAL";
+        const serial = parseInt(match[2], 10);
+        if (!isNaN(serial) && serial > (serialMap[category] || 0)) {
+          serialMap[category] = serial;
+        }
+      }
+    });
+
+    setSerials(serialMap);
+  } else {
+    setSerials({ OPEN: 0, INTERNAL: 0 });
   }
 }, [jobs]);
 
@@ -445,7 +452,11 @@ useEffect(() => {
                         <Input
                           id='advertNumb'
                           {...form.register('advertNumb')}
-                          value={editingJob ? form.watch('advertNumb') : generateAdvertNumber(category, serial)}
+                          value={
+                              editingJob
+                                ? form.watch('advertNumb')
+                                : generateAdvertNumber(category, serials[category as "OPEN" | "INTERNAL"])
+                            }
                           readOnly={!editingJob}
                           disabled={!!editingJob}
                           placeholder='e.g., TCPSB/OPEN/1/2025'
@@ -975,3 +986,4 @@ function generateAdvertNumber(category: "OPEN" | "INTERNAL" | "", lastSerial: nu
   const serial = lastSerial + 1;
   return `${prefix}/${category}/${serial}/${year}`;
 }
+

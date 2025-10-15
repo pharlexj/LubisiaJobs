@@ -112,7 +112,6 @@ console.log(applications);
                   navigate("/profile?step=1");
                   return;
                 }
-
                 const completed = profile?.applicantProfile?.completedSteps || [];
                 const lastStep = completed.length > 0 ? completed[completed.length - 1] : 1;
                 const isEmployeeVerified = profile?.applicantProfile?.isEmployee;
