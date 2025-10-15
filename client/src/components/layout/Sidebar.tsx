@@ -22,6 +22,8 @@ import {
   MessageCircle
 } from 'lucide-react';
 import ProfileCompletion from '@/components/applicant/ProfileCompletion';
+import { useState } from "react";
+import ProfileSettingsDrawer from "@/components/common/ProfileSettingsDrawer";
 
 interface SidebarProps {
   userRole: 'applicant' | 'admin' | 'board' |'accountant'| 'a.i.e Holder';
@@ -36,6 +38,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
     return `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase();
   };
 
+const [showProfileSettings, setShowProfileSettings] = useState(false);
   const handleLogout = () => {
     window.location.href = '/api/logout';
   };
@@ -328,7 +331,20 @@ export default function Sidebar({ userRole }: SidebarProps) {
             </div>
           </div>
         )}
+        <Button
+          variant="outline"
+          className="w-full justify-start text-gray-700 hover:text-gray-900 hover:bg-gray-50 mb-2"
+          onClick={() => setShowProfileSettings(true)}
+        >
+          <Settings className="w-4 h-4 mr-2" />
+          Account Settings
+        </Button>
 
+        <ProfileSettingsDrawer
+          open={showProfileSettings}
+          onClose={() => setShowProfileSettings(false)}
+          user={user}
+        />
         <Button
           variant="ghost"
           className="w-full justify-start text-gray-700 hover:text-gray-900 hover:bg-gray-50"
@@ -341,3 +357,4 @@ export default function Sidebar({ userRole }: SidebarProps) {
     </aside>
   );
 }
+
