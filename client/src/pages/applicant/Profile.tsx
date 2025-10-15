@@ -170,58 +170,6 @@ export default function Profile() {
   });
 
   // ✅ Save handler with automatic progression  
-  const handleSaveStepz = (payload: any) => {
-  // 🚀 Handle "Next" (no save, just go forward)
-  if (payload.method === "SKIP") {
-    const nextStep = getNextAllowedStep(
-      profile?.applicantProfile?.completedSteps || [],
-      !!isEmployeeVerified
-    );
-
-    // Update step and URL
-    setCurrentStep(nextStep);
-    setLocation(`/profile?step=${nextStep}`);
-    return;
-  }
-
-  // ✅ Normal save process
-  updateProfileMutation.mutate(payload, {
-    onSuccess: async () => {
-      // Refresh profile data
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-
-      // Decide next step based on current one
-      let nextStep: Step;
-
-      if (currentStep === 1) {
-        nextStep = payload.data.isEmployee ? 1.5 : 2;
-      } else if (currentStep === 1.5) {
-        nextStep = 2;
-      } else if (currentStep < 8) {
-        nextStep = (currentStep + 1) as Step;
-      } else {
-        nextStep = 8; // End of profile
-      }
-
-      // ✅ Move to next step and update URL
-      setCurrentStep(nextStep);
-      setLocation(`/profile?step=${nextStep}`);
-
-      toast({
-        title: "Saved Successfully",
-        description: `Step ${currentStep} completed.`,
-      });
-    },
-    onError: (error: any) => {
-      console.error("Error updating profile:", error);
-      toast({
-        title: "Error saving data",
-        description: "Please try again later.",
-        variant: "destructive",
-      });
-    },
-  });
-  };
   const handleSaveStep = (payload: any) => {
   // 🚀 Handle "Next" (no save, just go forward)
   if (payload.method === "SKIP") {
@@ -278,37 +226,6 @@ export default function Profile() {
     },
   });
 };
-
-
-  const handleSaveSteps = (payload: any) => {
-  // 🚀 Handle “Next” (no save needed)
-  if (payload.method === "SKIP") {
-    const nextStep = getNextStep(currentStep);
-    setCurrentStep(nextStep);
-    return;
-  }
-
-  // Normal save logic
-  updateProfileMutation.mutate(payload, {
-    onSuccess: () => {
-      let nextStep: Step;
-
-      if (currentStep === 1) {
-        nextStep = payload.data.isEmployee ? 1.5 : 2;
-      } else if (currentStep === 1.5) {
-        nextStep = 2;
-      } else if (currentStep < 8) {
-        nextStep = (currentStep + 1) as Step;
-      } else {
-        return; // Stop at last step
-      }
-
-      setTimeout(() => setCurrentStep(nextStep), 300);
-    },
-  });
-};
-
-
   // ✅ Step navigation
   const getNextStep = (current: Step): Step => {
     if (current === 1 && isEmployeeVerified) return 1.5;

@@ -4,12 +4,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { 
-  LayoutDashboard, 
-  User, 
-  FileText, 
-  Search, 
-  Upload, 
+import {
+  LayoutDashboard,
+  User,
+  FileText,
+  Search,
+  Upload,
   Settings,
   Briefcase,
   Users,
@@ -19,189 +19,72 @@ import {
   Calendar,
   Award,
   LogOut,
-  MessageCircle
+  MessageCircle,
+  Menu,
+  X,
 } from 'lucide-react';
 import ProfileCompletion from '@/components/applicant/ProfileCompletion';
-import { useState } from "react";
-import ProfileSettingsDrawer from "@/components/common/ProfileSettingsDrawer";
+import { useState } from 'react';
+import ProfileSettingsDrawer from '@/components/common/ProfileSettingsDrawer';
 
 interface SidebarProps {
-  userRole: 'applicant' | 'admin' | 'board' |'accountant'| 'a.i.e Holder';
+  userRole: 'applicant' | 'admin' | 'board' | 'accountant' | 'a.i.e Holder';
 }
 
 export default function Sidebar({ userRole }: SidebarProps) {
   const [location] = useLocation();
   const { user } = useAuth();
 
+  const [isOpen, setIsOpen] = useState(true); // desktop expand/collapse
+  const [isMobileOpen, setIsMobileOpen] = useState(false); // mobile drawer
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
+
+  const toggleSidebar = () => setIsOpen(!isOpen);
+  const toggleMobileSidebar = () => setIsMobileOpen(!isMobileOpen);
+
+  const handleLogout = () => {
+    window.location.href = '/api/logout';
+  };
+
   const getUserInitials = () => {
     if (!user?.firstName && !user?.lastName) return 'U';
     return `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase();
   };
 
-const [showProfileSettings, setShowProfileSettings] = useState(false);
-  const handleLogout = () => {
-    window.location.href = '/api/logout';
-  };
-
+  // -------------------- NAVIGATION DATA -------------------- //
   const applicantNavItems = [
-    { 
-      href: '/dashboard', 
-      icon: LayoutDashboard, 
-      label: 'Dashboard', 
-      description: 'Overview and stats' 
-    },
-    { 
-      href: '/profile', 
-      icon: User, 
-      label: 'Profile', 
-      description: 'Complete your profile' 
-    },
-    { 
-      href: '/applications', 
-      icon: FileText, 
-      label: 'My Applications', 
-      description: 'Track applications' 
-    },
-    { 
-      href: '/jobs', 
-      icon: Search, 
-      label: 'Browse Jobs', 
-      description: 'Find opportunities' 
-    },
-    { 
-      href: '/documents', 
-      icon: Upload, 
-      label: 'Documents', 
-      description: 'Upload certificates' 
-    },
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', description: 'Overview and stats' },
+    { href: '/profile', icon: User, label: 'Profile', description: 'Complete your profile' },
+    { href: '/applications', icon: FileText, label: 'My Applications', description: 'Track applications' },
+    { href: '/jobs', icon: Search, label: 'Browse Jobs', description: 'Find opportunities' },
+    { href: '/documents', icon: Upload, label: 'Documents', description: 'Upload certificates' },
   ];
 
   const adminNavItems = [
-    { 
-      href: '/admin', 
-      icon: LayoutDashboard, 
-      label: 'Dashboard', 
-      description: 'Admin overview' 
-    },
-    { 
-      href: '/admin/jobs', 
-      icon: Briefcase, 
-      label: 'Job Management', 
-      description: 'Create & manage jobs' 
-    },
-    { 
-      href: '/admin/applications', 
-      icon: Users, 
-      label: 'Applications', 
-      description: 'Review applications' 
-    },
-    { 
-      href: '/admin/reports', 
-      icon: BarChart3, 
-      label: 'Reports', 
-      description: 'Generate reports' 
-    },
-    { 
-      href: '/admin/notifications', 
-      icon: Bell, 
-      label: 'Notifications', 
-      description: 'Send notifications' 
-    },
-    { 
-      href: '/admin/sms', 
-      icon: MessageCircle, 
-      label: 'SMS Communications', 
-      description: 'Send SMS messages' 
-    },
-    { 
-      href: '/admin/settings', 
-      icon: Settings, 
-      label: 'System Config', 
-      description: 'System settings' 
-    },
+    { href: '/admin', icon: LayoutDashboard, label: 'Dashboard', description: 'Admin overview' },
+    { href: '/admin/jobs', icon: Briefcase, label: 'Job Management', description: 'Create & manage jobs' },
+    { href: '/admin/applications', icon: Users, label: 'Applications', description: 'Review applications' },
+    { href: '/admin/reports', icon: BarChart3, label: 'Reports', description: 'Generate reports' },
+    { href: '/admin/notifications', icon: Bell, label: 'Notifications', description: 'Send notifications' },
+    { href: '/admin/sms', icon: MessageCircle, label: 'SMS Communications', description: 'Send SMS messages' },
+    { href: '/admin/settings', icon: Settings, label: 'System Config', description: 'System settings' },
   ];
 
   const boardNavItems = [
-    { 
-      href: '/board', 
-      icon: LayoutDashboard, 
-      label: 'Dashboard', 
-      description: 'Committee overview' 
-    },
-    { 
-      href: '/board/shortlisting', 
-      icon: CheckCircle, 
-      label: 'Shortlisting', 
-      description: 'Review & shortlist' 
-    },
-    { 
-      href: '/board/schedule', 
-      icon: Calendar, 
-      label: 'Schedule', 
-      description: 'Schedule for Interviews' 
-    },
-    { 
-      href: '/board/interviews', 
-      icon: Calendar, 
-      label: 'Interviews', 
-      description: 'Schedule & conduct' 
-    },
-    { 
-      href: '/board/scoring', 
-      icon: Award, 
-      label: 'Scoring', 
-      description: 'Interview assessment' 
-    },
-    { 
-      href: '/board/reports', 
-      icon: BarChart3, 
-      label: 'Reports', 
-      description: 'Selection reports' 
-    },
+    { href: '/board', icon: LayoutDashboard, label: 'Dashboard', description: 'Committee overview' },
+    { href: '/board/shortlisting', icon: CheckCircle, label: 'Shortlisting', description: 'Review & shortlist' },
+    { href: '/board/schedule', icon: Calendar, label: 'Schedule', description: 'Schedule for Interviews' },
+    { href: '/board/interviews', icon: Calendar, label: 'Interviews', description: 'Schedule & conduct' },
+    { href: '/board/scoring', icon: Award, label: 'Scoring', description: 'Interview assessment' },
+    { href: '/board/reports', icon: BarChart3, label: 'Reports', description: 'Selection reports' },
   ];
+
   const accountNavItems = [
-    {
-      href: '/accounts/reports', 
-      icon: BarChart3, 
-      label:"claim",
-      description: 'Selection reports' 
-      
-    },
-    {
-      href: '/accounts/payment', 
-      icon: BarChart3, 
-      label:"payment",
-      description: 'Voucher Payment' 
-        
-      },
-    {
-      href: '/accounts/MIR', 
-      icon: BarChart3, 
-      label: "mir",      
-      description: 'Register Management' 
-        
-      },
-    {
-      href: '/accounts/budget', 
-      icon: BarChart3, 
-      label:"budget",
-      description: 'Budget Management' 
-        
-      },
-    {
-      href: '/accounts/votes', 
-      icon: BarChart3, 
-      label:"vote",
-      description: 'Votes Management' 
-        
-      },
-    {
-      href: '/accounts/reports', 
-      icon: BarChart3, 
-      label:"report",
-      description: 'Selection reports' 
-        
-      }
+    { href: '/accounts/reports', icon: BarChart3, label: 'Claim', description: 'Selection reports' },
+    { href: '/accounts/payment', icon: BarChart3, label: 'Payment', description: 'Voucher Payment' },
+    { href: '/accounts/MIR', icon: BarChart3, label: 'MIR', description: 'Register Management' },
+    { href: '/accounts/budget', icon: BarChart3, label: 'Budget', description: 'Budget Management' },
+    { href: '/accounts/votes', icon: BarChart3, label: 'Vote', description: 'Votes Management' },
   ];
 
   const getNavItems = () => {
@@ -249,112 +132,118 @@ const [showProfileSettings, setShowProfileSettings] = useState(false);
     }
   };
 
+  const sidebarWidth = isOpen ? 'w-64' : 'w-20';
+
+  // -------------------- RENDER -------------------- //
   return (
-    <aside className="w-64 bg-white shadow-sm border-r border-gray-200 h-screen sticky top-0 flex flex-col">
-      {/* User Profile Section */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center space-x-3 mb-3">
+    <>
+      {/* 🔹 Sidebar Container */}
+      <aside
+        className={`fixed md:static top-0 left-0 h-full bg-white border-r border-gray-200 shadow-sm flex flex-col z-40 transform transition-all duration-300 ease-in-out ${sidebarWidth}
+        ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}
+      >
+        {/* Header with profile and toggle */}
+        <div className="relative p-4 border-b border-gray-200 flex items-center space-x-3">
           <Avatar className="h-10 w-10">
             <AvatarImage src={user?.profileImageUrl} alt={user?.firstName} />
             <AvatarFallback className="bg-primary text-white">
               {getUserInitials()}
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-gray-900 truncate">
-              {(user?.firstName || '').toUpperCase()} {user?.lastName || ''}
-            </p>
-            <p className="text-sm text-gray-600 truncate">{user?.email}</p>
-          </div>
+
+          {isOpen && (
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-gray-900 truncate">
+                {(user?.firstName || '').toUpperCase()} {user?.lastName || ''}
+              </p>
+              <p className="text-sm text-gray-600 truncate">{user?.email}</p>
+              <Badge className={`${getRoleColor()} mt-1`}>{getRoleLabel()}</Badge>
+            </div>
+          )}
+
+          {/* Toggle button inside sidebar top-right */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-3 top-3 text-gray-600 hover:text-gray-900"
+            onClick={toggleSidebar}
+          >
+            {isOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </Button>
         </div>
-        <Badge className={getRoleColor()}>{getRoleLabel()}</Badge>
-      </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {getNavItems().map((item) => {
-          const IconComponent = item.icon;
-          const isActive = location === item.href;
-          
-          return (
-            <Link key={item.href} href={item.href}>
-              <a
-                className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors group ${
-                  isActive
-                    ? userRole === 'applicant'
+        {/* Navigation Links */}
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          {getNavItems().map((item) => {
+            const IconComponent = item.icon;
+            const isActive = location === item.href;
+
+            return (
+              <Link key={item.href} href={item.href}>
+                <a
+                  onClick={() => setIsMobileOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${
+                    isActive
                       ? 'bg-blue-50 text-primary border border-blue-200'
-                      : userRole === 'admin'
-                      ? 'bg-red-50 text-red-700 border border-red-200'
-                      : 'bg-green-50 text-green-700 border border-green-200'
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                }`}
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <IconComponent className="w-5 h-5 shrink-0" />
+                  {isOpen && (
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm">{item.label}</div>
+                      <div className="text-xs opacity-75 truncate">{item.description}</div>
+                    </div>
+                  )}
+                </a>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-gray-200">
+          {isOpen && (
+            <>
+              <Separator className="mb-4" />
+              {userRole === 'applicant' && <ProfileCompletion />}
+
+              <Button
+                variant="outline"
+                className="w-full justify-start text-gray-700 hover:text-gray-900 hover:bg-gray-50 mb-2"
+                onClick={() => setShowProfileSettings(true)}
               >
-                <IconComponent className={`w-5 h-5 ${isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`} />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm">{item.label}</div>
-                  <div className="text-xs opacity-75 truncate">{item.description}</div>
-                </div>
-              </a>
-            </Link>
-          );
-        })}
-      </nav>
+                <Settings className="w-4 h-4 mr-2" />
+                Account Settings
+              </Button>
+            </>
+          )}
 
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200">
-        <Separator className="mb-4" />
-        
-        {/* Quick Stats for Applicants */}
-        {userRole === 'applicant' && (
-          <ProfileCompletion />
-        )}
+          <ProfileSettingsDrawer
+            open={showProfileSettings}
+            onClose={() => setShowProfileSettings(false)}
+            user={user}
+          />
 
-        {/* System Status for Admins */}
-        {userRole === 'admin' && (
-          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-700">System Status</span>
-              <span className="flex items-center text-green-600">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
-                Online
-              </span>
-            </div>
-          </div>
-        )}
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+            onClick={handleLogout}
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            {isOpen && 'Sign Out'}
+          </Button>
+        </div>
+      </aside>
 
-        {/* Active Sessions for Board */}
-        {userRole === 'board' && (
-          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-700">Pending Reviews</span>
-              <Badge variant="secondary" className="text-xs">3</Badge>
-            </div>
-          </div>
-        )}
-        <Button
-          variant="outline"
-          className="w-full justify-start text-gray-700 hover:text-gray-900 hover:bg-gray-50 mb-2"
-          onClick={() => setShowProfileSettings(true)}
-        >
-          <Settings className="w-4 h-4 mr-2" />
-          Account Settings
-        </Button>
-
-        <ProfileSettingsDrawer
-          open={showProfileSettings}
-          onClose={() => setShowProfileSettings(false)}
-          user={user}
+      {/* 🔹 Mobile Overlay */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 z-30 md:hidden"
+          onClick={toggleMobileSidebar}
         />
-        <Button
-          variant="ghost"
-          className="w-full justify-start text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-          onClick={handleLogout}
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Sign Out
-        </Button>
-      </div>
-    </aside>
+      )}
+    </>
   );
 }
-

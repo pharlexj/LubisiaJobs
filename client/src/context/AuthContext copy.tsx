@@ -7,7 +7,7 @@ import {
   ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient"; 
+import { apiRequest } from "@/lib/queryClient"; // Centralized API request helper
 
 type AuthMode = "login" | "signup" | "otp" | "mobile" | null;
 
@@ -15,15 +15,9 @@ interface User {
   id: number;
   name: string;
   email: string;
-  role: "admin" | "applicant" | "board" | "accountant" | "guest" | string;
+  role: string;
   profilePhoto?: string;
   [key: string]: any;
-}
-
-interface NavLink {
-  label: string;
-  path: string;
-  icon?: string;
 }
 
 interface AuthContextType {
@@ -31,7 +25,6 @@ interface AuthContextType {
   mode: AuthMode;
   phoneNumber: string;
   user: User | null;
-  navLinks: NavLink[];
   openAuth: (mode: AuthMode, phoneNumber?: string) => void;
   closeAuth: () => void;
   changeMode: (mode: AuthMode) => void;
@@ -49,28 +42,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<AuthMode>(null);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [user, setUser] = useState<User | null>(null);
-  const [navLinks, setNavLinks] = useState<NavLink[]>([]);
+
   const queryClient = useQueryClient();
 
-  // 🔁 Load user + nav links on mount
+  // ✅ Load user on mount
   useEffect(() => {
     (async () => {
       const data = await refreshUser();
-      if (data) updateNavLinks(data.role);
+      if (data) setUser(data);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ Refresh user info
+  // ✅ Refresh user (integrates your refreshSession idea)
   const refreshUser = async (): Promise<User | null> => {
     try {
       const data = await apiRequest("GET", "/api/auth/me");
       setUser(data);
       queryClient.setQueryData(["/api/auth/me"], data);
-      updateNavLinks(data?.role);
       return data;
     } catch (err: any) {
+      // Auto logout if session expired
       if (err?.status === 401) {
+        console.warn("Session expired, logging out...");
         logout();
       } else {
         console.error("Failed to refresh user:", err);
@@ -79,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // ✅ Logout handler
+  // ✅ Logout handler (clears everything)
   const logout = async () => {
     try {
       await apiRequest("POST", "/api/auth/logout");
@@ -87,74 +81,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.warn("Logout error:", e);
     } finally {
       setUser(null);
-      setNavLinks([]);
       queryClient.clear();
     }
   };
 
-  // ✅ Dynamic role-based navigation
-  const updateNavLinks = (role?: string) => {
-    if (!role) {
-      setNavLinks([]);
-      return;
-    }
-
-    const common: NavLink[] = [
-      { label: "Home", path: "/", icon: "home" },
-      { label: "Profile", path: "/profile", icon: "user" },
-    ];
-
-    const admin: NavLink[] = [
-      ...common,
-      { label: "Dashboard", path: "/admin", icon: "layout-dashboard" },
-      { label: "Jobs", path: "/admin/jobs", icon: "briefcase" },
-      { label: "Applications", path: "/admin/applications", icon: "file-text" },
-      { label: "Reports", path: "/admin/reports", icon: "bar-chart" },
-      { label: "Settings", path: "/admin/settings", icon: "settings" },
-    ];
-
-    const applicant: NavLink[] = [
-      ...common,
-      { label: "Dashboard", path: "/dashboard", icon: "layout-dashboard" },
-      { label: "Applications", path: "/applications", icon: "file-text" },
-      { label: "Documents", path: "/documents", icon: "folder" },
-    ];
-
-    const board: NavLink[] = [
-      ...common,
-      { label: "Dashboard", path: "/board", icon: "layout-dashboard" },
-      { label: "Shortlisting", path: "/board/shortlisting", icon: "users" },
-      { label: "Interviews", path: "/board/interviews", icon: "clipboard" },
-      { label: "Scoring", path: "/board/scoring", icon: "star" },
-      { label: "Reports", path: "/board/reports", icon: "bar-chart" },
-    ];
-
-    const accountant: NavLink[] = [
-      ...common,
-      { label: "Dashboard", path: "/accountant", icon: "layout-dashboard" },
-      { label: "Payments", path: "/accountant/payments", icon: "credit-card" },
-      { label: "Reports", path: "/accountant/reports", icon: "bar-chart" },
-    ];
-
-    switch (role.toLowerCase()) {
-      case "admin":
-        setNavLinks(admin);
-        break;
-      case "applicant":
-        setNavLinks(applicant);
-        break;
-      case "board":
-        setNavLinks(board);
-        break;
-      case "accountant":
-        setNavLinks(accountant);
-        break;
-      default:
-        setNavLinks(common);
-    }
-  };
-
-  // ✅ Modal helpers
+  // ✅ Auth modal helpers
   const openAuth = (newMode: AuthMode, phone?: string) => {
     setMode(newMode);
     setOpen(true);
@@ -174,7 +105,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         mode,
         phoneNumber,
         user,
-        navLinks,
         setUser,
         openAuth,
         closeAuth,
