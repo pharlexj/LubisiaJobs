@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import Navigation from '@/components/layout/Navigation';
@@ -37,7 +37,7 @@ export const jobSchema = z
     // ✅ exact or progression
     progressionAllowed: z.boolean().optional().default(false),
 
-    category: z.enum(["Open", "Internal"], {
+    category: z.enum(["Open", "Internal",""], {
       errorMap: () => ({ message: "Please select category" }),
     }),
 
@@ -110,7 +110,8 @@ export default function AdminJobManagement() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<any>(null);
-  const [category, setCategory] = useState<"OPEN" | "INTERNAL">("OPEN");
+  // allow empty string so select can start blank
+  const [category, setCategory] = useState<"OPEN" | "INTERNAL" | "">("");
   const [serial, setSerial] = useState(0); // You should fetch last serial from DB
   const advertNumber = generateAdvertNumber(category, serial);
 
@@ -133,7 +134,28 @@ export default function AdminJobManagement() {
   const jobGroups = configData?.jobGroups || [];
   const jobs = configData?.jobs || [];
   const studyArea = configData?.studyAreas || [];
-  const specializations = configData?.specializations;
+  const specializations = configData?.specializations; 
+
+
+
+useEffect(() => {
+  if (jobs && jobs.length > 0) {
+    // Find the last used serial number in the job advert numbers
+    const serials = jobs
+      .map((job: any) => {
+        const match = job.advertNumb?.match(/\/(\d+)\/\d{4}$/);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter((num: number) => !isNaN(num));
+
+    if (serials.length > 0) {
+      const lastSerial = Math.max(...serials);
+      setSerial(lastSerial);
+    } else {
+      setSerial(0);
+    }
+  }
+}, [jobs]);
 
   const form = useForm<JobFormData>({
     resolver: zodResolver(jobSchema),
@@ -147,7 +169,7 @@ export default function AdminJobManagement() {
       requiredStudyAreaId: 0,
       posts: 0,
       experience: '',
-      category: "Open",
+      category: "",
       requirements: '',
       advertNumb: '',
       advertType: '',
@@ -333,7 +355,7 @@ export default function AdminJobManagement() {
       requiredStudyAreaId: 0,
       posts: 0,
       experience: '',
-      category: 'Open',
+      category: '',
       requirements: '',
       advertNumb: '',
       advertType: '',
@@ -506,13 +528,12 @@ export default function AdminJobManagement() {
                       </div>
                       <div>
                         <Label htmlFor="category">Category</Label>
-                        <Select
-                            value={form.watch("category") || ""}
-                            onValueChange={(value) => {
-                              form.setValue('category', value as "Open" | "Internal");
-                              setCategory(value === 'Open' ? 'OPEN' : 'INTERNAL');
-                            }}
-                          >
+                        <Select value={form.watch("category") || undefined} // ✅ undefined = no selection
+                          onValueChange={(value) => {
+                            form.setValue("category", value as "Open" | "Internal" | "");
+                            setCategory(value === "Open" ? "OPEN" : "INTERNAL");
+                          }}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select Category" />
                           </SelectTrigger>
@@ -521,6 +542,7 @@ export default function AdminJobManagement() {
                             <SelectItem value="Internal">Internal</SelectItem>
                           </SelectContent>
                         </Select>
+
                         {form.formState.errors.category && (
                           <p className="text-sm text-red-600 mt-1">
                             {form.formState.errors.category.message}
@@ -947,7 +969,7 @@ export default function AdminJobManagement() {
     </div>
   );
 }
-function generateAdvertNumber(category: "OPEN" | "INTERNAL", lastSerial: number = 0): string {
+function generateAdvertNumber(category: "OPEN" | "INTERNAL" | "", lastSerial: number = 0): string {
   const prefix = "TCPSB";
   const year = new Date().getFullYear();
   const serial = lastSerial + 1;
