@@ -429,7 +429,7 @@ export const carouselSlides = pgTable("carousel_slides", {
   // Display control
   displayOrder: integer("display_order").default(0),
   isActive: boolean("is_active").default(true),
-  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({

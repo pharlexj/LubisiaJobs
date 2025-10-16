@@ -27,7 +27,8 @@ const updateBoardMemberSchema = insertBoardMemberSchema.partial();
 const insertCarouselSlideSchema = createInsertSchema(carouselSlides).omit({
   id: true,
   createdAt: true,
-  updatedAt: true
+  updatedAt: true,
+  createdBy: true
 });
 
 const updateCarouselSlideSchema = insertCarouselSlideSchema.partial();
