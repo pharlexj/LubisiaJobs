@@ -20,6 +20,7 @@ import {
   employmentHistory,
   referees,
   documents,
+  adminDocuments,
   otpVerification,
   employees,
   payroll,
@@ -77,9 +78,11 @@ import {
   type InsertNotificationRecipient,
   type InsertNotification,
   type Ethnicity,
+  type AdminDocument,
+  type InsertAdminDocument,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, like, sql, lt, PromiseOf, or, ne } from "drizzle-orm";
+import { eq, desc, and, like, sql, lt, PromiseOf, or, ne, isNull, not, isNotNull } from "drizzle-orm";
 import { Fullscreen } from "lucide-react";
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -198,6 +201,24 @@ export interface IStorage {
     avgGeneralScore: number;
     totalPanelMembers: number;
   }>;
+  
+  // Job archiving operations
+  archiveExpiredJobs(): Promise<number>;
+  getArchivedJobs(): Promise<Job[]>;
+  
+  // Admin documents operations
+  createAdminDocument(doc: InsertAdminDocument): Promise<AdminDocument>;
+  getAdminDocuments(filters?: { type?: string; jobId?: number }): Promise<AdminDocument[]>;
+  updateAdminDocument(id: number, doc: Partial<InsertAdminDocument>): Promise<AdminDocument>;
+  deleteAdminDocument(id: number): Promise<void>;
+  
+  // Interview scheduling operations
+  scheduleInterview(applicationId: number, interviewDate: string, interviewTime: string, duration: number): Promise<Application>;
+  bulkScheduleInterviews(schedules: Array<{ applicationId: number; interviewDate: string; interviewTime: string; duration: number }>): Promise<void>;
+  
+  // SMS-triggered status update operations
+  shortlistApplicationWithSMS(applicationId: number): Promise<Application>;
+  hireApplicationWithSMS(applicationId: number): Promise<Application>;
 }
 export class DatabaseStorage implements IStorage {
   // User operations
@@ -1000,6 +1021,138 @@ async getFaq() {
     };
 
     return result;
+  }
+
+  // Job archiving operations
+  async archiveExpiredJobs(): Promise<number> {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    const result = await db
+      .update(jobs)
+      .set({ archivedAt: sql`now()` })
+      .where(
+        and(
+          lt(jobs.endDate, oneMonthAgo.toISOString().split('T')[0]),
+          isNull(jobs.archivedAt)
+        )
+      )
+      .returning({ id: jobs.id });
+
+    return result.length;
+  }
+
+  async getArchivedJobs(): Promise<Job[]> {
+    return await db
+      .select()
+      .from(jobs)
+      .where(isNotNull(jobs.archivedAt))
+      .orderBy(desc(jobs.archivedAt));
+  }
+
+  // Admin documents operations
+  async createAdminDocument(doc: InsertAdminDocument): Promise<AdminDocument> {
+    const [adminDoc] = await db
+      .insert(adminDocuments)
+      .values(doc)
+      .returning();
+    return adminDoc;
+  }
+
+  async getAdminDocuments(filters?: { type?: string; jobId?: number }): Promise<AdminDocument[]> {
+    const conditions = [eq(adminDocuments.isPublished, true)];
+
+    if (filters?.type) {
+      conditions.push(eq(adminDocuments.type, filters.type as any));
+    }
+    if (filters?.jobId) {
+      conditions.push(eq(adminDocuments.jobId, filters.jobId));
+    }
+
+    return await db
+      .select()
+      .from(adminDocuments)
+      .where(and(...conditions))
+      .orderBy(desc(adminDocuments.createdAt));
+  }
+
+  async updateAdminDocument(id: number, doc: Partial<InsertAdminDocument>): Promise<AdminDocument> {
+    const [adminDoc] = await db
+      .update(adminDocuments)
+      .set({ ...doc, updatedAt: sql`now()` })
+      .where(eq(adminDocuments.id, id))
+      .returning();
+    return adminDoc;
+  }
+
+  async deleteAdminDocument(id: number): Promise<void> {
+    await db
+      .update(adminDocuments)
+      .set({ isPublished: false, updatedAt: sql`now()` })
+      .where(eq(adminDocuments.id, id));
+  }
+
+  // Interview scheduling operations
+  async scheduleInterview(
+    applicationId: number,
+    interviewDate: string,
+    interviewTime: string,
+    duration: number
+  ): Promise<Application> {
+    const [application] = await db
+      .update(applications)
+      .set({
+        interviewDate,
+        interviewTime,
+        interviewDuration: duration,
+        status: 'interview_scheduled',
+        updatedAt: sql`now()`
+      })
+      .where(eq(applications.id, applicationId))
+      .returning();
+    return application;
+  }
+
+  async bulkScheduleInterviews(
+    schedules: Array<{ applicationId: number; interviewDate: string; interviewTime: string; duration: number }>
+  ): Promise<void> {
+    for (const schedule of schedules) {
+      await this.scheduleInterview(
+        schedule.applicationId,
+        schedule.interviewDate,
+        schedule.interviewTime,
+        schedule.duration
+      );
+    }
+  }
+
+  // SMS-triggered status update operations
+  async shortlistApplicationWithSMS(applicationId: number): Promise<Application> {
+    const [application] = await db
+      .update(applications)
+      .set({
+        status: 'shortlisted',
+        shortlistedAt: sql`now()`,
+        shortlistSmsSent: true,
+        updatedAt: sql`now()`
+      })
+      .where(eq(applications.id, applicationId))
+      .returning();
+    return application;
+  }
+
+  async hireApplicationWithSMS(applicationId: number): Promise<Application> {
+    const [application] = await db
+      .update(applications)
+      .set({
+        status: 'hired',
+        hiredAt: sql`now()`,
+        hireSmsSent: true,
+        updatedAt: sql`now()`
+      })
+      .where(eq(applications.id, applicationId))
+      .returning();
+    return application;
   }
 
   // Carousel slides operations

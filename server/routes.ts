@@ -2698,6 +2698,232 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     }
   });
 
+  // Job archiving routes
+  app.post('/api/admin/jobs/archive-expired', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const archivedCount = await storage.archiveExpiredJobs();
+      res.json({ message: `${archivedCount} job(s) archived successfully`, count: archivedCount });
+    } catch (error) {
+      console.error('Error archiving jobs:', error);
+      res.status(500).json({ message: 'Failed to archive jobs' });
+    }
+  });
+
+  app.get('/api/admin/jobs/archived', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const archivedJobs = await storage.getArchivedJobs();
+      res.json(archivedJobs);
+    } catch (error) {
+      console.error('Error fetching archived jobs:', error);
+      res.status(500).json({ message: 'Failed to fetch archived jobs' });
+    }
+  });
+
+  // Admin documents routes
+  app.post('/api/admin/documents', isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      const { title, description, type, jobId } = req.body;
+      
+      const adminDoc = await storage.createAdminDocument({
+        title,
+        description,
+        type,
+        fileName: req.file.originalname,
+        filePath: `/uploads/${req.file.filename}`,
+        fileSize: req.file.size,
+        mimeType: req.file.mimetype,
+        jobId: jobId ? parseInt(jobId) : null,
+        isPublished: true,
+        uploadedBy: user.id
+      });
+
+      res.json(adminDoc);
+    } catch (error) {
+      console.error('Error uploading admin document:', error);
+      res.status(500).json({ message: 'Failed to upload document' });
+    }
+  });
+
+  app.get('/api/admin/documents', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { type, jobId } = req.query;
+      const filters: any = {};
+      if (type) filters.type = type;
+      if (jobId) filters.jobId = parseInt(jobId as string);
+
+      const documents = await storage.getAdminDocuments(filters);
+      res.json(documents);
+    } catch (error) {
+      console.error('Error fetching admin documents:', error);
+      res.status(500).json({ message: 'Failed to fetch documents' });
+    }
+  });
+
+  app.get('/api/public/admin-documents', async (req, res) => {
+    try {
+      const { type } = req.query;
+      const filters: any = {};
+      if (type) filters.type = type;
+
+      const documents = await storage.getAdminDocuments(filters);
+      res.json(documents);
+    } catch (error) {
+      console.error('Error fetching public admin documents:', error);
+      res.status(500).json({ message: 'Failed to fetch documents' });
+    }
+  });
+
+  app.put('/api/admin/documents/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { id } = req.params;
+      const adminDoc = await storage.updateAdminDocument(parseInt(id), req.body);
+      res.json(adminDoc);
+    } catch (error) {
+      console.error('Error updating admin document:', error);
+      res.status(500).json({ message: 'Failed to update document' });
+    }
+  });
+
+  app.delete('/api/admin/documents/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { id } = req.params;
+      await storage.deleteAdminDocument(parseInt(id));
+      res.json({ message: 'Document deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting admin document:', error);
+      res.status(500).json({ message: 'Failed to delete document' });
+    }
+  });
+
+  // Interview scheduling routes
+  app.post('/api/admin/applications/:id/schedule-interview', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || (user.role !== 'admin' && user.role !== 'board')) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { id } = req.params;
+      const { interviewDate, interviewTime, duration } = req.body;
+
+      const application = await storage.scheduleInterview(
+        parseInt(id),
+        interviewDate,
+        interviewTime,
+        duration
+      );
+
+      res.json(application);
+    } catch (error) {
+      console.error('Error scheduling interview:', error);
+      res.status(500).json({ message: 'Failed to schedule interview' });
+    }
+  });
+
+  app.post('/api/admin/applications/bulk-schedule-interviews', isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || (user.role !== 'admin' && user.role !== 'board')) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No Excel file uploaded' });
+      }
+
+      // Parse Excel/CSV file here - for now accepting JSON in body
+      const schedules = req.body.schedules || [];
+
+      await storage.bulkScheduleInterviews(schedules);
+
+      res.json({ message: 'Interviews scheduled successfully', count: schedules.length });
+    } catch (error) {
+      console.error('Error bulk scheduling interviews:', error);
+      res.status(500).json({ message: 'Failed to bulk schedule interviews' });
+    }
+  });
+
+  // SMS-triggered status update routes
+  app.post('/api/admin/applications/:id/shortlist-with-sms', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { id } = req.params;
+      const application = await storage.shortlistApplicationWithSMS(parseInt(id));
+
+      // Send SMS notification here
+      const applicant = await storage.getApplicantById(application.applicantId);
+      if (applicant?.phoneNumber) {
+        await sendOtp(applicant.phoneNumber, `Congratulations! You have been shortlisted. Your application ID: ${application.id}`);
+      }
+
+      res.json(application);
+    } catch (error) {
+      console.error('Error shortlisting with SMS:', error);
+      res.status(500).json({ message: 'Failed to shortlist application' });
+    }
+  });
+
+  app.post('/api/admin/applications/:id/hire-with-sms', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { id } = req.params;
+      const application = await storage.hireApplicationWithSMS(parseInt(id));
+
+      // Send SMS notification here
+      const applicant = await storage.getApplicantById(application.applicantId);
+      if (applicant?.phoneNumber) {
+        await sendOtp(applicant.phoneNumber, `Congratulations! You have been hired. Your application ID: ${application.id}`);
+      }
+
+      res.json(application);
+    } catch (error) {
+      console.error('Error hiring with SMS:', error);
+      res.status(500).json({ message: 'Failed to hire application' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

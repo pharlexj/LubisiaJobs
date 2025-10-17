@@ -198,6 +198,7 @@ export const jobs = pgTable("jobs", {
   status: varchar("status"),
   startDate: date("start_date"),
   endDate: date("end_date"),
+  archivedAt: timestamp("archived_at"),
   createdBy: varchar("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -218,7 +219,13 @@ export const applications = pgTable("applications", {
   submittedOn: date("submitted_on"),
   remarks: text("remarks"),
   interviewDate: date("interview_date"),
+  interviewTime: varchar("interview_time", { length: 10 }),
+  interviewDuration: integer("interview_duration"),
   interviewScore: integer("interview_score"),
+  shortlistedAt: timestamp("shortlisted_at"),
+  hiredAt: timestamp("hired_at"),
+  shortlistSmsSent: boolean("shortlist_sms_sent").default(false),
+  hireSmsSent: boolean("hire_sms_sent").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -379,6 +386,26 @@ export const documents = pgTable("documents", {
   fileSize: integer("file_size"),
   mimeType: varchar("mime_type", { length: 100 }),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const adminDocumentsEnum = pgEnum("admin_document_type", [
+  "advert", "shortlist", "policy", "form", "circular", "news_feed"
+]);
+
+export const adminDocuments = pgTable("admin_documents", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 250 }).notNull(),
+  description: text("description"),
+  type: adminDocumentsEnum("type").notNull(),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  filePath: varchar("file_path", { length: 500 }).notNull(),
+  fileSize: integer("file_size"),
+  mimeType: varchar("mime_type", { length: 100 }),
+  jobId: integer("job_id").references(() => jobs.id),
+  isPublished: boolean("is_published").default(true),
+  uploadedBy: varchar("uploaded_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Notices
@@ -770,3 +797,7 @@ export type InsertPanelScore = z.infer<typeof insertPanelScore>;
 export const insertNoticeSubscription = createInsertSchema(noticeSubscriptions).omit({ id: true, subscribedAt: true });
 export type InsertNoticeSubscription = z.infer<typeof insertNoticeSubscription>;
 export type NoticeSubscription = typeof noticeSubscriptions.$inferSelect;
+
+export const insertAdminDocument = createInsertSchema(adminDocuments).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertAdminDocument = z.infer<typeof insertAdminDocument>;
+export type AdminDocument = typeof adminDocuments.$inferSelect;
