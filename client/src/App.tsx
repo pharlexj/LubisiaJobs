@@ -37,6 +37,24 @@ import BoardInterviews from "@/pages/board/Interviews";
 import BoardScheduling from "@/pages/board/Scheduling";
 import BoardScoring from "@/pages/board/Scoring";
 import BoardReports from "@/pages/board/Reports";
+
+// Accountant pages
+import AccountantDashboard from "@/pages/accountant/Dashboard";
+import AccountantClaims from "@/pages/accountant/Claims";
+import AccountantPayments from "@/pages/accountant/Payments";
+import AccountantMIR from "@/pages/accountant/MIR";
+import AccountantVote from "@/pages/accountant/Vote";
+import AccountantBudget from "@/pages/accountant/Budget";
+import AccountantEmployees from "@/pages/accountant/Employees";
+import AccountantReports from "@/pages/accountant/Reports";
+import AccountantCharts from "@/pages/accountant/Charts";
+import AccountantSettings from "@/pages/accountant/Settings";
+
+// A.I.E Holder pages
+import AIEDashboard from "@/pages/aie/Dashboard";
+import AIERequests from "@/pages/aie/Requests";
+import AIEMIRR from "@/pages/aie/MIR";
+
 import { useEffect } from "react";
 import { AuthProvider, useAuthContext } from "@/context/AuthContext";
 import AuthDrawer from "@/components/layout/AuthDrawer";
@@ -170,6 +188,75 @@ function Router() {
         path="/board/reports"
         component={BoardReports}
         allowedRoles={["board"]}
+      />
+
+      {/* Accountant routes */}
+      <ProtectedRoute
+        path="/accountant"
+        component={AccountantDashboard}
+        allowedRoles={["accountant"]}
+      />
+      <ProtectedRoute
+        path="/accountant/claims"
+        component={AccountantClaims}
+        allowedRoles={["accountant"]}
+      />
+      <ProtectedRoute
+        path="/accountant/payments"
+        component={AccountantPayments}
+        allowedRoles={["accountant"]}
+      />
+      <ProtectedRoute
+        path="/accountant/mir"
+        component={AccountantMIR}
+        allowedRoles={["accountant"]}
+      />
+      <ProtectedRoute
+        path="/accountant/vote"
+        component={AccountantVote}
+        allowedRoles={["accountant"]}
+      />
+      <ProtectedRoute
+        path="/accountant/budget"
+        component={AccountantBudget}
+        allowedRoles={["accountant"]}
+      />
+      <ProtectedRoute
+        path="/accountant/employees"
+        component={AccountantEmployees}
+        allowedRoles={["accountant"]}
+      />
+      <ProtectedRoute
+        path="/accountant/reports"
+        component={AccountantReports}
+        allowedRoles={["accountant"]}
+      />
+      <ProtectedRoute
+        path="/accountant/charts"
+        component={AccountantCharts}
+        allowedRoles={["accountant"]}
+      />
+      <ProtectedRoute
+        path="/accountant/settings"
+        component={AccountantSettings}
+        allowedRoles={["accountant"]}
+      />
+
+      {/* A.I.E Holder routes */}
+      <ProtectedRoute
+        path="/aie"
+        component={AIEDashboard}
+        allowedRoles={["a.i.e Holder"]}
+      />
+      <ProtectedRoute
+        path="/aie/requests"
+        component={AIERequests}
+        allowedRoles={["a.i.e Holder"]}
+      />
+      <ProtectedRoute
+        path="/aie/mir"
+        component={AIEMIRR}
+        allowedRoles={["a.i.e Holder"]}
       />
 
       {/* Fallback */}
