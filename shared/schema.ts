@@ -725,6 +725,131 @@ export const otpVerification = pgTable("otp_verification", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ========================================
+// ACCOUNTING MODULE TABLES
+// ========================================
+
+// Transaction status enum
+export const transactionStatusEnum = pgEnum("transaction_status", [
+  "pending", "approved", "rejected", "completed"
+]);
+
+// Transaction type enum
+export const transactionTypeEnum = pgEnum("transaction_type", [
+  "claim", "payment", "imprest"
+]);
+
+// Vote Accounts - Budget vote management
+export const voteAccounts = pgTable("vote_accounts", {
+  id: serial("id").primaryKey(),
+  voteNo: varchar("vote_no", { length: 50 }).notNull().unique(),
+  voteId: varchar("vote_id", { length: 50 }).notNull(),
+  description: text("description"),
+  head: varchar("head", { length: 200 }),
+  subHead: varchar("sub_head", { length: 200 }),
+  allocation: integer("allocation").notNull().default(0),
+  utilized: integer("utilized").notNull().default(0),
+  balance: integer("balance").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Budget - Department budget allocations
+export const budgets = pgTable("budgets", {
+  id: serial("id").primaryKey(),
+  departmentId: integer("department_id").references(() => departments.id),
+  voteAccountId: integer("vote_account_id").references(() => voteAccounts.id),
+  financialYear: varchar("financial_year", { length: 20 }).notNull(),
+  estimatedAmount: integer("estimated_amount").notNull(),
+  utilized: integer("utilized").notNull().default(0),
+  balance: integer("balance").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Transactions - Claims and Payments
+export const transactions = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  transactionType: transactionTypeEnum("transaction_type").notNull(),
+  employeeId: integer("employee_id").references(() => employees.id),
+  personalNo: varchar("personal_no", { length: 50 }),
+  name: varchar("name", { length: 250 }),
+  designation: varchar("designation", { length: 250 }),
+  jg: varchar("jg", { length: 4 }),
+  
+  // Financial details
+  voucherNo: varchar("voucher_no", { length: 50 }),
+  voteAccountId: integer("vote_account_id").references(() => voteAccounts.id),
+  voteNo: varchar("vote_no", { length: 50 }),
+  voteId: varchar("vote_id", { length: 50 }),
+  amounts: integer("amounts").notNull(),
+  amountInWords: text("amount_in_words"),
+  
+  // Claim-specific fields
+  dated: date("dated"),
+  dateReturn: date("date_return"),
+  days: integer("days"),
+  place: varchar("place", { length: 200 }),
+  destination: varchar("destination", { length: 200 }),
+  busFare: integer("bus_fare").default(0),
+  taxiFare: integer("taxi_fare").default(0),
+  perdiem: integer("perdiem").default(0),
+  subsistence: integer("subsistence").default(0),
+  fare: integer("fare").default(0),
+  returnInfo: text("return_info"),
+  
+  // Payment-specific fields
+  particulars: jsonb("particulars"), // Array of particulars and amounts
+  descriptions: text("descriptions"),
+  
+  // Budget tracking
+  amountsAllocated: integer("amounts_allocated"),
+  balanceBeforeCommitted: integer("balance_before_committed"),
+  amoutsCommited: integer("amouts_commited"),
+  balanceAfterCommitted: integer("balance_after_committed"),
+  
+  // Document and status
+  file: varchar("file", { length: 500 }),
+  status: transactionStatusEnum("status").default("pending"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Master Imprest Register (MIR)
+export const masterImprestRegister = pgTable("master_imprest_register", {
+  id: serial("id").primaryKey(),
+  transactionId: integer("transaction_id").references(() => transactions.id),
+  employeeId: integer("employee_id").references(() => employees.id),
+  personalNo: varchar("personal_no", { length: 50 }),
+  name: varchar("name", { length: 250 }),
+  
+  // Imprest details
+  advanceAmount: integer("advance_amount").notNull(),
+  advanceDate: date("advance_date").notNull(),
+  voucherNo: varchar("voucher_no", { length: 50 }),
+  
+  // Retirement details
+  retirementAmount: integer("retirement_amount").default(0),
+  retirementDate: date("retirement_date"),
+  retirementVoucherNo: varchar("retirement_voucher_no", { length: 50 }),
+  
+  // Balance tracking
+  outstandingBalance: integer("outstanding_balance").notNull(),
+  status: transactionStatusEnum("status").default("pending"),
+  
+  // References
+  voteAccountId: integer("vote_account_id").references(() => voteAccounts.id),
+  purpose: text("purpose"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas for OTP
 export const insertOtpSchema = createInsertSchema(otpVerification).omit({
   id: true,
@@ -801,3 +926,44 @@ export type NoticeSubscription = typeof noticeSubscriptions.$inferSelect;
 export const insertAdminDocument = createInsertSchema(adminDocuments).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertAdminDocument = z.infer<typeof insertAdminDocument>;
 export type AdminDocument = typeof adminDocuments.$inferSelect;
+
+// ========================================
+// ACCOUNTING MODULE INSERT SCHEMAS & TYPES
+// ========================================
+
+// Vote Accounts
+export const insertVoteAccount = createInsertSchema(voteAccounts).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true 
+});
+export type InsertVoteAccount = z.infer<typeof insertVoteAccount>;
+export type VoteAccount = typeof voteAccounts.$inferSelect;
+
+// Budget
+export const insertBudget = createInsertSchema(budgets).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true 
+});
+export type InsertBudget = z.infer<typeof insertBudget>;
+export type Budget = typeof budgets.$inferSelect;
+
+// Transactions
+export const insertTransaction = createInsertSchema(transactions).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true,
+  approvedAt: true 
+});
+export type InsertTransaction = z.infer<typeof insertTransaction>;
+export type Transaction = typeof transactions.$inferSelect;
+
+// Master Imprest Register
+export const insertMasterImprestRegister = createInsertSchema(masterImprestRegister).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true 
+});
+export type InsertMasterImprestRegister = z.infer<typeof insertMasterImprestRegister>;
+export type MasterImprestRegister = typeof masterImprestRegister.$inferSelect;
