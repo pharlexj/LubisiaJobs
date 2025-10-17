@@ -42,3 +42,6 @@ export function canProgress(
     return { allowed: true, reason: `Requires: ${rule.extraRequirement}` };
   return { allowed: true };
 }
+export function getEligibility(cert:string[], ) {
+  
+}

@@ -86,7 +86,7 @@ export default function JobCard({
       variant: "destructive",
     });
   },
-});
+  });
 
  // --- Intelligent Eligibility Check with Reason ---
   function getEligibility() {
@@ -110,34 +110,29 @@ export default function JobCard({
         continue;
       }
       if (requiredCertLevel) {
-        // Use inheritance logic if progression allowed
+        // Use inheritance logic if progression allowed     
+        
         if (job.progressionAllowed) {
           // Map certificateLevelId to QualificationLevel string
-          const certMap: Record<number, import('@/lib/inheritanceUtils').QualificationLevel> = { 1: 'Certificate', 2: 'Ordinary Diploma', 3: 'Bachelor\'s Degree', 4: 'Master\'s Degree' };
+          const certMap: Record<number, import('@/lib/inheritanceUtils').QualificationLevel> = { 6: 'Certificate', 5: 'Ordinary Diploma', 4: 'Advanced Diploma', 2: 'Bachelor\'s Degree', 1: 'Master\'s Degree' };
           const currentLevel: import('@/lib/inheritanceUtils').QualificationLevel = certMap[Number(edu.certificateLevelId)] || 'Certificate';
           const targetLevel: import('@/lib/inheritanceUtils').QualificationLevel = certMap[Number(requiredCertLevel.id)] || 'Certificate';
           // Comprehensive progression rules based on certificateLevel order
-          const certificateLevel = [
+        
+        
+          const certificateLevel = [ 
             "Master's Degree",
             "Bachelor's Degree",
-            "Diploma Higher",
             "Advanced Diploma",
             "Ordinary Diploma",
             "Certificate",
-            "O-Level",
-            "A-Level",
-            "KCSE",
-            "KCPE",
-            "Craft Certificate",
-            "PhD",
-            "Certification"
           ];
           const rules: import('@/lib/inheritanceUtils').InheritanceRule[] = [];
           for (let i = certificateLevel.length - 1; i > 0; i--) {
             rules.push({
               from: certificateLevel[i] as import('@/lib/inheritanceUtils').QualificationLevel,
               to: certificateLevel[i - 1] as import('@/lib/inheritanceUtils').QualificationLevel,
-              minYears: 2 // You can customize minYears per transition
+              minYears: Number(job?.experience) // You can customize minYears per transition
             });
           }
           const result = useInheritance(
@@ -146,6 +141,8 @@ export default function JobCard({
             edu.doca ? new Date(edu.doca) : new Date(),
             rules
           );
+          console.log(currentLevel,targetLevel);
+
           if (!result.allowed) {
             return { eligible: false, reason: result.reason || 'Progression not allowed.' };
           } else {
@@ -161,62 +158,15 @@ export default function JobCard({
     let reason = 'You do not meet the required qualifications.';
     if (requiredStudyArea && applicantProfile.education.every((edu: any) => edu.studyAreaId !== requiredStudyArea.id)) {
       reason = `Required study area: ${requiredStudyArea.name}`;
+    }else if (requiredCertLevel && applicantProfile.education.every((edu: any) => edu.certificateLevelId !== (requiredCertLevel as any).id)) {
+      reason = `Required certificate level: ${(requiredCertLevel as any).name}`;
     } else if (job.requiredSpecializationIds?.length > 0 && applicantProfile.education.every((edu: any) => !job.requiredSpecializationIds.includes(edu.specializationId))) {
       reason = 'Required specialization not found in your education records.';
-    } else if (requiredCertLevel && applicantProfile.education.every((edu: any) => edu.certificateLevelId !== (requiredCertLevel as any).id)) {
-      reason = `Required certificate level: ${(requiredCertLevel as any).name}`;
-    }
+    } 
     return { eligible: false, reason };
   }
   }    
   const eligibility = getEligibility();
-
-  // ----------------- Eligibility Check -----------------
-  const isEligible = () => {
-    if (!isAuthenticated) return false;
-
-    const requiredStudyArea = studyAreas.find(
-      (sa: any) => sa.id === job.requiredStudyAreaId
-    );
-    const requiredCertLevel = certificateLevels.find(
-      (c: any) => c.id === job.certificateLevel
-    );
-
-    // If no specific requirements → allow
-    if (!requiredStudyArea && !requiredCertLevel && !job.requiredSpecializationIds?.length) {
-      return true;
-    }
-
-    // Applicant must have education records
-    if (!applicantProfile?.education || applicantProfile.education.length === 0) {
-      return false;
-    }
-
-    // Check each education record
-    return applicantProfile.education.some((edu: any) => {
-      // Study area must match
-      if (requiredStudyArea && edu.studyAreaId !== requiredStudyArea.id) return false;
-
-      // Specialization must match (if required)
-      if (job.requiredSpecializationIds?.length > 0) {
-        if (!job.requiredSpecializationIds.includes(edu.specializationId)) return false;
-      }
-
-      // Certificate Level must match
-      if (requiredCertLevel) {
-        if (job.progressionAllowed) {
-          // progression: allow equal or higher level
-          return edu.certificateLevelId >= requiredCertLevel.id;
-        } else {
-          // strict match
-          return edu.certificateLevelId === requiredCertLevel.id;
-        }
-      }
-
-      return true;
-    });
-  };
-
   // ----------------- Required Qualifications Renderer -----------------
   const getRequiredQualifications = () => {
     const studyArea = studyAreas.find((sa: any) => sa.id === job.requiredStudyAreaId);
@@ -256,16 +206,6 @@ export default function JobCard({
       if (!eligibility?.eligible) return;
     }
 
-    if (!isEligible()) {
-      toast({
-        title: "Application Not Eligible",
-        description:
-          "You do not meet the required education qualifications for this position.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     applyMutation.mutate();
   };
 
@@ -273,10 +213,7 @@ export default function JobCard({
   
   const isExpired = deadline?.color === "text-red-600" && deadline?.text === "Expired";
 
-// const isExpired = new Date(job.endDate) < new Date(); // separate check
-
-  const hasRequirements =
-    job.requiredStudyAreaId || job.certificateLevel || job.requiredSpecializationIds?.length;
+  const hasRequirements = job.requiredStudyAreaId || job.certificateLevel || job.requiredSpecializationIds?.length;
 
   // ----------------- Render -----------------
   return (
