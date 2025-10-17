@@ -221,7 +221,7 @@ switch (req.user?.role) {
           status: "phone_verification_required",
           message: "Phone number not verified.",
           instructions: "Please enter the 6-digit code sent to your phone. If you did not receive it, you can resend the code.",
-          phoneNumber: verifiedPhone.phoneNumber || req.user.phoneNumber || null,
+          phoneNumber: verifiedPhone?.phoneNumber || req.user?.phoneNumber || null,
           resendCodeEndpoint: "/api/auth/send-otp",
           enterCodeAt: "/auth/otp"
         });
