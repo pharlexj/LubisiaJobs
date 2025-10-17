@@ -37,6 +37,10 @@ import {
   noticeSubscriptions,
   notifications,
   notificationRecipients,
+  voteAccounts,
+  budgets,
+  transactions,
+  masterImprestRegister,
   type User,
   type UpsertUser,
   type Applicant,
@@ -80,6 +84,10 @@ import {
   type Ethnicity,
   type AdminDocument,
   type InsertAdminDocument,
+  type VoteAccount,
+  type Budget,
+  type Transaction,
+  type MasterImprestRegister,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, like, sql, lt, PromiseOf, or, ne, isNull, not, isNotNull } from "drizzle-orm";
@@ -219,6 +227,21 @@ export interface IStorage {
   // SMS-triggered status update operations
   shortlistApplicationWithSMS(applicationId: number): Promise<Application>;
   hireApplicationWithSMS(applicationId: number): Promise<Application>;
+  
+  // Accounting module operations
+  getAllVoteAccounts(): Promise<any[]>;
+  createVoteAccount(data: any): Promise<any>;
+  getAllBudgets(): Promise<any[]>;
+  createBudget(data: any): Promise<any>;
+  getTransactions(filters?: { type?: any; status?: any }): Promise<any[]>;
+  createClaim(data: any): Promise<any>;
+  createPayment(data: any): Promise<any>;
+  approveTransaction(id: number, approvedBy: string): Promise<any>;
+  rejectTransaction(id: number, rejectedBy: string, reason: string): Promise<any>;
+  getAllMIREntries(): Promise<any[]>;
+  createMIREntry(data: any): Promise<any>;
+  retireMIREntry(id: number, retirementAmount: number, retirementDate: string, retirementVoucherNo: string): Promise<any>;
+  getAllEmployees(): Promise<any[]>;
 }
 export class DatabaseStorage implements IStorage {
   // User operations
@@ -2335,7 +2358,117 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
       .returning();
     
     return document;
-  }  
+  }
+  
+  // ========================================
+  // ACCOUNTING MODULE METHODS
+  // ========================================
+
+  async getAllVoteAccounts(): Promise<VoteAccount[]> {
+    return await db.select().from(voteAccounts).orderBy(desc(voteAccounts.createdAt));
+  }
+
+  async createVoteAccount(data: any): Promise<VoteAccount> {
+    const [voteAccount] = await db.insert(voteAccounts).values(data).returning();
+    return voteAccount;
+  }
+
+  async getAllBudgets(): Promise<Budget[]> {
+    return await db.select().from(budgets).orderBy(desc(budgets.createdAt));
+  }
+
+  async createBudget(data: any): Promise<Budget> {
+    const [budget] = await db.insert(budgets).values(data).returning();
+    return budget;
+  }
+
+  async getTransactions(filters?: { type?: any; status?: any }): Promise<Transaction[]> {
+    let query = db.select().from(transactions);
+    
+    if (filters?.type) {
+      query = query.where(eq(transactions.transactionType, filters.type)) as any;
+    }
+    if (filters?.status) {
+      query = query.where(eq(transactions.status, filters.status)) as any;
+    }
+    
+    return await query.orderBy(desc(transactions.createdAt));
+  }
+
+  async createClaim(data: any): Promise<Transaction> {
+    const [transaction] = await db.insert(transactions).values(data).returning();
+    return transaction;
+  }
+
+  async createPayment(data: any): Promise<Transaction> {
+    const [transaction] = await db.insert(transactions).values(data).returning();
+    return transaction;
+  }
+
+  async approveTransaction(id: number, approvedBy: string): Promise<Transaction> {
+    const [transaction] = await db
+      .update(transactions)
+      .set({ 
+        status: 'approved',
+        approvedBy,
+        approvedAt: sql`NOW()`
+      })
+      .where(eq(transactions.id, id))
+      .returning();
+    return transaction;
+  }
+
+  async rejectTransaction(id: number, rejectedBy: string, reason: string): Promise<Transaction> {
+    const [transaction] = await db
+      .update(transactions)
+      .set({ 
+        status: 'rejected',
+        approvedBy: rejectedBy,
+        rejectionReason: reason,
+        approvedAt: sql`NOW()`
+      })
+      .where(eq(transactions.id, id))
+      .returning();
+    return transaction;
+  }
+
+  async getAllMIREntries(): Promise<MasterImprestRegister[]> {
+    return await db.select().from(masterImprestRegister).orderBy(desc(masterImprestRegister.createdAt));
+  }
+
+  async createMIREntry(data: any): Promise<MasterImprestRegister> {
+    const [mirEntry] = await db.insert(masterImprestRegister).values(data).returning();
+    return mirEntry;
+  }
+
+  async retireMIREntry(
+    id: number, 
+    retirementAmount: number, 
+    retirementDate: string,
+    retirementVoucherNo: string
+  ): Promise<MasterImprestRegister> {
+    const [entry] = await db.select().from(masterImprestRegister).where(eq(masterImprestRegister.id, id));
+    
+    const outstandingBalance = entry.advanceAmount - retirementAmount;
+    
+    const [mirEntry] = await db
+      .update(masterImprestRegister)
+      .set({
+        retirementAmount,
+        retirementDate,
+        retirementVoucherNo,
+        outstandingBalance,
+        status: outstandingBalance === 0 ? 'completed' : 'pending'
+      })
+      .where(eq(masterImprestRegister.id, id))
+      .returning();
+    
+    return mirEntry;
+  }
+
+  async getAllEmployees(): Promise<Employee[]> {
+    return await db.select().from(employees).orderBy(employees.personalNumber);
+  }
 }
 // Add a method to filter notification recipients by audience if needed
 export class DatabaseStorageWithAudience extends DatabaseStorage {
