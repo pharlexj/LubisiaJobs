@@ -2,7 +2,17 @@
 
 ## Overview
 
-This is a comprehensive job recruitment and application management system built for Trans Nzoia County Public Service Board. The application serves as a digital platform for managing job postings, applicant profiles, applications, and the entire recruitment workflow from application submission to final selection. It supports multiple user roles including applicants, administrators, and board members, each with tailored interfaces and functionality.
+This is a comprehensive job recruitment and application management system built for Trans Nzoia County Public Service Board. The application serves as a digital platform for managing job postings, applicant profiles, applications, and the entire recruitment workflow from application submission to final selection. It supports multiple user roles including applicants, administrators, board members, accountants, and A.I.E Holders, each with tailored interfaces and functionality.
+
+## Recent Changes
+
+### October 17, 2025 - Accounting Module Integration
+- **Enhanced Sidebar Navigation**: Implemented expandable menu groups with hierarchical navigation for accountant and A.I.E Holder roles
+- **Accountant Dashboard**: Complete accounting interface with Claims, Payments, MIR, Vote, Budget, Employees, Reports, Charts, and Settings pages
+- **A.I.E Holder Interface**: Financial approval workflow with Dashboard, Requests, and MIR overview pages
+- **Route Protection**: Added protected routes for all accounting pages with role-based access control
+- **UI Enhancements**: Expandable sidebar sections with ChevronDown/ChevronRight icons for better navigation
+- **Role Support**: Added purple badge for A.I.E Holder role in sidebar
 
 ## User Preferences
 
@@ -35,7 +45,7 @@ The system implements Replit's OpenID Connect authentication:
 
 - **Authentication Provider**: Replit OIDC for secure user authentication
 - **Session Storage**: PostgreSQL-backed sessions using connect-pg-simple
-- **Authorization**: Role-based access control with three user types (applicant, admin, board)
+- **Authorization**: Role-based access control with five user types (applicant, admin, board, accountant, a.i.e Holder)
 - **User Management**: Automatic user creation and profile management upon first login
 
 ### Database Design
@@ -93,3 +103,55 @@ The project uses a monorepo structure with shared code:
 - **Class Variance Authority**: Component variant management
 - **Memoizee**: Function memoization for performance optimization
 - **WebSocket**: Real-time communication support (via Neon serverless)
+
+## Accounting Module
+
+### Overview
+The accounting module provides comprehensive financial management capabilities for Trans Nzoia County Public Service Board, supporting two key roles:
+
+1. **Accountant**: Full financial management and transaction processing
+2. **A.I.E Holder (Accounting & Imprest Executive)**: Financial approval and oversight
+
+### Accountant Features
+
+#### Transactions Management
+- **Claims Management**: Process employee claims with status tracking (pending, approved, rejected)
+- **Payment Processing**: Manage payment vouchers and financial transactions
+- **Master Imprest Register (MIR)**: Track imprest advances, retirements, and outstanding balances
+
+#### Reporting & Analytics
+- **Financial Reports**: Generate comprehensive financial reports (summaries, claims, payments, MIR, budget utilization, vote statements)
+- **Charts & Analytics**: Visual analysis with monthly expenditure, budget distribution, claims trends, and vote utilization charts
+
+#### Accounts Setup
+- **Vote Management**: Manage budget vote accounts with allocation tracking and utilization percentages
+- **Budget Planning**: Department budget allocation with utilization tracking and progress visualization
+- **Employee Records**: Maintain employee financial records with claims and imprest tracking
+- **System Settings**: Configure organization details, financial parameters, document templates, and system preferences
+
+### A.I.E Holder Features
+
+#### Approval Workflow
+- **Approval Requests**: Review and approve/reject financial transactions (claims, payments, imprest)
+- **Dashboard Overview**: Monitor pending approvals, monthly spending, budget balance, and utilization rates
+- **Activity Tracking**: View approval history and recent activities
+
+#### Financial Oversight
+- **MIR Overview**: Monitor all Master Imprest Register entries and outstanding balances
+- **Budget Monitoring**: Track budget utilization and department spending
+- **Vote Overview**: Review vote account balances and allocations
+
+### Technical Implementation
+
+#### UI/UX Features
+- **Expandable Sidebar**: Hierarchical navigation with collapsible menu groups for Transactions, Reporting, and Accounts Setup
+- **Responsive Design**: Mobile-first design with adaptive layouts for all screen sizes
+- **Status Indicators**: Color-coded badges for transaction status (pending/approved/rejected/completed)
+- **Search & Filter**: Advanced search and filtering capabilities across all modules
+- **Data Visualization**: Progress bars, charts, and visual indicators for budget tracking
+
+#### Navigation Structure
+- Accountant routes: `/accountant/*` (dashboard, claims, payments, mir, vote, budget, employees, reports, charts, settings)
+- A.I.E Holder routes: `/aie/*` (dashboard, requests, mir)
+- Role-based access control with protected routes
+- Purple badge indicator for A.I.E Holder role in sidebar
