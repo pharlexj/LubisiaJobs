@@ -21,7 +21,14 @@ import {
   LogOut,
   MessageCircle,
   Menu,
-  X
+  X,
+  DollarSign,
+  Receipt,
+  BookOpen,
+  TrendingUp,
+  Calculator,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import ProfileCompletion from '@/components/applicant/ProfileCompletion';
 import { useState } from 'react';
@@ -39,6 +46,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(true); // desktop expand/collapse
   const [isMobileOpen, setIsMobileOpen] = useState(false); // mobile slide
   const [showProfileSettings, setShowProfileSettings] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
 
   const toggleSidebar = () => setIsOpen(!isOpen);
   const toggleMobileSidebar = () => setIsMobileOpen(!isMobileOpen);
@@ -81,11 +89,66 @@ export default function Sidebar({ userRole }: SidebarProps) {
   ];
 
   const accountNavItems = [
-    { href: '/accounts/reports', icon: BarChart3, label: 'Claim', description: 'Selection reports' },
-    { href: '/accounts/payment', icon: BarChart3, label: 'Payment', description: 'Voucher Payment' },
-    { href: '/accounts/MIR', icon: BarChart3, label: 'MIR', description: 'Register Management' },
-    { href: '/accounts/budget', icon: BarChart3, label: 'Budget', description: 'Budget Management' },
-    { href: '/accounts/votes', icon: BarChart3, label: 'Vote', description: 'Votes Management' },
+    { href: '/accountant', icon: LayoutDashboard, label: 'Dashboard', description: 'Accountant overview' },
+    { 
+      id: 'transactions',
+      icon: DollarSign, 
+      label: 'Transactions', 
+      description: 'Financial transactions',
+      children: [
+        { href: '/accountant/claims', icon: Receipt, label: 'Claims', description: 'Process claims' },
+        { href: '/accountant/payments', icon: DollarSign, label: 'Payments', description: 'Payment processing' },
+        { href: '/accountant/mir', icon: BookOpen, label: 'Master Imprest', description: 'MIR management' },
+      ]
+    },
+    { 
+      id: 'reporting',
+      icon: TrendingUp, 
+      label: 'Reporting', 
+      description: 'Financial reports',
+      children: [
+        { href: '/accountant/reports', icon: FileText, label: 'Reports', description: 'Financial reports' },
+        { href: '/accountant/charts', icon: BarChart3, label: 'Charts', description: 'Analytics & charts' },
+      ]
+    },
+    { 
+      id: 'setup',
+      icon: Settings, 
+      label: 'Accounts Setup', 
+      description: 'System configuration',
+      children: [
+        { href: '/accountant/vote', icon: Calculator, label: 'Vote Management', description: 'Manage votes' },
+        { href: '/accountant/budget', icon: Briefcase, label: 'Budget', description: 'Budget planning' },
+        { href: '/accountant/employees', icon: Users, label: 'Employees', description: 'Employee records' },
+        { href: '/accountant/settings', icon: Settings, label: 'Settings', description: 'System settings' },
+      ]
+    },
+  ];
+
+  const aieNavItems = [
+    { href: '/aie', icon: LayoutDashboard, label: 'Dashboard', description: 'A.I.E overview' },
+    { 
+      id: 'transactions',
+      icon: DollarSign, 
+      label: 'Transactions', 
+      description: 'Financial transactions',
+      children: [
+        { href: '/aie/requests', icon: CheckCircle, label: 'Requests', description: 'Approval requests' },
+        { href: '/aie/mir', icon: BookOpen, label: 'Master Imprest', description: 'MIR overview' },
+        { href: '/aie/budget', icon: Briefcase, label: 'Budget', description: 'Budget overview' },
+        { href: '/aie/vote', icon: Calculator, label: 'Vote', description: 'Vote overview' },
+      ]
+    },
+    { 
+      id: 'reporting',
+      icon: TrendingUp, 
+      label: 'Reports', 
+      description: 'Financial reports',
+      children: [
+        { href: '/aie/reports', icon: FileText, label: 'Reports', description: 'Financial reports' },
+        { href: '/aie/charts', icon: BarChart3, label: 'Charts', description: 'Analytics & charts' },
+      ]
+    },
   ];
 
   const getNavItems = () => {
@@ -94,8 +157,17 @@ export default function Sidebar({ userRole }: SidebarProps) {
       case 'admin': return adminNavItems;
       case 'board': return boardNavItems;
       case 'accountant': return accountNavItems;
+      case 'a.i.e Holder': return aieNavItems;
       default: return [];
     }
+  };
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups(prev =>
+      prev.includes(groupId)
+        ? prev.filter(id => id !== groupId)
+        : [...prev, groupId]
+    );
   };
 
   const getRoleColor = () => {
@@ -104,6 +176,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
       case 'admin': return 'bg-red-100 text-red-800';
       case 'board': return 'bg-green-100 text-green-800';
       case 'accountant': return 'bg-yellow-100 text-yellow-800';
+      case 'a.i.e Holder': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -114,6 +187,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
       case 'admin': return 'Administrator';
       case 'board': return 'Board Member';
       case 'accountant': return 'Accountant';
+      case 'a.i.e Holder': return 'A.I.E Holder';
       default: return 'User';
     }
   };
@@ -167,34 +241,101 @@ export default function Sidebar({ userRole }: SidebarProps) {
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           <TooltipProvider delayDuration={200}>
-            {getNavItems().map((item) => {
+            {getNavItems().map((item: any) => {
               const IconComponent = item.icon;
               const isActive = location === item.href;
+              const isGroupExpanded = item.id && expandedGroups.includes(item.id);
+              const hasChildren = item.children && item.children.length > 0;
 
+              // Regular nav item (no children)
+              if (!hasChildren) {
+                return (
+                  <Tooltip key={item.href}>
+                    <TooltipTrigger asChild>
+                      <Link href={item.href}>
+                        <a
+                          onClick={() => setIsMobileOpen(false)}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${
+                            isActive
+                              ? 'bg-blue-50 text-primary border border-blue-200'
+                              : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                          }`}
+                        >
+                          <IconComponent className="w-5 h-5 shrink-0" />
+                          {isOpen && (
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm">{item.label}</div>
+                              <div className="text-xs opacity-75 truncate">{item.description}</div>
+                            </div>
+                          )}
+                        </a>
+                      </Link>
+                    </TooltipTrigger>
+                    {!isOpen && <TooltipContent side="right">{item.label}</TooltipContent>}
+                  </Tooltip>
+                );
+              }
+
+              // Expandable group item
               return (
-                <Tooltip key={item.href}>
-                  <TooltipTrigger asChild>
-                    <Link href={item.href}>
-                      <a
-                        onClick={() => setIsMobileOpen(false)}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${
-                          isActive
-                            ? 'bg-blue-50 text-primary border border-blue-200'
+                <div key={item.id}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => toggleGroup(item.id)}
+                        className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg transition-colors group ${
+                          isGroupExpanded
+                            ? 'bg-gray-100 text-gray-900'
                             : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                         }`}
                       >
-                        <IconComponent className="w-5 h-5 shrink-0" />
+                        <div className="flex items-center gap-3">
+                          <IconComponent className="w-5 h-5 shrink-0" />
+                          {isOpen && (
+                            <div className="flex-1 min-w-0 text-left">
+                              <div className="font-medium text-sm">{item.label}</div>
+                              <div className="text-xs opacity-75 truncate">{item.description}</div>
+                            </div>
+                          )}
+                        </div>
                         {isOpen && (
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm">{item.label}</div>
-                            <div className="text-xs opacity-75 truncate">{item.description}</div>
-                          </div>
+                          isGroupExpanded ? (
+                            <ChevronDown className="w-4 h-4 shrink-0" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 shrink-0" />
+                          )
                         )}
-                      </a>
-                    </Link>
-                  </TooltipTrigger>
-                  {!isOpen && <TooltipContent side="right">{item.label}</TooltipContent>}
-                </Tooltip>
+                      </button>
+                    </TooltipTrigger>
+                    {!isOpen && <TooltipContent side="right">{item.label}</TooltipContent>}
+                  </Tooltip>
+
+                  {/* Children (sub-items) */}
+                  {isOpen && isGroupExpanded && (
+                    <div className="ml-7 mt-1 space-y-1">
+                      {item.children.map((child: any) => {
+                        const ChildIcon = child.icon;
+                        const isChildActive = location === child.href;
+
+                        return (
+                          <Link key={child.href} href={child.href}>
+                            <a
+                              onClick={() => setIsMobileOpen(false)}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+                                isChildActive
+                                  ? 'bg-blue-50 text-primary border border-blue-200'
+                                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                              }`}
+                            >
+                              <ChildIcon className="w-4 h-4 shrink-0" />
+                              <span>{child.label}</span>
+                            </a>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </TooltipProvider>
