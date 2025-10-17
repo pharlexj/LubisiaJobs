@@ -1184,7 +1184,13 @@ switch (req.user?.role) {
         submittedOn: new Date().toISOString().split('T')[0],
         remarks: null,
         interviewDate: null,
+        interviewTime: null,
+        interviewDuration: null,
         interviewScore: null,
+        shortlistedAt: null,
+        hiredAt: null,
+        shortlistSmsSent: false,
+        hireSmsSent: false,
       });
 
       res.json(application);
@@ -2891,7 +2897,10 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       // Send SMS notification here
       const applicant = await storage.getApplicantById(application.applicantId);
       if (applicant?.phoneNumber) {
-        await sendOtp(applicant.phoneNumber, `Congratulations! You have been shortlisted. Your application ID: ${application.id}`);
+        await sendOtp({ 
+          to: applicant.phoneNumber, 
+          template: `Congratulations! You have been shortlisted. Your application ID: ${application.id}` 
+        });
       }
 
       res.json(application);
@@ -2914,7 +2923,10 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       // Send SMS notification here
       const applicant = await storage.getApplicantById(application.applicantId);
       if (applicant?.phoneNumber) {
-        await sendOtp(applicant.phoneNumber, `Congratulations! You have been hired. Your application ID: ${application.id}`);
+        await sendOtp({ 
+          to: applicant.phoneNumber, 
+          template: `Congratulations! You have been hired. Your application ID: ${application.id}` 
+        });
       }
 
       res.json(application);

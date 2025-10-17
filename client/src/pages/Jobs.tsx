@@ -13,8 +13,8 @@ import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { apiRequest } from '@/lib/queryClient';
 import { useAuthContext } from "@/context/AuthContext";
 export default function Jobs() {
-  // const { isAuthenticated } = useAuth();
-  const { isAuthenticated, user, applicantProfile,redirectUrl } = useAuth();
+  const { isAuthenticated, user, applicantProfile, redirectUrl } = useAuth();
+  const { handleClick } = useAuthContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedJobGroup, setSelectedJobGroup] = useState<string>('all');
@@ -33,6 +33,7 @@ export default function Jobs() {
     
     return matchesSearch && matchesDepartment && matchesJobGroup;
   });
+  
   if (isLoading) {
     return (
       <div className="min-h-screen bg-neutral-50">
@@ -55,9 +56,6 @@ export default function Jobs() {
       </div>
     );
   }
-
-  const {handleClick } = useAuthContext();
- 
 
   return (
     <div className="min-h-screen bg-neutral-50">
