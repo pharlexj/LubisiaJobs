@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Navigation from '@/components/layout/Navigation';
 import JobCard from '@/components/job/JobCard';
@@ -18,6 +18,7 @@ export default function Jobs() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedJobGroup, setSelectedJobGroup] = useState<string>('all');
+  const [displayCount, setDisplayCount] = useState(12);
   const { data: config, isLoading } = usePublicConfig();  
   const departments = config?.departments || [];
   const jobGroups = config?.jobGroups || [];
@@ -33,6 +34,24 @@ export default function Jobs() {
     
     return matchesSearch && matchesDepartment && matchesJobGroup;
   });
+
+  const displayedJobs = filteredJobs.slice(0, displayCount);
+  const hasMore = displayCount < filteredJobs.length;
+
+  const loadMore = () => {
+    setDisplayCount(prev => prev + 12);
+  };
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setSelectedDepartment('all');
+    setSelectedJobGroup('all');
+    setDisplayCount(12);
+  };
+
+  useEffect(() => {
+    setDisplayCount(12);
+  }, [searchTerm, selectedDepartment, selectedJobGroup]);
   
   if (isLoading) {
     return (
@@ -207,11 +226,8 @@ export default function Jobs() {
                   {(searchTerm || selectedDepartment !== 'all' || selectedJobGroup !== 'all') && (
                     <Button 
                       variant="outline"
-                      onClick={() => {
-                        setSearchTerm('');
-                        setSelectedDepartment('all');
-                        setSelectedJobGroup('all');
-                      }}
+                      onClick={resetFilters}
+                      data-testid="button-clear-filters"
                     >
                       Clear Filters
                     </Button>
@@ -224,7 +240,8 @@ export default function Jobs() {
           <>
             <div className="flex justify-between items-center mb-6">
               <p className="text-gray-600">
-                Showing {filteredJobs.length} of {activeJobs.length} jobs
+                Showing {displayedJobs.length} of {filteredJobs.length} jobs
+                {filteredJobs.length !== activeJobs.length && ` (${activeJobs.length} total)`}
               </p>
               <Select defaultValue="newest">
                 <SelectTrigger className="w-48">
@@ -240,7 +257,7 @@ export default function Jobs() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredJobs.map((job) => (
+              {displayedJobs.map((job) => (
                 <JobCard
                 key={job.id}
                 job={job}
@@ -261,6 +278,20 @@ export default function Jobs() {
 
               ))}
             </div>
+
+            {/* Load More Button */}
+            {hasMore && (
+              <div className="mt-8 text-center" data-testid="load-more-section">
+                <Button 
+                  onClick={loadMore}
+                  variant="outline"
+                  size="lg"
+                  data-testid="button-load-more"
+                >
+                  Load More Jobs ({filteredJobs.length - displayCount} remaining)
+                </Button>
+              </div>
+            )}
           </>
         )}
 
