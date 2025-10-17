@@ -2936,6 +2936,239 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     }
   });
 
+  // ========================================
+  // ACCOUNTING MODULE ROUTES
+  // ========================================
+
+  // Vote Accounts Routes
+  app.get('/api/accounting/vote-accounts', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !['accountant', 'admin'].includes(user.role!)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const voteAccounts = await storage.getAllVoteAccounts();
+      res.json(voteAccounts);
+    } catch (error) {
+      console.error('Error fetching vote accounts:', error);
+      res.status(500).json({ message: 'Failed to fetch vote accounts' });
+    }
+  });
+
+  app.post('/api/accounting/vote-accounts', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'accountant') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const voteAccount = await storage.createVoteAccount(req.body);
+      res.json(voteAccount);
+    } catch (error) {
+      console.error('Error creating vote account:', error);
+      res.status(500).json({ message: 'Failed to create vote account' });
+    }
+  });
+
+  // Budget Routes
+  app.get('/api/accounting/budgets', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !['accountant', 'admin'].includes(user.role!)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const budgets = await storage.getAllBudgets();
+      res.json(budgets);
+    } catch (error) {
+      console.error('Error fetching budgets:', error);
+      res.status(500).json({ message: 'Failed to fetch budgets' });
+    }
+  });
+
+  app.post('/api/accounting/budgets', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'accountant') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const budget = await storage.createBudget(req.body);
+      res.json(budget);
+    } catch (error) {
+      console.error('Error creating budget:', error);
+      res.status(500).json({ message: 'Failed to create budget' });
+    }
+  });
+
+  // Transaction Routes (Claims & Payments)
+  app.get('/api/accounting/transactions', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !['accountant', 'admin'].includes(user.role!)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { type, status } = req.query;
+      const transactions = await storage.getTransactions({ type, status });
+      res.json(transactions);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      res.status(500).json({ message: 'Failed to fetch transactions' });
+    }
+  });
+
+  app.post('/api/accounting/transactions/claim', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'accountant') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const transaction = await storage.createClaim({
+        ...req.body,
+        transactionType: 'claim',
+        createdBy: user.id
+      });
+
+      res.json({ 
+        success: true, 
+        message: 'Claim generated successfully!',
+        transaction 
+      });
+    } catch (error) {
+      console.error('Error creating claim:', error);
+      res.status(500).json({ message: 'Failed to create claim' });
+    }
+  });
+
+  app.post('/api/accounting/transactions/payment', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'accountant') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const transaction = await storage.createPayment({
+        ...req.body,
+        transactionType: 'payment',
+        createdBy: user.id
+      });
+
+      res.json({ 
+        success: true, 
+        message: 'Payment generated successfully!',
+        transaction 
+      });
+    } catch (error) {
+      console.error('Error creating payment:', error);
+      res.status(500).json({ message: 'Failed to create payment' });
+    }
+  });
+
+  app.patch('/api/accounting/transactions/:id/approve', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Only A.I.E Holder can approve transactions' });
+      }
+
+      const { id } = req.params;
+      const transaction = await storage.approveTransaction(parseInt(id), user.id);
+      res.json(transaction);
+    } catch (error) {
+      console.error('Error approving transaction:', error);
+      res.status(500).json({ message: 'Failed to approve transaction' });
+    }
+  });
+
+  app.patch('/api/accounting/transactions/:id/reject', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Only A.I.E Holder can reject transactions' });
+      }
+
+      const { id } = req.params;
+      const { reason } = req.body;
+      const transaction = await storage.rejectTransaction(parseInt(id), user.id, reason);
+      res.json(transaction);
+    } catch (error) {
+      console.error('Error rejecting transaction:', error);
+      res.status(500).json({ message: 'Failed to reject transaction' });
+    }
+  });
+
+  // Master Imprest Register Routes
+  app.get('/api/accounting/mir', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !['accountant', 'admin'].includes(user.role!)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const mirEntries = await storage.getAllMIREntries();
+      res.json(mirEntries);
+    } catch (error) {
+      console.error('Error fetching MIR entries:', error);
+      res.status(500).json({ message: 'Failed to fetch MIR entries' });
+    }
+  });
+
+  app.post('/api/accounting/mir', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'accountant') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const mirEntry = await storage.createMIREntry(req.body);
+      res.json(mirEntry);
+    } catch (error) {
+      console.error('Error creating MIR entry:', error);
+      res.status(500).json({ message: 'Failed to create MIR entry' });
+    }
+  });
+
+  app.patch('/api/accounting/mir/:id/retire', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'accountant') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { id } = req.params;
+      const { retirementAmount, retirementDate, retirementVoucherNo } = req.body;
+      const mirEntry = await storage.retireMIREntry(
+        parseInt(id), 
+        retirementAmount, 
+        retirementDate,
+        retirementVoucherNo
+      );
+      res.json(mirEntry);
+    } catch (error) {
+      console.error('Error retiring MIR entry:', error);
+      res.status(500).json({ message: 'Failed to retire MIR entry' });
+    }
+  });
+
+  // Employee financial records
+  app.get('/api/accounting/employees', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !['accountant', 'admin'].includes(user.role!)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const employees = await storage.getAllEmployees();
+      res.json(employees);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      res.status(500).json({ message: 'Failed to fetch employees' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
