@@ -3272,6 +3272,110 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     }
   });
 
+  // Get budget summary for accountant
+  app.get('/api/accountant/budget', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !['accountant', 'admin'].includes(user.role!)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const budgets = await storage.getAllBudgets();
+      const totalBudget = budgets.reduce((sum, b) => sum + (b.allocatedAmount || 0), 0);
+      const utilized = budgets.reduce((sum, b) => sum + (b.utilizedAmount || 0), 0);
+      
+      res.json({
+        totalBudget,
+        allocated: totalBudget,
+        utilized,
+        remaining: totalBudget - utilized
+      });
+    } catch (error) {
+      console.error('Error fetching budget summary:', error);
+      res.status(500).json({ message: 'Failed to fetch budget summary' });
+    }
+  });
+
+  // ========================================
+  // A.I.E HOLDER ROUTES (Financial approval workflow)
+  // ========================================
+
+  // Get dashboard stats for A.I.E Holder
+  app.get('/api/aie/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'a.i.e Holder') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const transactions = await storage.getTransactions();
+      const mirEntries = await storage.getAllMIREntries();
+      const budgets = await storage.getAllBudgets();
+      
+      const pendingApprovals = transactions.filter(t => t.status === 'pending').length;
+      const approvedToday = transactions.filter(t => 
+        t.status === 'approved' && 
+        t.approvedAt && 
+        new Date(t.approvedAt).toDateString() === new Date().toDateString()
+      ).length;
+      const activeMirs = mirEntries.filter(m => m.status === 'pending').length;
+      
+      const currentMonth = new Date().getMonth();
+      const monthlySpend = transactions
+        .filter(t => t.status === 'approved' && new Date(t.createdAt).getMonth() === currentMonth)
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+      
+      const totalBudget = budgets.reduce((sum, b) => sum + (b.allocatedAmount || 0), 0);
+      const utilized = budgets.reduce((sum, b) => sum + (b.utilizedAmount || 0), 0);
+      const budgetBalance = totalBudget - utilized;
+      const utilizationRate = totalBudget > 0 ? Math.round((utilized / totalBudget) * 100) : 0;
+
+      res.json({
+        pendingApprovals,
+        approvedToday,
+        activeMirs,
+        monthlySpend,
+        budgetBalance,
+        utilizationRate
+      });
+    } catch (error) {
+      console.error('Error fetching A.I.E stats:', error);
+      res.status(500).json({ message: 'Failed to fetch statistics' });
+    }
+  });
+
+  // Get all approval requests for A.I.E Holder
+  app.get('/api/aie/requests', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'a.i.e Holder') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const transactions = await storage.getTransactions();
+      res.json(transactions);
+    } catch (error) {
+      console.error('Error fetching approval requests:', error);
+      res.status(500).json({ message: 'Failed to fetch approval requests' });
+    }
+  });
+
+  // Get MIR overview for A.I.E Holder (same as accountant)
+  app.get('/api/aie/mir', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'a.i.e Holder') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const mirEntries = await storage.getAllMIREntries();
+      res.json(mirEntries);
+    } catch (error) {
+      console.error('Error fetching MIR entries:', error);
+      res.status(500).json({ message: 'Failed to fetch MIR entries' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
