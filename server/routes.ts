@@ -442,6 +442,9 @@ switch (req.user?.role) {
         redirectUrl = '/admin';
       } else if (user.role === 'board') {
         redirectUrl = '/board';
+      
+      } else if (user.role === 'accountant') {
+        redirectUrl = '/accountant';
       }
 
       res.json({ ...user, applicantProfile, redirectUrl });
