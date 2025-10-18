@@ -6,7 +6,15 @@ This is a comprehensive job recruitment and application management system built 
 
 ## Recent Changes
 
-### October 17, 2025 - Accounting Module Integration
+### October 18, 2025 - Accounting Module Backend Integration
+- **Database Schema**: Created 4 accounting tables (vote_accounts, budgets, transactions, master_imprest_register) with full relationships
+- **Document Generation**: Integrated docxtemplater for .docx template processing with currency formatting and number-to-words conversion
+- **Backend API Routes**: Implemented 15+ accounting endpoints for transactions, claims, payments, MIR, vote accounts, and budgets
+- **Storage Layer**: Added complete CRUD operations for all accounting entities with approval/rejection workflow
+- **Frontend-Backend Integration**: Connected all accountant and A.I.E Holder pages to backend APIs
+- **Role-Based Access**: Enforced role-based access control on all accounting endpoints (accountant and a.i.e Holder)
+
+### October 17, 2025 - Accounting Module Frontend
 - **Enhanced Sidebar Navigation**: Implemented expandable menu groups with hierarchical navigation for accountant and A.I.E Holder roles
 - **Accountant Dashboard**: Complete accounting interface with Claims, Payments, MIR, Vote, Budget, Employees, Reports, Charts, and Settings pages
 - **A.I.E Holder Interface**: Financial approval workflow with Dashboard, Requests, and MIR overview pages
@@ -155,3 +163,46 @@ The accounting module provides comprehensive financial management capabilities f
 - A.I.E Holder routes: `/aie/*` (dashboard, requests, mir)
 - Role-based access control with protected routes
 - Purple badge indicator for A.I.E Holder role in sidebar
+
+#### Backend Architecture
+
+##### Database Tables
+- **vote_accounts**: Budget vote codes with allocation and utilization tracking (code, description, allocated_amount, utilized_amount, balance, fiscal_year)
+- **budgets**: Department budget allocations (department, allocated_amount, utilized_amount, fiscal_year)
+- **transactions**: Claims and payments with approval workflow (transaction_type, amount, description, payee_name, voucher_no, vote_code, status, approved_by, approved_at)
+- **master_imprest_register**: Imprest advances and retirements (employee_name, mir_no, advance_amount, retirement_amount, outstanding_balance, purpose, status)
+
+##### API Endpoints
+
+**Accountant Routes** (`/api/accountant/*`):
+- `GET /claims` - Get all claim transactions
+- `GET /payments` - Get all payment transactions
+- `GET /mir` - Get all MIR entries
+- `GET /votes` - Get all vote accounts
+- `GET /budgets` - Get all budgets
+- `GET /budget` - Get budget summary with totals
+- `GET /employees` - Get all employee records
+
+**A.I.E Holder Routes** (`/api/aie/*`):
+- `GET /stats` - Get dashboard statistics (pending approvals, monthly spend, budget balance, utilization rate)
+- `GET /requests` - Get all approval requests (transactions)
+- `GET /mir` - Get MIR overview
+
+**Core Accounting Routes** (`/api/accounting/*`):
+- `GET/POST /vote-accounts` - Manage vote accounts
+- `GET/POST /budgets` - Manage budgets
+- `GET /transactions` - Get filtered transactions
+- `POST /transactions/claim` - Create new claim
+- `POST /transactions/payment` - Create new payment
+- `PATCH /transactions/:id/approve` - Approve transaction
+- `PATCH /transactions/:id/reject` - Reject transaction
+- `GET/POST /mir` - Manage MIR entries
+- `PATCH /mir/:id/retire` - Retire imprest
+- `GET /employees` - Get employee financial records
+
+##### Document Generation
+- **Template Engine**: docxtemplater for .docx template processing
+- **Template Location**: `public/templates/` (claim.docx, payment.docx)
+- **Export Location**: `public/exports/` for generated documents
+- **Features**: Currency formatting (KSh), amount to words conversion, date formatting, financial year calculation
+- **Template Variables**: Supports dynamic placeholders like {txtname}, {txtamount}, {txtvote}, {txtamount_in_words}, etc.
