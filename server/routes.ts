@@ -3172,6 +3172,106 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     }
   });
 
+  // ========================================
+  // ACCOUNTANT-SPECIFIC ROUTES (Frontend compatibility)
+  // ========================================
+
+  // Get all claims (transactions with type='claim')
+  app.get('/api/accountant/claims', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !['accountant', 'admin'].includes(user.role!)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const transactions = await storage.getTransactions({ type: 'claim' });
+      res.json(transactions);
+    } catch (error) {
+      console.error('Error fetching claims:', error);
+      res.status(500).json({ message: 'Failed to fetch claims' });
+    }
+  });
+
+  // Get all payments (transactions with type='payment')
+  app.get('/api/accountant/payments', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !['accountant', 'admin'].includes(user.role!)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const transactions = await storage.getTransactions({ type: 'payment' });
+      res.json(transactions);
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+      res.status(500).json({ message: 'Failed to fetch payments' });
+    }
+  });
+
+  // Get all MIR entries
+  app.get('/api/accountant/mir', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !['accountant', 'admin'].includes(user.role!)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const mirEntries = await storage.getAllMIREntries();
+      res.json(mirEntries);
+    } catch (error) {
+      console.error('Error fetching MIR entries:', error);
+      res.status(500).json({ message: 'Failed to fetch MIR entries' });
+    }
+  });
+
+  // Get all vote accounts
+  app.get('/api/accountant/votes', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !['accountant', 'admin'].includes(user.role!)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const voteAccounts = await storage.getAllVoteAccounts();
+      res.json(voteAccounts);
+    } catch (error) {
+      console.error('Error fetching vote accounts:', error);
+      res.status(500).json({ message: 'Failed to fetch vote accounts' });
+    }
+  });
+
+  // Get all budgets
+  app.get('/api/accountant/budgets', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !['accountant', 'admin'].includes(user.role!)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const budgets = await storage.getAllBudgets();
+      res.json(budgets);
+    } catch (error) {
+      console.error('Error fetching budgets:', error);
+      res.status(500).json({ message: 'Failed to fetch budgets' });
+    }
+  });
+
+  // Get all employees for accounting
+  app.get('/api/accountant/employees', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !['accountant', 'admin'].includes(user.role!)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const employees = await storage.getAllEmployees();
+      res.json(employees);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      res.status(500).json({ message: 'Failed to fetch employees' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
