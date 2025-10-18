@@ -3,7 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CheckCircle, Clock, BookOpen, DollarSign, Calculator, TrendingUp } from 'lucide-react';
 
 export default function AIEDashboard() {
-  const { data: stats } = useQuery({
+  const { data: stats } = useQuery<{
+    pendingApprovals: number;
+    approvedToday: number;
+    activeMirs: number;
+    monthlySpend: number;
+    budgetBalance: number;
+    utilizationRate: number;
+  }>({
     queryKey: ['/api/aie/stats'],
   });
 

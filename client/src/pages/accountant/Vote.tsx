@@ -16,7 +16,7 @@ import { Calculator, Search, Plus } from 'lucide-react';
 export default function Vote() {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: votes, isLoading } = useQuery({
+  const { data: votes, isLoading } = useQuery<any[]>({
     queryKey: ['/api/accountant/votes'],
   });
 

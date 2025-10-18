@@ -17,7 +17,7 @@ import { DollarSign, Search, Filter, CheckCircle, Clock, XCircle } from 'lucide-
 export default function Payments() {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: payments, isLoading } = useQuery({
+  const { data: payments, isLoading } = useQuery<any[]>({
     queryKey: ['/api/accountant/payments'],
   });
 
