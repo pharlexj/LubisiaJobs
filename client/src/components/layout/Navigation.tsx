@@ -18,7 +18,7 @@ export default function Navigation() {
   const [location] = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const [showAuthDrawer, setShowAuthDrawer] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'otp' | 'mobile'>('login');
 
   const publicRoutes = [
     { path: '/', label: 'Home' },
@@ -32,6 +32,10 @@ export default function Navigation() {
   const handleAuthClick = (mode: 'login' | 'signup') => {
     setAuthMode(mode);
     setShowAuthDrawer(true);
+  };
+
+  const handleModeSwitch = (mode: 'login') => {
+    setAuthMode(mode);
   };
   
   const handleLogout = () => {
@@ -182,6 +186,7 @@ export default function Navigation() {
         onOpenChange={setShowAuthDrawer}
         mode={authMode}
         onModeChange={setAuthMode}
+        handleClick={handleModeSwitch}
       />
     </>
   );
