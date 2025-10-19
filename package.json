@@ -47,6 +47,7 @@
     "@types/dompurify": "^3.0.5",
     "@types/memoizee": "^0.4.12",
     "@types/multer": "^2.0.0",
+    "@types/number-to-words": "^1.2.3",
     "africastalking": "^0.7.4",
     "bcrypt": "^6.0.0",
     "class-variance-authority": "^0.7.1",

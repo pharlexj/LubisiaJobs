@@ -3102,7 +3102,10 @@ useEffect(() => {
                                 />
                               ) : (
                                 <div
-                                 className={`mt-2 h-32 rounded-md bg-gradient-to-${slide.bgGradient?.split('bg-gradient-to-')[1]?.[0]||'r'} from-[${slide.bgGradient?.match(/from-\[(.*?)\]/)?.[1]||'#3b82f6'}] to-[${slide.bgGradient?.match(/to-\[(.*?)\]/)?.[1]||'#a21caf'}]`}
+                                 className="mt-2 h-32 rounded-md"
+                                 style={{
+                                   background: `linear-gradient(to right, ${slide.bgGradient?.match(/from-\[(.*?)\]/)?.[1]||'#3b82f6'}, ${slide.bgGradient?.match(/to-\[(.*?)\]/)?.[1]||'#a21caf'})`
+                                 }}
                                 />
                               )}
                                <div className="text-xs mt-2">Accent: <span style={{background: slide.accentColor, color: '#fff', padding: '2px 8px', borderRadius: '4px'}}>{slide.accentColor}</span></div>

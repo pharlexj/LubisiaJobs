@@ -1,0 +1,114 @@
+[esbuild css minify]
+▲ [WARNING] Expected identifier but found whitespace [css-syntax-error]
+
+    <stdin>:3079:21:
+      3079 │   --tw-gradient-from: ${carouselSlideForm.watch('gradientStart')...
+           ╵                      ^
+
+
+▲ [WARNING] Unexpected "$" [css-syntax-error]
+
+    <stdin>:3079:22:
+      3079 │   --tw-gradient-from: ${carouselSlideForm.watch('gradientStart')...
+           ╵                       ^
+
+
+▲ [WARNING] Expected ":" [css-syntax-error]
+
+    <stdin>:3079:41:
+      3079 │ ...dient-from: ${carouselSlideForm.watch('gradientStart')||'#3b8...
+           │                                   ^
+           ╵                                   :
+
+
+▲ [WARNING] Expected identifier but found "var(" [css-syntax-error]
+
+    <stdin>:3079:77:
+      3079 │ ...h('gradientStart')||'#3b82f6'} var(--tw-gradient-from-position);
+           ╵                                   ~~~~
+
+
+▲ [WARNING] Expected identifier but found whitespace [css-syntax-error]
+
+    <stdin>:3084:21:
+      3084 │   --tw-gradient-from: ${slide.bgGradient?.match(/from-\[(.*?)\]/...
+           ╵                      ^
+
+
+▲ [WARNING] Unexpected "$" [css-syntax-error]
+
+    <stdin>:3084:22:
+      3084 │   --tw-gradient-from: ${slide.bgGradient?.match(/from-\[(.*?)\]/...
+           ╵                       ^
+
+
+▲ [WARNING] Expected ":" [css-syntax-error]
+
+    <stdin>:3084:29:
+      3084 │   --tw-gradient-from: ${slide.bgGradient?.match(/from-\[(.*?)\]/...
+           │                              ^
+           ╵                              :
+
+
+▲ [WARNING] Expected identifier but found "var(" [css-syntax-error]
+
+    <stdin>:3084:83:
+      3084 │ ...m-\[(.*?)\]/)?.[1]||'#3b82f6'} var(--tw-gradient-from-position);
+           ╵                                   ~~~~
+
+
+▲ [WARNING] Expected identifier but found whitespace [css-syntax-error]
+
+    <stdin>:3122:19:
+      3122 │   --tw-gradient-to: ${carouselSlideForm.watch('gradientEnd')||'#...
+           ╵                    ^
+
+
+▲ [WARNING] Unexpected "$" [css-syntax-error]
+
+    <stdin>:3122:20:
+      3122 │   --tw-gradient-to: ${carouselSlideForm.watch('gradientEnd')||'#...
+           ╵                     ^
+
+
+▲ [WARNING] Expected ":" [css-syntax-error]
+
+    <stdin>:3122:39:
+      3122 │ ...radient-to: ${carouselSlideForm.watch('gradientEnd')||'#a21ca...
+           │                                   ^
+           ╵                                   :
+
+
+▲ [WARNING] Expected identifier but found "var(" [css-syntax-error]
+
+    <stdin>:3122:73:
+      3122 │ ...watch('gradientEnd')||'#a21caf'} var(--tw-gradient-to-position);
+           ╵                                     ~~~~
+
+
+▲ [WARNING] Expected identifier but found whitespace [css-syntax-error]
+
+    <stdin>:3125:19:
+      3125 │   --tw-gradient-to: ${slide.bgGradient?.match(/to-\[(.*?)\]/)?.[...
+           ╵                    ^
+
+
+▲ [WARNING] Unexpected "$" [css-syntax-error]
+
+    <stdin>:3125:20:
+      3125 │   --tw-gradient-to: ${slide.bgGradient?.match(/to-\[(.*?)\]/)?.[...
+           ╵                     ^
+
+
+▲ [WARNING] Expected ":" [css-syntax-error]
+
+    <stdin>:3125:27:
+      3125 │   --tw-gradient-to: ${slide.bgGradient?.match(/to-\[(.*?)\]/)?.[...
+           │                            ^
+           ╵                            :
+
+
+▲ [WARNING] Expected identifier but found "var(" [css-syntax-error]
+
+    <stdin>:3125:79:
+      3125 │ .../to-\[(.*?)\]/)?.[1]||'#a21caf'} var(--tw-gradient-to-position);
