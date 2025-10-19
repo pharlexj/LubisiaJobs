@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import Navigation from '@/components/layout/Navigation';
@@ -36,9 +36,7 @@ export default function BoardScheduling() {
   const [selectedApplicants, setSelectedApplicants] = useState<Set<number>>(new Set());
   const [interviewDate, setInterviewDate] = useState('');
   const [interviewVenue, setInterviewVenue] = useState('');
-  const [smsMessage, setSmsMessage] = useState(
-    `We are pleased to invite you to an interview for the position you applied for with the County Public Service Board, Trans Nzoia. Kindly refer to the shortlist for the details regarding the requirements. For more details, login to your account to track your application.`
-  );
+  const [smsMessage, setSmsMessage] = useState('');
 
   const { data: jobs = [], isLoading: jobsLoading } = useQuery({
     queryKey: ['/api/public/jobs'],
@@ -48,6 +46,35 @@ export default function BoardScheduling() {
     queryKey: ['/api/board/applications'],
     enabled: !!user && user.role === 'board',
   });
+
+  const selectedJobData = (jobs as any[]).find((j: any) => j.id.toString() === selectedJob);
+
+  useEffect(() => {
+    let message = 'We are pleased to invite you to an interview for the position of ';
+    
+    if (selectedJobData) {
+      message += `${selectedJobData.title}, JOB GROUP '${selectedJobData.jgName}'`;
+    } else {
+      message += '[Position]';
+    }
+    
+    message += ' you applied for with the County Public Service Board, Trans Nzoia. ';
+    
+    if (interviewDate && interviewVenue) {
+      const formattedDate = new Date(interviewDate).toLocaleDateString('en-GB', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      });
+      message += `The interview is scheduled for ${formattedDate} at ${interviewVenue}. `;
+    } else {
+      message += 'Kindly select the interview date and venue to complete this message. ';
+    }
+    
+    message += 'Kindly refer to the shortlist for the details regarding the requirements. For more details, login to your account to track your application.';
+    
+    setSmsMessage(message);
+  }, [selectedJob, selectedJobData, interviewDate, interviewVenue]);
 
   const sendSMSMutation = useMutation({
     mutationFn: async (data: { applicationIds: number[]; message: string; interviewDate: string; interviewVenue: string }) => {

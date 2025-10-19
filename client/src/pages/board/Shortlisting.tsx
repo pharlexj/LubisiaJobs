@@ -199,30 +199,35 @@ export default function BoardShortlisting() {
         <main className="flex-1 p-6">
           <div className="container mx-auto space-y-6">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Shortlisting Panel</h1>
-                <p className="text-sm md:text-base text-gray-600">
-                  Review applications and select candidates for interviews.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" data-testid="button-export" className="flex-1 md:flex-initial">
-                  <Download className="w-4 h-4 mr-2" />
-                  <span className="hidden sm:inline">Export List</span>
-                  <span className="sm:hidden">Export</span>
-                </Button>
-                <Button size="sm" data-testid="button-print" className="flex-1 md:flex-initial">
-                  <FileText className="w-4 h-4 mr-2" />
-                  <span className="hidden sm:inline">Print Sheet</span>
-                  <span className="sm:hidden">Print</span>
-                </Button>
+            <div className="bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-lg p-4 md:p-6 shadow-lg">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <h1 className="text-xl md:text-3xl font-bold mb-2 flex items-center gap-3">
+                    <CheckCircle className="w-6 h-6 md:w-8 md:h-8" />
+                    SHORTLISTING PANEL
+                  </h1>
+                  <p className="text-teal-100 text-xs md:text-base">
+                    Review applications and select candidates for interviews.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" data-testid="button-export" className="flex-1 md:flex-initial bg-white/20 backdrop-blur-sm border-white/30 text-white hover:bg-white/30">
+                    <Download className="w-4 h-4 mr-2" />
+                    <span className="hidden sm:inline">Export List</span>
+                    <span className="sm:hidden">Export</span>
+                  </Button>
+                  <Button size="sm" data-testid="button-print" className="flex-1 md:flex-initial bg-white text-teal-700 hover:bg-white/90">
+                    <FileText className="w-4 h-4 mr-2" />
+                    <span className="hidden sm:inline">Print Sheet</span>
+                    <span className="sm:hidden">Print</span>
+                  </Button>
+                </div>
               </div>
             </div>
 
             {/* Filters Card */}
-            <Card>
-              <CardContent className="p-6 space-y-6">
+            <Card className="border-teal-200 shadow-md">
+              <CardContent className="p-4 md:p-6 space-y-4 md:space-y-6 bg-gradient-to-b from-teal-50 to-white">
                 {/* Search and Job Selection */}
                 <div className="flex flex-col lg:flex-row gap-4">
                   <div className="flex-1">
@@ -240,7 +245,7 @@ export default function BoardShortlisting() {
                   
                   <div className="flex flex-col sm:flex-row gap-4">
                     <Select value={selectedJob} onValueChange={setSelectedJob}>
-                      <SelectTrigger className="w-full sm:w-64" data-testid="select-job">
+                      <SelectTrigger className="w-full sm:w-64 border-teal-300 focus:border-teal-500" data-testid="select-job">
                         <SelectValue placeholder="Select a job" />
                       </SelectTrigger>
                       <SelectContent>

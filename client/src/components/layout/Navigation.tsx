@@ -126,6 +126,22 @@ export default function Navigation() {
                         </Link>
                       </DropdownMenuItem>
                     )}
+                    {user?.role === 'accountant' && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/accountant/settings">
+                          <Settings className="mr-2 h-4 w-4" />
+                          Settings
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    {user?.role === 'admin' && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/settings">
+                          <Settings className="mr-2 h-4 w-4" />
+                          Settings
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
                       <LogOut className="mr-2 h-4 w-4" />
