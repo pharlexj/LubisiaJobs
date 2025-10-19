@@ -2365,7 +2365,7 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
   // ========================================
 
   async getAllVoteAccounts(): Promise<VoteAccount[]> {
-    return await db.select().from(voteAccounts).orderBy(desc(voteAccounts.createdAt));
+    return await db.select().from(voteAccounts);
   }
 
   async createVoteAccount(data: any): Promise<VoteAccount> {
@@ -2389,19 +2389,25 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
       query = query.where(eq(transactions.transactionType, filters.type)) as any;
     }
     if (filters?.status) {
-      query = query.where(eq(transactions.status, filters.status)) as any;
+      query = query.where(eq(transactions.state, filters.status)) as any;
     }
     
     return await query.orderBy(desc(transactions.createdAt));
   }
 
   async createClaim(data: any): Promise<Transaction> {
-    const [transaction] = await db.insert(transactions).values(data).returning();
+    const [transaction] = await db.insert(transactions).values({
+      ...data,
+      state: data.state || 'pending'
+    }).returning();
     return transaction;
   }
 
   async createPayment(data: any): Promise<Transaction> {
-    const [transaction] = await db.insert(transactions).values(data).returning();
+    const [transaction] = await db.insert(transactions).values({
+      ...data,
+      state: data.state || 'pending'
+    }).returning();
     return transaction;
   }
 
@@ -2409,9 +2415,8 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
     const [transaction] = await db
       .update(transactions)
       .set({ 
-        status: 'approved',
-        approvedBy,
-        approvedAt: sql`NOW()`
+        state: 'approved',
+        updatedAt: sql`NOW()`
       })
       .where(eq(transactions.id, id))
       .returning();
@@ -2422,10 +2427,8 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
     const [transaction] = await db
       .update(transactions)
       .set({ 
-        status: 'rejected',
-        approvedBy: rejectedBy,
-        rejectionReason: reason,
-        approvedAt: sql`NOW()`
+        state: 'rejected',
+        updatedAt: sql`NOW()`
       })
       .where(eq(transactions.id, id))
       .returning();
@@ -2447,18 +2450,11 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
     retirementDate: string,
     retirementVoucherNo: string
   ): Promise<MasterImprestRegister> {
-    const [entry] = await db.select().from(masterImprestRegister).where(eq(masterImprestRegister.id, id));
-    
-    const outstandingBalance = entry.advanceAmount - retirementAmount;
-    
     const [mirEntry] = await db
       .update(masterImprestRegister)
       .set({
-        retirementAmount,
-        retirementDate,
-        retirementVoucherNo,
-        outstandingBalance,
-        status: outstandingBalance === 0 ? 'completed' : 'pending'
+        status: 'retired',
+        updatedAt: sql`NOW()`
       })
       .where(eq(masterImprestRegister.id, id))
       .returning();
@@ -2466,8 +2462,20 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
     return mirEntry;
   }
 
-  async getAllEmployees(): Promise<Employee[]> {
-    return await db.select().from(employees).orderBy(employees.personalNumber);
+  async getAllEmployees(): Promise<any[]> {
+    // Return users with accountant or applicant role as "employees"
+    const employeeUsers = await db
+      .select({
+        id: users.id,
+        name: sql<string>`CONCAT(${users.firstName}, ' ', ${users.surname})`,
+        email: users.email,
+        phoneNumber: users.phoneNumber,
+        role: users.role,
+      })
+      .from(users)
+      .where(or(eq(users.role, 'applicant'), eq(users.role, 'accountant')));
+    
+    return employeeUsers;
   }
 }
 // Add a method to filter notification recipients by audience if needed
