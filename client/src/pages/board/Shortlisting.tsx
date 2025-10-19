@@ -199,21 +199,23 @@ export default function BoardShortlisting() {
         <main className="flex-1 p-6">
           <div className="container mx-auto space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Shortlisting Panel</h1>
-                <p className="text-gray-600">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Shortlisting Panel</h1>
+                <p className="text-sm md:text-base text-gray-600">
                   Review applications and select candidates for interviews.
                 </p>
               </div>
-              <div className="flex space-x-2">
-                <Button variant="outline" data-testid="button-export">
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" data-testid="button-export" className="flex-1 md:flex-initial">
                   <Download className="w-4 h-4 mr-2" />
-                  Export List
+                  <span className="hidden sm:inline">Export List</span>
+                  <span className="sm:hidden">Export</span>
                 </Button>
-                <Button data-testid="button-print">
+                <Button size="sm" data-testid="button-print" className="flex-1 md:flex-initial">
                   <FileText className="w-4 h-4 mr-2" />
-                  Print Sheet
+                  <span className="hidden sm:inline">Print Sheet</span>
+                  <span className="sm:hidden">Print</span>
                 </Button>
               </div>
             </div>
@@ -236,9 +238,9 @@ export default function BoardShortlisting() {
                     </div>
                   </div>
                   
-                  <div className="flex gap-4">
+                  <div className="flex flex-col sm:flex-row gap-4">
                     <Select value={selectedJob} onValueChange={setSelectedJob}>
-                      <SelectTrigger className="w-64" data-testid="select-job">
+                      <SelectTrigger className="w-full sm:w-64" data-testid="select-job">
                         <SelectValue placeholder="Select a job" />
                       </SelectTrigger>
                       <SelectContent>
@@ -252,7 +254,7 @@ export default function BoardShortlisting() {
                     </Select>
 
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-40" data-testid="select-status">
+                      <SelectTrigger className="w-full sm:w-40" data-testid="select-status">
                         <SelectValue placeholder="Status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -267,24 +269,24 @@ export default function BoardShortlisting() {
 
                 {/* Years of Experience */}
                 <div>
-                  <Label className="text-base font-semibold mb-3 block">Choose the Required Years of Experience</Label>
+                  <Label className="text-sm md:text-base font-semibold mb-3 block">Choose the Required Years of Experience</Label>
                   <RadioGroup value={yearsOfExperience} onValueChange={setYearsOfExperience}>
-                    <div className="flex gap-6">
+                    <div className="flex flex-wrap gap-4 md:gap-6">
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="0-3" id="exp-0-3" data-testid="radio-exp-0-3" />
-                        <Label htmlFor="exp-0-3" className="font-normal cursor-pointer">0-3 Yrs</Label>
+                        <Label htmlFor="exp-0-3" className="font-normal cursor-pointer text-sm md:text-base">0-3 Yrs</Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="4-6" id="exp-4-6" data-testid="radio-exp-4-6" />
-                        <Label htmlFor="exp-4-6" className="font-normal cursor-pointer">4-6 Yrs</Label>
+                        <Label htmlFor="exp-4-6" className="font-normal cursor-pointer text-sm md:text-base">4-6 Yrs</Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="7-10" id="exp-7-10" data-testid="radio-exp-7-10" />
-                        <Label htmlFor="exp-7-10" className="font-normal cursor-pointer">7-10 Yrs</Label>
+                        <Label htmlFor="exp-7-10" className="font-normal cursor-pointer text-sm md:text-base">7-10 Yrs</Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="10+" id="exp-10plus" data-testid="radio-exp-10plus" />
-                        <Label htmlFor="exp-10plus" className="font-normal cursor-pointer">Over 10 Yrs</Label>
+                        <Label htmlFor="exp-10plus" className="font-normal cursor-pointer text-sm md:text-base">Over 10 Yrs</Label>
                       </div>
                     </div>
                   </RadioGroup>
@@ -294,7 +296,7 @@ export default function BoardShortlisting() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Sub-County */}
                   <div>
-                    <Label className="text-base font-semibold mb-2 block">Sub-County</Label>
+                    <Label className="text-sm md:text-base font-semibold mb-2 block">Sub-County</Label>
                     <Select value={subCounty} onValueChange={setSubCounty}>
                       <SelectTrigger data-testid="select-subcounty">
                         <SelectValue placeholder="Select sub-county" />
@@ -312,7 +314,7 @@ export default function BoardShortlisting() {
 
                   {/* KCSE Mean Grade */}
                   <div>
-                    <Label className="text-base font-semibold mb-2 block">KCSE Mean Grade</Label>
+                    <Label className="text-sm md:text-base font-semibold mb-2 block">KCSE Mean Grade</Label>
                     <Select value={kcseMeanGrade} onValueChange={setKcseMeanGrade}>
                       <SelectTrigger data-testid="select-kcse-grade">
                         <SelectValue placeholder="--Select Required Mean Grade--" />
@@ -348,18 +350,18 @@ export default function BoardShortlisting() {
             {/* Status Overview */}
             {selectedJob && (
               <div className="bg-white border rounded-lg p-4">
-                <h2 className="text-lg font-semibold text-teal-700 mb-3" data-testid="text-job-title">
+                <h2 className="text-base md:text-lg font-semibold text-teal-700 mb-3" data-testid="text-job-title">
                   {(jobs as any[]).find((j: any) => j.id.toString() === selectedJob)?.advertNumb} {(jobs as any[]).find((j: any) => j.id.toString() === selectedJob)?.title}
                 </h2>
-                <div className="flex gap-3">
-                  <span className="text-sm">Total number of Applicants: {filteredApplications.length}</span>
-                  <Badge className="bg-teal-600 hover:bg-teal-700" data-testid="badge-shortlisted">
+                <div className="flex flex-wrap gap-3">
+                  <span className="text-xs md:text-sm">Total: {filteredApplications.length}</span>
+                  <Badge className="bg-teal-600 hover:bg-teal-700 text-xs md:text-sm" data-testid="badge-shortlisted">
                     {shortlistedCount} Shortlisted
                   </Badge>
-                  <Badge className="bg-red-600 hover:bg-red-700" data-testid="badge-not-shortlisted">
+                  <Badge className="bg-red-600 hover:bg-red-700 text-xs md:text-sm" data-testid="badge-not-shortlisted">
                     {notShortlistedCount} Not Shortlisted
                   </Badge>
-                  <Badge className="bg-orange-600 hover:bg-orange-700" data-testid="badge-pending">
+                  <Badge className="bg-orange-600 hover:bg-orange-700 text-xs md:text-sm" data-testid="badge-pending">
                     {pendingCount} Pending
                   </Badge>
                 </div>
@@ -369,21 +371,21 @@ export default function BoardShortlisting() {
             {/* Applications Table */}
             <Card>
               <CardHeader>
-                <CardTitle>Applications for Review ({filteredApplications.length})</CardTitle>
+                <CardTitle className="text-base md:text-lg">Applications for Review ({filteredApplications.length})</CardTitle>
               </CardHeader>
               <CardContent>
                 {filteredApplications.length === 0 ? (
                   <div className="text-center py-12">
-                    <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Applications Found</h3>
-                    <p className="text-gray-600">
+                    <FileText className="w-12 h-12 md:w-16 md:h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">No Applications Found</h3>
+                    <p className="text-sm md:text-base text-gray-600">
                       No applications match your current filters.
                     </p>
                   </div>
                 ) : (
                   <>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
+                    <div className="overflow-x-auto -mx-6 px-6 md:mx-0 md:px-0">
+                      <table className="w-full min-w-[800px]">
                         <thead className="bg-gray-50 border-b">
                           <tr>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">
@@ -461,24 +463,28 @@ export default function BoardShortlisting() {
 
                     {/* Bulk Action Buttons */}
                     {filteredApplications.length > 0 && (
-                      <div className="flex gap-3 mt-6">
+                      <div className="flex flex-col sm:flex-row gap-3 mt-6">
                         <Button 
                           onClick={handleBulkShortlist}
-                          className="bg-green-600 hover:bg-green-700"
+                          className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                          size="sm"
                           disabled={selectedApplicants.size === 0 || updateStatusMutation.isPending}
                           data-testid="button-bulk-shortlist"
                         >
                           <CheckCircle className="w-4 h-4 mr-2" />
-                          AUTO SHORTLIST SELECTED
+                          <span className="hidden md:inline">AUTO SHORTLIST SELECTED</span>
+                          <span className="md:hidden">SHORTLIST ({selectedApplicants.size})</span>
                         </Button>
                         <Button 
                           onClick={handleBulkReject}
-                          className="bg-red-600 hover:bg-red-700"
+                          className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
+                          size="sm"
                           disabled={selectedApplicants.size === 0 || updateStatusMutation.isPending}
                           data-testid="button-bulk-reject"
                         >
                           <XCircle className="w-4 h-4 mr-2" />
-                          AUTO NOT SHORTLIST SELECTED
+                          <span className="hidden md:inline">AUTO NOT SHORTLIST SELECTED</span>
+                          <span className="md:hidden">REJECT ({selectedApplicants.size})</span>
                         </Button>
                       </div>
                     )}
@@ -492,9 +498,9 @@ export default function BoardShortlisting() {
 
       {/* Applicant Details Modal */}
       <Dialog open={showApplicantDetails} onOpenChange={setShowApplicantDetails}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto w-[95vw] md:w-full">
           <DialogHeader>
-            <DialogTitle className="text-2xl">
+            <DialogTitle className="text-lg md:text-2xl">
               Candidate Profile: {selectedApplicant?.fullName || `${selectedApplicant?.firstName} ${selectedApplicant?.surname}`}
             </DialogTitle>
           </DialogHeader>
@@ -694,33 +700,38 @@ export default function BoardShortlisting() {
           )}
 
           {/* Action Buttons at Bottom of Modal */}
-          <div className="flex gap-3 pt-6 border-t mt-6">
+          <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t mt-6">
             {selectedApplicant?.status !== 'shortlisted' && (
               <Button
                 onClick={handleIndividualShortlist}
                 className="flex-1 bg-green-600 hover:bg-green-700"
+                size="sm"
                 disabled={updateStatusMutation.isPending}
                 data-testid="button-modal-shortlist"
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
-                {updateStatusMutation.isPending ? 'Processing...' : 'Shortlist Candidate'}
+                <span className="hidden sm:inline">{updateStatusMutation.isPending ? 'Processing...' : 'Shortlist Candidate'}</span>
+                <span className="sm:hidden">{updateStatusMutation.isPending ? 'Processing...' : 'Shortlist'}</span>
               </Button>
             )}
             {selectedApplicant?.status !== 'rejected' && (
               <Button
                 onClick={handleIndividualReject}
                 className="flex-1 bg-red-600 hover:bg-red-700"
+                size="sm"
                 disabled={updateStatusMutation.isPending}
                 data-testid="button-modal-reject"
               >
                 <XCircle className="w-4 h-4 mr-2" />
-                {updateStatusMutation.isPending ? 'Processing...' : 'Reject Candidate'}
+                <span className="hidden sm:inline">{updateStatusMutation.isPending ? 'Processing...' : 'Reject Candidate'}</span>
+                <span className="sm:hidden">{updateStatusMutation.isPending ? 'Processing...' : 'Reject'}</span>
               </Button>
             )}
             <Button
               variant="outline"
               onClick={() => setShowApplicantDetails(false)}
               className="flex-1"
+              size="sm"
               data-testid="button-modal-close"
             >
               Close

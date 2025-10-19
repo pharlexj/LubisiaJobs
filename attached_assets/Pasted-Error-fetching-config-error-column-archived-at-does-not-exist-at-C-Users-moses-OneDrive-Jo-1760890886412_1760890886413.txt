@@ -1,0 +1,52 @@
+Error fetching config: error: column "archived_at" does not exist
+    at C:\Users\moses\OneDrive\JobBoard\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (C:\Users\moses\OneDrive\JobBoard\node_modules\src\node-postgres\session.ts:104:19)
+    at async DatabaseStorageWithAudience.getJobs (C:\Users\moses\OneDrive\JobBoard\server\storage.ts:562:10)
+    at async Promise.all (index 9)
+    at async <anonymous> (C:\Users\moses\OneDrive\JobBoard\server\routes.ts:933:11) {
+  length: 112,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '329',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3721',
+  routine: 'errorMissingColumn'
+}
+7:17:51 PM [express] GET /api/public/config 500 in 820ms :: {"message":"Failed to fetch configuratio…
+7:17:51 PM [express] GET /api/board/applications 304 in 870ms :: [{"status":"shortlisted","submitted…
+7:19:41 PM [express] GET /api/auth/me 304 in 174ms :: {"user":{"id":"0594446c-32af-4a3d-9e31-883acdb…
+Error fetching jobs: error: column "archived_at" does not exist
+    at C:\Users\moses\OneDrive\JobBoard\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (C:\Users\moses\OneDrive\JobBoard\node_modules\src\node-postgres\session.ts:104:19)
+    at async DatabaseStorageWithAudience.getJobs (C:\Users\moses\OneDrive\JobBoard\server\storage.ts:562:10)
+    at async <anonymous> (C:\Users\moses\OneDrive\JobBoard\server\routes.ts:916:20) {
+  length: 112,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '329',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3721',
+  routine: 'errorMissingColumn'
+}
