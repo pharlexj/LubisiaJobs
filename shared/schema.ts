@@ -754,17 +754,16 @@ export const voteAccounts = pgTable("vote_accounts", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Budget - Department budget allocations
+// Budget - Department budget allocations (based on tbl_budget_estimate)
 export const budgets = pgTable("budgets", {
   id: serial("id").primaryKey(),
-  departmentId: integer("department_id").references(() => departments.id),
-  voteAccountId: integer("vote_account_id").references(() => voteAccounts.id),
-  financialYear: varchar("financial_year", { length: 20 }).notNull(),
-  allocatedAmount: integer("allocated_amount").notNull(),
-  utilizedAmount: integer("utilized_amount").notNull().default(0),
-  balance: integer("balance").notNull().default(0),
+  departmentId: integer("dept_id").references(() => departments.id),
+  fy: varchar("fy", { length: 10 }).notNull(), // fiscal year
+  voteId: varchar("vote_id", { length: 20 }),
+  estimatedAmount: integer("estimated_amt").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+  deletedAt: timestamp("deleted_at"),
 });
 
 // Transactions - Claims and Payments
