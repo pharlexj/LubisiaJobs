@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import Navigation from '@/components/layout/Navigation';
+import Sidebar from '@/components/layout/Sidebar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +28,12 @@ export default function Budget() {
   ];
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="min-h-screen bg-neutral-50">
+      <Navigation />
+      <div className="flex">
+        <Sidebar userRole="accountant" />
+        <main className="flex-1">
+          <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Budget Planning</h1>
@@ -124,6 +131,9 @@ export default function Budget() {
           </div>
         </CardContent>
       </Card>
+      </div>
+        </main>
+      </div>
     </div>
   );
 }

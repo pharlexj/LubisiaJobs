@@ -1,3 +1,5 @@
+import Navigation from '@/components/layout/Navigation';
+import Sidebar from '@/components/layout/Sidebar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +8,12 @@ import { Settings as SettingsIcon, Building, DollarSign, FileText, Save } from '
 
 export default function Settings() {
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="min-h-screen bg-neutral-50">
+      <Navigation />
+      <div className="flex">
+        <Sidebar userRole="accountant" />
+        <main className="flex-1">
+          <div className="container mx-auto p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Accounting Settings</h1>
         <p className="text-gray-600 mt-2">Configure accounting system settings</p>
@@ -129,6 +136,9 @@ export default function Settings() {
             </Button>
           </CardContent>
         </Card>
+      </div>
+      </div>
+        </main>
       </div>
     </div>
   );

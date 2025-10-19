@@ -1,3 +1,5 @@
+import Navigation from '@/components/layout/Navigation';
+import Sidebar from '@/components/layout/Sidebar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Download, Calendar, Filter } from 'lucide-react';
@@ -43,7 +45,12 @@ export default function Reports() {
   ];
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="min-h-screen bg-neutral-50">
+      <Navigation />
+      <div className="flex">
+        <Sidebar userRole="accountant" />
+        <main className="flex-1">
+          <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Financial Reports</h1>
@@ -113,6 +120,9 @@ export default function Reports() {
           </div>
         </CardContent>
       </Card>
+      </div>
+        </main>
+      </div>
     </div>
   );
 }
