@@ -48,6 +48,7 @@ export default function Navigation() {
       case 'applicant': return '/dashboard';
       case 'admin': return '/admin';
       case 'board': return '/board';
+      case 'accountant': return '/accountant';
       default: return '/';
     }
   };

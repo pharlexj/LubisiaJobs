@@ -208,7 +208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 switch (req.user?.role) {
   case "admin":
   case "board":
-  case "accounts":
+  case "accountant":
   
     redirectUrl = `/${req.user?.role}`;
     break;
@@ -441,8 +441,7 @@ switch (req.user?.role) {
       } else if (user.role === 'admin') {
         redirectUrl = '/admin';
       } else if (user.role === 'board') {
-        redirectUrl = '/board';
-      
+        redirectUrl = '/board';      
       } else if (user.role === 'accountant') {
         redirectUrl = '/accountant';
       }
@@ -878,7 +877,7 @@ switch (req.user?.role) {
         role: user.role,
         permissions,
         navigation,
-        redirectUrl: user.role === 'admin' ? '/admin' : user.role === 'board' ? '/board' : user.role === 'applicant' ? '/dashboard' : '/'
+        redirectUrl: user.role === 'admin' ? '/admin' : user.role === 'board' ? '/board' : user.role === 'applicant' ? '/dashboard' : user.role === 'accountant' ? '/accountant' : '/'
       });
     } catch (error) {
       console.error('Error fetching user permissions:', error);
