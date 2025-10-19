@@ -14,6 +14,7 @@ interface Employee {
   id: number;
   name: string;
   personalNumber: string;
+  designation?: string;
 }
 
 interface Vote {
