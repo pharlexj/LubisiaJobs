@@ -60,25 +60,30 @@ export default function BoardShortlisting() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ applicationIds, status }: { applicationIds: number[]; status: string }) => {
-      return await apiRequest('POST', '/api/board/applications/bulk-update', {
+      console.log('Updating applications:', { applicationIds, status });
+      const result = await apiRequest('POST', '/api/board/applications/bulk-update', {
         applicationIds,
         status,
         shortlistedAt: status === 'shortlisted' ? new Date().toISOString() : undefined
       });
+      console.log('Update result:', result);
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      const statusText = data?.status === 'shortlisted' ? 'shortlisted' : 'rejected';
       toast({
-        title: 'Success',
-        description: 'Applications updated successfully.',
+        title: 'Success!',
+        description: `Successfully ${statusText} ${Array.isArray(data) ? data.length : selectedApplicants.size} application(s).`,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/board/applications'] });
       setSelectedApplicants(new Set());
       setShowApplicantDetails(false);
     },
     onError: (error: any) => {
+      console.error('Update error:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update applications',
+        description: error.message || 'Failed to update applications. Please try again.',
         variant: 'destructive',
       });
     },
