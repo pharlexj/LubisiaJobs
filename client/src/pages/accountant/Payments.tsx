@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,13 +12,39 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { DollarSign, Search, Filter, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { DollarSign, Search, Filter, CheckCircle, Clock, XCircle, Download } from 'lucide-react';
+import PaymentFormDialog from '@/components/accountant/PaymentFormDialog';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Payments() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [showNewPaymentDialog, setShowNewPaymentDialog] = useState(false);
+  const { toast } = useToast();
 
   const { data: payments, isLoading } = useQuery<any[]>({
     queryKey: ['/api/accountant/payments'],
+  });
+
+  const exportPaymentMutation = useMutation({
+    mutationFn: async (paymentId: number) => {
+      const response = await apiRequest('POST', `/api/accounting/export/payment/${paymentId}`);
+      return response;
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: 'Success',
+        description: 'Payment document generated successfully',
+      });
+      window.open(data.downloadUrl, '_blank');
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to generate payment document',
+        variant: 'destructive',
+      });
+    },
   });
 
   const getStatusBadge = (status: string) => {
@@ -46,7 +72,7 @@ export default function Payments() {
           <h1 className="text-3xl font-bold text-gray-900">Payment Processing</h1>
           <p className="text-gray-600 mt-2">Manage voucher payments and transactions</p>
         </div>
-        <Button data-testid="button-new-payment">
+        <Button onClick={() => setShowNewPaymentDialog(true)} data-testid="button-new-payment">
           <DollarSign className="w-4 h-4 mr-2" />
           New Payment
         </Button>
@@ -141,9 +167,20 @@ export default function Payments() {
                       <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
                       <TableCell>{getStatusBadge(payment.status)}</TableCell>
                       <TableCell>
-                        <Button size="sm" variant="outline" data-testid={`button-view-${payment.id}`}>
-                          View
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" data-testid={`button-view-${payment.id}`}>
+                            View
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => exportPaymentMutation.mutate(payment.id)}
+                            disabled={exportPaymentMutation.isPending}
+                            data-testid={`button-export-${payment.id}`}
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -153,6 +190,11 @@ export default function Payments() {
           </div>
         </CardContent>
       </Card>
+
+      <PaymentFormDialog
+        open={showNewPaymentDialog}
+        onOpenChange={setShowNewPaymentDialog}
+      />
     </div>
   );
 }

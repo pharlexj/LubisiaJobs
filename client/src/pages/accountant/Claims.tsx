@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,14 +12,40 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Receipt, Search, Filter, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Receipt, Search, Filter, CheckCircle, XCircle, Clock, Download } from 'lucide-react';
+import ClaimFormDialog from '@/components/accountant/ClaimFormDialog';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Claims() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showNewClaimDialog, setShowNewClaimDialog] = useState(false);
+  const { toast } = useToast();
 
   const { data: claims, isLoading } = useQuery<any[]>({
     queryKey: ['/api/accountant/claims'],
+  });
+
+  const exportClaimMutation = useMutation({
+    mutationFn: async (claimId: number) => {
+      const response = await apiRequest('POST', `/api/accounting/export/claim/${claimId}`);
+      return response;
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: 'Success',
+        description: 'Claim document generated successfully',
+      });
+      window.open(data.downloadUrl, '_blank');
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to generate claim document',
+        variant: 'destructive',
+      });
+    },
   });
 
   const getStatusBadge = (status: string) => {
@@ -47,7 +73,7 @@ export default function Claims() {
           <h1 className="text-3xl font-bold text-gray-900">Claims Management</h1>
           <p className="text-gray-600 mt-2">Process and manage employee claims</p>
         </div>
-        <Button data-testid="button-new-claim">
+        <Button onClick={() => setShowNewClaimDialog(true)} data-testid="button-new-claim">
           <Receipt className="w-4 h-4 mr-2" />
           New Claim
         </Button>
@@ -112,9 +138,20 @@ export default function Claims() {
                       <TableCell>{new Date(claim.date).toLocaleDateString()}</TableCell>
                       <TableCell>{getStatusBadge(claim.status)}</TableCell>
                       <TableCell>
-                        <Button size="sm" variant="outline" data-testid={`button-view-${claim.id}`}>
-                          View
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" data-testid={`button-view-${claim.id}`}>
+                            View
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => exportClaimMutation.mutate(claim.id)}
+                            disabled={exportClaimMutation.isPending}
+                            data-testid={`button-export-${claim.id}`}
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -124,6 +161,11 @@ export default function Claims() {
           </div>
         </CardContent>
       </Card>
+
+      <ClaimFormDialog
+        open={showNewClaimDialog}
+        onOpenChange={setShowNewClaimDialog}
+      />
     </div>
   );
 }

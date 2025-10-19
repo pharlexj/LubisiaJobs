@@ -13,6 +13,10 @@ import { ApplicantService } from "./applicantService";
 import { z } from "zod";
 import { createInsertSchema } from 'drizzle-zod';
 import { boardMembers, carouselSlides } from "@shared/schema";
+import Docxtemplater from "docxtemplater";
+import PizZip from "pizzip";
+import fs from "fs";
+import numberToWords from "number-to-words";
 
 // Board member validation schemas
 const insertBoardMemberSchema = createInsertSchema(boardMembers).omit({
@@ -3133,6 +3137,166 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     }
   });
 
+  // Document Export Routes
+  app.post('/api/accounting/export/claim/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'accountant') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { id } = req.params;
+      const transactions = await storage.getTransactions({ type: 'claim' });
+      const claim = transactions.find((t: any) => t.id === parseInt(id));
+
+      if (!claim) {
+        return res.status(404).json({ message: 'Claim not found' });
+      }
+
+      // Load the template
+      const templatePath = path.join(process.cwd(), 'public', 'templates', 'claim.docx');
+      const content = fs.readFileSync(templatePath, 'binary');
+      const zip = new PizZip(content);
+      const doc = new Docxtemplater(zip, {
+        paragraphLoop: true,
+        linebreaks: true,
+      });
+
+      // Format currency
+      const formatCurrency = (amount: number) => `KSh ${amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      
+      // Convert amount to words
+      const amountInWords = numberToWords.toWords(claim.amounts || 0).toUpperCase() + ' SHILLINGS ONLY';
+
+      // Calculate financial year
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const fiscalYear = currentDate.getMonth() >= 6 ? `${currentYear}/${currentYear + 1}` : `${currentYear - 1}/${currentYear}`;
+
+      // Set template data
+      const claimData: any = claim;
+      doc.render({
+        txtname: claim.name || '',
+        txtdesignation: claimData.designation || '',
+        txtjg: claimData.jobGroup || '',
+        txtdate_travel: claimData.travelDate || '',
+        txtdate_return: claimData.returnDate || '',
+        txtdestination: claimData.destination || '',
+        txtdays: claimData.numberOfDays || '',
+        txtamount: formatCurrency(claim.amounts || 0),
+        txtamount_in_words: amountInWords,
+        txtvote: claim.voteId || '',
+        txtvoucher: claim.voucherNo || '',
+        txtparticulars: claim.particulars || '',
+        txtbus: formatCurrency(claim.busFare || 0),
+        txttaxi: formatCurrency(claim.taxiFare || 0),
+        txtperdiem: formatCurrency(claimData.perDiem || 0),
+        txtsubsistence: formatCurrency(claim.subsistence || 0),
+        txtfy: claim.fy || fiscalYear,
+        txtdate: new Date().toLocaleDateString('en-GB'),
+      });
+
+      const buf = doc.getZip().generate({ type: 'nodebuffer' });
+
+      // Ensure exports directory exists
+      const exportsDir = path.join(process.cwd(), 'public', 'exports');
+      if (!fs.existsSync(exportsDir)) {
+        fs.mkdirSync(exportsDir, { recursive: true });
+      }
+
+      // Save file
+      const filename = `claim_${claim.voucherNo || id}_${Date.now()}.docx`;
+      const filepath = path.join(exportsDir, filename);
+      fs.writeFileSync(filepath, buf);
+
+      res.json({
+        success: true,
+        message: 'Claim document generated successfully',
+        filename,
+        downloadUrl: `/exports/${filename}`
+      });
+    } catch (error) {
+      console.error('Error generating claim document:', error);
+      res.status(500).json({ message: 'Failed to generate claim document' });
+    }
+  });
+
+  app.post('/api/accounting/export/payment/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'accountant') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { id } = req.params;
+      const transactions = await storage.getTransactions({ type: 'payment' });
+      const payment = transactions.find((t: any) => t.id === parseInt(id));
+
+      if (!payment) {
+        return res.status(404).json({ message: 'Payment not found' });
+      }
+
+      // Load the template
+      const templatePath = path.join(process.cwd(), 'public', 'templates', 'payment.docx');
+      const content = fs.readFileSync(templatePath, 'binary');
+      const zip = new PizZip(content);
+      const doc = new Docxtemplater(zip, {
+        paragraphLoop: true,
+        linebreaks: true,
+      });
+
+      // Format currency
+      const formatCurrency = (amount: number) => `KSh ${amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      
+      // Convert amount to words
+      const amountInWords = numberToWords.toWords(payment.amounts || 0).toUpperCase() + ' SHILLINGS ONLY';
+
+      // Calculate financial year
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const fiscalYear = currentDate.getMonth() >= 6 ? `${currentYear}/${currentYear + 1}` : `${currentYear - 1}/${currentYear}`;
+
+      // Set template data
+      const paymentData: any = payment;
+      doc.render({
+        txtname: payment.name || '',
+        txtdated: payment.dated || new Date().toLocaleDateString('en-GB'),
+        txtamount: formatCurrency(payment.amounts || 0),
+        txtamount_in_words: amountInWords,
+        txtvote: payment.voteId || '',
+        txtvoucher: payment.voucherNo || '',
+        txtparticulars: payment.particulars || '',
+        txtdepartment: paymentData.departmentName || '',
+        txtfy: payment.fy || fiscalYear,
+        txtallocation: formatCurrency(payment.amountsAllocated || 0),
+        txttotal_balance: formatCurrency(payment.balanceAfterCommitted || 0),
+      });
+
+      const buf = doc.getZip().generate({ type: 'nodebuffer' });
+
+      // Ensure exports directory exists
+      const exportsDir = path.join(process.cwd(), 'public', 'exports');
+      if (!fs.existsSync(exportsDir)) {
+        fs.mkdirSync(exportsDir, { recursive: true });
+      }
+
+      // Save file
+      const filename = `payment_${payment.voucherNo || id}_${Date.now()}.docx`;
+      const filepath = path.join(exportsDir, filename);
+      fs.writeFileSync(filepath, buf);
+
+      res.json({
+        success: true,
+        message: 'Payment document generated successfully',
+        filename,
+        downloadUrl: `/exports/${filename}`
+      });
+    } catch (error) {
+      console.error('Error generating payment document:', error);
+      res.status(500).json({ message: 'Failed to generate payment document' });
+    }
+  });
+
   app.patch('/api/accounting/mir/:id/retire', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -3280,8 +3444,8 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       }
 
       const budgets = await storage.getAllBudgets();
-      const totalBudget = budgets.reduce((sum, b) => sum + (b.allocatedAmount || 0), 0);
-      const utilized = budgets.reduce((sum, b) => sum + (b.utilizedAmount || 0), 0);
+      const totalBudget = budgets.reduce((sum, b) => sum + (b.estimatedAmount || 0), 0);
+      const utilized = 0; // Calculate from transactions if needed
       
       res.json({
         totalBudget,
@@ -3311,21 +3475,23 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       const mirEntries = await storage.getAllMIREntries();
       const budgets = await storage.getAllBudgets();
       
-      const pendingApprovals = transactions.filter(t => t.status === 'pending').length;
+      const pendingApprovals = transactions.filter(t => t.state === 'pending').length;
       const approvedToday = transactions.filter(t => 
-        t.status === 'approved' && 
-        t.approvedAt && 
-        new Date(t.approvedAt).toDateString() === new Date().toDateString()
+        t.state === 'approved' && 
+        t.updatedAt && 
+        new Date(t.updatedAt).toDateString() === new Date().toDateString()
       ).length;
       const activeMirs = mirEntries.filter(m => m.status === 'pending').length;
       
       const currentMonth = new Date().getMonth();
       const monthlySpend = transactions
-        .filter(t => t.status === 'approved' && new Date(t.createdAt).getMonth() === currentMonth)
-        .reduce((sum, t) => sum + (t.amount || 0), 0);
+        .filter(t => t.state === 'approved' && t.createdAt && new Date(t.createdAt).getMonth() === currentMonth)
+        .reduce((sum, t) => sum + (t.amounts || 0), 0);
       
-      const totalBudget = budgets.reduce((sum, b) => sum + (b.allocatedAmount || 0), 0);
-      const utilized = budgets.reduce((sum, b) => sum + (b.utilizedAmount || 0), 0);
+      const totalBudget = budgets.reduce((sum, b) => sum + (b.estimatedAmount || 0), 0);
+      const utilized = transactions
+        .filter(t => t.state === 'approved')
+        .reduce((sum, t) => sum + (t.amounts || 0), 0);
       const budgetBalance = totalBudget - utilized;
       const utilizationRate = totalBudget > 0 ? Math.round((utilized / totalBudget) * 100) : 0;
 
