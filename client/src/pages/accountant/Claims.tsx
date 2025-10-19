@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
+import Navigation from '@/components/layout/Navigation';
+import Sidebar from '@/components/layout/Sidebar';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
@@ -156,8 +158,14 @@ export default function Claims() {
   };
 
   return (
-    <div className="p-4">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="min-h-screen bg-neutral-50">
+      <Navigation />
+      
+      <div className="flex">
+        <Sidebar userRole="accountant" />
+        
+        <main className="flex-1 p-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* LEFT: Claim Form */}
         <div>
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-t-lg">
@@ -459,6 +467,8 @@ export default function Claims() {
             </div>
           </div>
         </div>
+          </div>
+        </main>
       </div>
     </div>
   );
