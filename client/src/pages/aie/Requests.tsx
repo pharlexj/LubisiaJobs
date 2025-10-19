@@ -17,7 +17,7 @@ import { CheckCircle, XCircle, Search, Filter, Clock } from 'lucide-react';
 export default function Requests() {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: requests, isLoading } = useQuery({
+  const { data: requests, isLoading } = useQuery<any[]>({
     queryKey: ['/api/aie/requests'],
   });
 

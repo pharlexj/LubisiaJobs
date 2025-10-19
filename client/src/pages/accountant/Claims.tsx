@@ -18,7 +18,7 @@ export default function Claims() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const { data: claims, isLoading } = useQuery({
+  const { data: claims, isLoading } = useQuery<any[]>({
     queryKey: ['/api/accountant/claims'],
   });
 

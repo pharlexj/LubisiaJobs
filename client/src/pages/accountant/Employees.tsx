@@ -16,7 +16,7 @@ import { Users, Search, Plus } from 'lucide-react';
 export default function Employees() {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: employees, isLoading } = useQuery({
+  const { data: employees, isLoading } = useQuery<any[]>({
     queryKey: ['/api/accountant/employees'],
   });
 

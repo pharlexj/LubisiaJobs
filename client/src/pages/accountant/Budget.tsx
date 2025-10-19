@@ -9,7 +9,12 @@ import { Briefcase, Search, Download, Plus } from 'lucide-react';
 export default function Budget() {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: budgetData } = useQuery({
+  const { data: budgetData } = useQuery<{
+    totalBudget: number;
+    allocated: number;
+    utilized: number;
+    remaining: number;
+  }>({
     queryKey: ['/api/accountant/budget'],
   });
 

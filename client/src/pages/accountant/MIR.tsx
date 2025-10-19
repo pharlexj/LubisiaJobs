@@ -17,7 +17,7 @@ import { BookOpen, Search, Filter, CheckCircle, Clock } from 'lucide-react';
 export default function MIR() {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: mirRecords, isLoading } = useQuery({
+  const { data: mirRecords, isLoading } = useQuery<any[]>({
     queryKey: ['/api/accountant/mir'],
   });
 

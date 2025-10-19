@@ -6,8 +6,14 @@ This is a comprehensive job recruitment and application management system built 
 
 ## Recent Changes
 
+### October 19, 2025 - Accounting Schema Updated to Original Structure
+- **Database Schema Alignment**: Updated accounting tables to match original tbl_* structure from legacy system
+- **6 Core Tables**: votes, vote_accounts, budgets, allowances, transactions, master_imprest_register, audits
+- **Simplified Structure**: Removed unnecessary tables (logins, employees, subscriptions) as requested
+- **Field Name Consistency**: Matched original field names (fy, dept_id, vote_id, amounts, etc.)
+- **Schema Types**: Updated insert schemas and TypeScript types for all accounting tables
+
 ### October 18, 2025 - Accounting Module Backend Integration
-- **Database Schema**: Created 4 accounting tables (vote_accounts, budgets, transactions, master_imprest_register) with full relationships
 - **Document Generation**: Integrated docxtemplater for .docx template processing with currency formatting and number-to-words conversion
 - **Backend API Routes**: Implemented 15+ accounting endpoints for transactions, claims, payments, MIR, vote accounts, and budgets
 - **Storage Layer**: Added complete CRUD operations for all accounting entities with approval/rejection workflow
@@ -166,11 +172,14 @@ The accounting module provides comprehensive financial management capabilities f
 
 #### Backend Architecture
 
-##### Database Tables
-- **vote_accounts**: Budget vote codes with allocation and utilization tracking (code, description, allocated_amount, utilized_amount, balance, fiscal_year)
-- **budgets**: Department budget allocations (department, allocated_amount, utilized_amount, fiscal_year)
-- **transactions**: Claims and payments with approval workflow (transaction_type, amount, description, payee_name, voucher_no, vote_code, status, approved_by, approved_at)
-- **master_imprest_register**: Imprest advances and retirements (employee_name, mir_no, advance_amount, retirement_amount, outstanding_balance, purpose, status)
+##### Database Tables (Based on Original tbl_* Structure)
+- **votes**: Budget line items/vote heads (vote_id, voted_items, vote_type: Development/Recurrent)
+- **vote_accounts**: Account numbers for vote management (account)
+- **budgets**: Budget estimates by department and vote (fy, dept_id, vote_id, estimated_amt)
+- **allowances**: Travel allowances by scale/job group (scale, amounts, dept_id, place_id, country_id)
+- **transactions**: Claims and payments (fy, vote_id, transaction_type, name, personal_no, particulars, amounts, subsistence, bus_fare, taxi_fare, voucher_no, dated, state)
+- **master_imprest_register**: MIR tracking (transaction_id, status, receipt_payment, mode)
+- **audits**: Audit trail for operations (user_email, user_id, operations, ip_address, locations, machine)
 
 ##### API Endpoints
 
