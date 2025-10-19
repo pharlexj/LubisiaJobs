@@ -3,32 +3,53 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import Navigation from '@/components/layout/Navigation';
 import Sidebar from '@/components/layout/Sidebar';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { 
+  Search, 
+  Filter, 
+  CheckCircle, 
+  XCircle,
+  Download,
+  FileText,
+  GraduationCap,
+  Award,
+  Briefcase,
+  User,
+  MapPin,
+  Phone,
+  Mail,
+  Calendar
+} from 'lucide-react';
 
 export default function BoardShortlisting() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedJob, setSelectedJob] = useState('');
   const [yearsOfExperience, setYearsOfExperience] = useState('');
   const [subCounty, setSubCounty] = useState('');
   const [kcseMeanGrade, setKcseMeanGrade] = useState('');
+  const [statusFilter, setStatusFilter] = useState('submitted');
   const [selectedApplicants, setSelectedApplicants] = useState<Set<number>>(new Set());
-  const [filteredApplications, setFilteredApplications] = useState<any[]>([]);
-  const [showFiltered, setShowFiltered] = useState(false);
+  const [showApplicantDetails, setShowApplicantDetails] = useState(false);
+  const [selectedApplicant, setSelectedApplicant] = useState<any>(null);
 
-  const { data: jobs = [] } = useQuery({
+  const { data: jobs = [], isLoading: jobsLoading } = useQuery({
     queryKey: ['/api/public/jobs'],
   });
 
-  const { data: allApplications = [] } = useQuery({
+  const { data: allApplications = [], isLoading: appsLoading } = useQuery({
     queryKey: ['/api/board/applications'],
     enabled: !!user && user.role === 'board',
   });
@@ -52,6 +73,7 @@ export default function BoardShortlisting() {
       });
       queryClient.invalidateQueries({ queryKey: ['/api/board/applications'] });
       setSelectedApplicants(new Set());
+      setShowApplicantDetails(false);
     },
     onError: (error: any) => {
       toast({
@@ -62,57 +84,20 @@ export default function BoardShortlisting() {
     },
   });
 
-  const handleGetList = () => {
-    if (!selectedJob) {
-      toast({
-        title: 'Select a job',
-        description: 'Please select a job to filter applicants.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    let filtered = (allApplications as any[]).filter((app: any) => 
-      app.jobId?.toString() === selectedJob && app.status === 'submitted'
-    );
-
-    if (subCounty) {
-      filtered = filtered.filter((app: any) => 
-        app.subCountyName?.toLowerCase().includes(subCounty.toLowerCase())
-      );
-    }
-
-    setFilteredApplications(filtered);
-    setShowFiltered(true);
+  const handleIndividualShortlist = () => {
+    if (!selectedApplicant) return;
+    updateStatusMutation.mutate({
+      applicationIds: [selectedApplicant.id],
+      status: 'shortlisted'
+    });
   };
 
-  const handleClearFilters = () => {
-    setSelectedJob('');
-    setYearsOfExperience('');
-    setSubCounty('');
-    setKcseMeanGrade('');
-    setFilteredApplications([]);
-    setShowFiltered(false);
-    setSelectedApplicants(new Set());
-  };
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      const allIds = new Set(filteredApplications.map((app: any) => app.id));
-      setSelectedApplicants(allIds);
-    } else {
-      setSelectedApplicants(new Set());
-    }
-  };
-
-  const handleSelectApplicant = (id: number, checked: boolean) => {
-    const newSelected = new Set(selectedApplicants);
-    if (checked) {
-      newSelected.add(id);
-    } else {
-      newSelected.delete(id);
-    }
-    setSelectedApplicants(newSelected);
+  const handleIndividualReject = () => {
+    if (!selectedApplicant) return;
+    updateStatusMutation.mutate({
+      applicationIds: [selectedApplicant.id],
+      status: 'rejected'
+    });
   };
 
   const handleBulkShortlist = () => {
@@ -145,19 +130,66 @@ export default function BoardShortlisting() {
     });
   };
 
-  const applicationsToDisplay = showFiltered ? filteredApplications : [];
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = new Set(filteredApplications.map((app: any) => app.id));
+      setSelectedApplicants(allIds);
+    } else {
+      setSelectedApplicants(new Set());
+    }
+  };
 
-  const shortlistedCount = (allApplications as any[]).filter((app: any) => 
-    app.status === 'shortlisted' && app.jobId?.toString() === selectedJob
-  ).length;
+  const handleSelectApplicant = (id: number, checked: boolean) => {
+    const newSelected = new Set(selectedApplicants);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedApplicants(newSelected);
+  };
 
-  const notShortlistedCount = (allApplications as any[]).filter((app: any) => 
-    app.status === 'rejected' && app.jobId?.toString() === selectedJob
-  ).length;
+  const handleViewDetails = (applicant: any) => {
+    setSelectedApplicant(applicant);
+    setShowApplicantDetails(true);
+  };
 
-  const pendingCount = (allApplications as any[]).filter((app: any) => 
-    app.status === 'submitted' && app.jobId?.toString() === selectedJob
-  ).length;
+  let filteredApplications = (allApplications as any[]).filter((app: any) => {
+    const matchesSearch = !searchTerm ||
+      app.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.surname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesJob = !selectedJob || app.jobId?.toString() === selectedJob;
+    const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
+    const matchesSubCounty = !subCounty || app.constituencyName?.toLowerCase().includes(subCounty.toLowerCase());
+
+    return matchesSearch && matchesJob && matchesStatus && matchesSubCounty;
+  });
+
+  const shortlistedCount = filteredApplications.filter((app: any) => app.status === 'shortlisted').length;
+  const notShortlistedCount = filteredApplications.filter((app: any) => app.status === 'rejected').length;
+  const pendingCount = filteredApplications.filter((app: any) => app.status === 'submitted').length;
+
+  const isLoading = jobsLoading || appsLoading;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-neutral-50">
+        <Navigation />
+        <div className="flex">
+          <Sidebar userRole="board" />
+          <main className="flex-1 p-6">
+            <div className="animate-pulse space-y-6">
+              <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+              <div className="h-64 bg-gray-200 rounded"></div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -166,25 +198,71 @@ export default function BoardShortlisting() {
         <Sidebar userRole="board" />
         <main className="flex-1 p-6">
           <div className="container mx-auto space-y-6">
-            <h1 className="text-2xl font-bold">Shortlisting Panel</h1>
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Shortlisting Panel</h1>
+                <p className="text-gray-600">
+                  Review applications and select candidates for interviews.
+                </p>
+              </div>
+              <div className="flex space-x-2">
+                <Button variant="outline" data-testid="button-export">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export List
+                </Button>
+                <Button data-testid="button-print">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Print Sheet
+                </Button>
+              </div>
+            </div>
 
+            {/* Filters Card */}
             <Card>
               <CardContent className="p-6 space-y-6">
-                {/* Job Selection */}
-                <div>
-                  <Label className="text-base font-semibold mb-3 block">Select a job here:</Label>
-                  <Select value={selectedJob} onValueChange={setSelectedJob}>
-                    <SelectTrigger data-testid="select-job">
-                      <SelectValue placeholder="Select job" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(jobs as any[]).map((job: any) => (
-                        <SelectItem key={job.id} value={job.id.toString()}>
-                          {job.advertNumb} - {job.title} [Job Group '{job.jgName}'] {job.posts} Post
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {/* Search and Job Selection */}
+                <div className="flex flex-col lg:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                      <Input
+                        placeholder="Search by applicant name or job title..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                        data-testid="input-search"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-4">
+                    <Select value={selectedJob} onValueChange={setSelectedJob}>
+                      <SelectTrigger className="w-64" data-testid="select-job">
+                        <SelectValue placeholder="Select a job" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Jobs</SelectItem>
+                        {(jobs as any[]).map((job: any) => (
+                          <SelectItem key={job.id} value={job.id.toString()}>
+                            {job.advertNumb} - {job.title} [{job.jgName}]
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="w-40" data-testid="select-status">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="submitted">Submitted</SelectItem>
+                        <SelectItem value="shortlisted">Shortlisted</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 {/* Years of Experience */}
@@ -213,7 +291,7 @@ export default function BoardShortlisting() {
                 </div>
 
                 {/* Filters Row */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Sub-County */}
                   <div>
                     <Label className="text-base font-semibold mb-2 block">Sub-County</Label>
@@ -222,6 +300,7 @@ export default function BoardShortlisting() {
                         <SelectValue placeholder="Select sub-county" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="">All Sub-Counties</SelectItem>
                         {(constituencies as any[]).map((constituency: any) => (
                           <SelectItem key={constituency.id} value={constituency.name}>
                             {constituency.name}
@@ -233,12 +312,13 @@ export default function BoardShortlisting() {
 
                   {/* KCSE Mean Grade */}
                   <div>
-                    <Label className="text-base font-semibold mb-2 block">Choose the Required KCSE Mean Grade</Label>
+                    <Label className="text-base font-semibold mb-2 block">KCSE Mean Grade</Label>
                     <Select value={kcseMeanGrade} onValueChange={setKcseMeanGrade}>
                       <SelectTrigger data-testid="select-kcse-grade">
                         <SelectValue placeholder="--Select Required Mean Grade--" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="">All Grades</SelectItem>
                         <SelectItem value="A">A</SelectItem>
                         <SelectItem value="A-">A-</SelectItem>
                         <SelectItem value="B+">B+</SelectItem>
@@ -256,50 +336,52 @@ export default function BoardShortlisting() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-3">
-                  <Button 
-                    onClick={handleGetList}
-                    className="bg-green-600 hover:bg-green-700"
-                    data-testid="button-get-list"
-                  >
-                    Get List
-                  </Button>
-                  <Button 
-                    onClick={handleClearFilters}
-                    className="bg-orange-500 hover:bg-orange-600"
-                    data-testid="button-clear-filters"
-                  >
-                    Clear Filters
+                <div className="flex gap-3 items-center">
+                  <Button variant="outline" data-testid="button-more-filters">
+                    <Filter className="w-4 h-4 mr-2" />
+                    More Filters
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Results Section */}
-            {showFiltered && selectedJob && (
-              <>
-                {/* Job Title and Stats */}
-                <div className="bg-white border rounded-lg p-4">
-                  <h2 className="text-lg font-semibold text-teal-700 mb-3" data-testid="text-job-title">
-                    {(jobs as any[]).find((j: any) => j.id.toString() === selectedJob)?.advertNumb} {(jobs as any[]).find((j: any) => j.id.toString() === selectedJob)?.title} Job Group 'J' 1 Post
-                  </h2>
-                  <div className="flex gap-3">
-                    <span className="text-sm">Total number of Applicants</span>
-                    <Badge className="bg-teal-600 hover:bg-teal-700" data-testid="badge-shortlisted">
-                      {shortlistedCount} Shortlisted
-                    </Badge>
-                    <Badge className="bg-red-600 hover:bg-red-700" data-testid="badge-not-shortlisted">
-                      {notShortlistedCount} Not Shortlisted
-                    </Badge>
-                    <Badge className="bg-orange-600 hover:bg-orange-700" data-testid="badge-pending">
-                      {pendingCount} Pending
-                    </Badge>
-                  </div>
+            {/* Status Overview */}
+            {selectedJob && (
+              <div className="bg-white border rounded-lg p-4">
+                <h2 className="text-lg font-semibold text-teal-700 mb-3" data-testid="text-job-title">
+                  {(jobs as any[]).find((j: any) => j.id.toString() === selectedJob)?.advertNumb} {(jobs as any[]).find((j: any) => j.id.toString() === selectedJob)?.title}
+                </h2>
+                <div className="flex gap-3">
+                  <span className="text-sm">Total number of Applicants: {filteredApplications.length}</span>
+                  <Badge className="bg-teal-600 hover:bg-teal-700" data-testid="badge-shortlisted">
+                    {shortlistedCount} Shortlisted
+                  </Badge>
+                  <Badge className="bg-red-600 hover:bg-red-700" data-testid="badge-not-shortlisted">
+                    {notShortlistedCount} Not Shortlisted
+                  </Badge>
+                  <Badge className="bg-orange-600 hover:bg-orange-700" data-testid="badge-pending">
+                    {pendingCount} Pending
+                  </Badge>
                 </div>
+              </div>
+            )}
 
-                {/* Applications Table */}
-                <Card>
-                  <CardContent className="p-0">
+            {/* Applications Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Applications for Review ({filteredApplications.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {filteredApplications.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Applications Found</h3>
+                    <p className="text-gray-600">
+                      No applications match your current filters.
+                    </p>
+                  </div>
+                ) : (
+                  <>
                     <div className="overflow-x-auto">
                       <table className="w-full">
                         <thead className="bg-gray-50 border-b">
@@ -323,95 +405,329 @@ export default function BoardShortlisting() {
                           </tr>
                         </thead>
                         <tbody>
-                          {applicationsToDisplay.length === 0 ? (
-                            <tr>
-                              <td colSpan={10} className="text-center py-8 text-gray-500">
-                                No applications found for selected filters
+                          {filteredApplications.map((app: any, index: number) => (
+                            <tr key={app.id} className="border-b hover:bg-gray-50" data-testid={`row-applicant-${app.id}`}>
+                              <td className="py-3 px-4">
+                                <Checkbox
+                                  checked={selectedApplicants.has(app.id)}
+                                  onCheckedChange={(checked) => handleSelectApplicant(app.id, checked as boolean)}
+                                  data-testid={`checkbox-applicant-${app.id}`}
+                                />
+                              </td>
+                              <td className="py-3 px-4 text-sm">{index + 1}</td>
+                              <td className="py-3 px-4 text-sm" data-testid={`text-name-${app.id}`}>
+                                {app.fullName || `${app.firstName || ''} ${app.surname || ''}`}
+                              </td>
+                              <td className="py-3 px-4 text-sm" data-testid={`text-id-${app.id}`}>
+                                {app.nationalId || app.idNumber}
+                              </td>
+                              <td className="py-3 px-4 text-sm" data-testid={`text-contacts-${app.id}`}>
+                                {app.email || 'N/A'}
+                                {app.phoneNumber && <div className="text-xs text-gray-500">{app.phoneNumber}</div>}
+                              </td>
+                              <td className="py-3 px-4 text-sm" data-testid={`text-location-${app.id}`}>
+                                {app.countyName || 'N/A'}
+                              </td>
+                              <td className="py-3 px-4 text-sm" data-testid={`text-ward-${app.id}`}>
+                                {app.wardName || 'N/A'}
+                              </td>
+                              <td className="py-3 px-4 text-sm" data-testid={`text-subcounty-${app.id}`}>
+                                {app.subCountyName || app.constituencyName || 'N/A'}
+                              </td>
+                              <td className="py-3 px-4">
+                                <Badge 
+                                  className={app.status === 'shortlisted' ? 'bg-green-600' : 'bg-gray-400'}
+                                  data-testid={`badge-status-${app.id}`}
+                                >
+                                  {app.status === 'shortlisted' ? 'Yes' : 'No'}
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-4">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                                  onClick={() => handleViewDetails(app)}
+                                  data-testid={`button-more-${app.id}`}
+                                >
+                                  More
+                                </Button>
                               </td>
                             </tr>
-                          ) : (
-                            applicationsToDisplay.map((app: any, index: number) => (
-                              <tr key={app.id} className="border-b hover:bg-gray-50" data-testid={`row-applicant-${app.id}`}>
-                                <td className="py-3 px-4">
-                                  <Checkbox
-                                    checked={selectedApplicants.has(app.id)}
-                                    onCheckedChange={(checked) => handleSelectApplicant(app.id, checked as boolean)}
-                                    data-testid={`checkbox-applicant-${app.id}`}
-                                  />
-                                </td>
-                                <td className="py-3 px-4 text-sm">{index + 1}</td>
-                                <td className="py-3 px-4 text-sm" data-testid={`text-name-${app.id}`}>
-                                  {app.fullName || `${app.firstName || ''} ${app.surname || ''}`}
-                                </td>
-                                <td className="py-3 px-4 text-sm" data-testid={`text-id-${app.id}`}>
-                                  {app.nationalId || app.idNumber}
-                                </td>
-                                <td className="py-3 px-4 text-sm" data-testid={`text-contacts-${app.id}`}>
-                                  {app.email || app.phoneNumber || 'N/A'}
-                                  {app.phoneNumber && <div className="text-xs text-gray-500">{app.phoneNumber}</div>}
-                                </td>
-                                <td className="py-3 px-4 text-sm" data-testid={`text-location-${app.id}`}>
-                                  {app.countyName || 'N/A'}
-                                </td>
-                                <td className="py-3 px-4 text-sm" data-testid={`text-ward-${app.id}`}>
-                                  {app.wardName || 'N/A'}
-                                </td>
-                                <td className="py-3 px-4 text-sm" data-testid={`text-subcounty-${app.id}`}>
-                                  {app.subCountyName || app.constituencyName || 'N/A'}
-                                </td>
-                                <td className="py-3 px-4">
-                                  <Badge 
-                                    className={app.status === 'shortlisted' ? 'bg-green-600' : 'bg-gray-400'}
-                                    data-testid={`badge-status-${app.id}`}
-                                  >
-                                    {app.status === 'shortlisted' ? 'Yes' : 'No'}
-                                  </Badge>
-                                </td>
-                                <td className="py-3 px-4">
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline"
-                                    className="text-blue-600 border-blue-600 hover:bg-blue-50"
-                                    data-testid={`button-more-${app.id}`}
-                                  >
-                                    More
-                                  </Button>
-                                </td>
-                              </tr>
-                            ))
-                          )}
+                          ))}
                         </tbody>
                       </table>
                     </div>
-                  </CardContent>
-                </Card>
 
-                {/* Bulk Action Buttons */}
-                {applicationsToDisplay.length > 0 && (
-                  <div className="flex gap-3">
-                    <Button 
-                      onClick={handleBulkShortlist}
-                      className="bg-green-600 hover:bg-green-700"
-                      disabled={selectedApplicants.size === 0 || updateStatusMutation.isPending}
-                      data-testid="button-bulk-shortlist"
-                    >
-                      ✓ AUTO SHORTLIST SELECTED
-                    </Button>
-                    <Button 
-                      onClick={handleBulkReject}
-                      className="bg-red-600 hover:bg-red-700"
-                      disabled={selectedApplicants.size === 0 || updateStatusMutation.isPending}
-                      data-testid="button-bulk-reject"
-                    >
-                      ✗ AUTO NOT SHORTLIST SELECTED
-                    </Button>
-                  </div>
+                    {/* Bulk Action Buttons */}
+                    {filteredApplications.length > 0 && (
+                      <div className="flex gap-3 mt-6">
+                        <Button 
+                          onClick={handleBulkShortlist}
+                          className="bg-green-600 hover:bg-green-700"
+                          disabled={selectedApplicants.size === 0 || updateStatusMutation.isPending}
+                          data-testid="button-bulk-shortlist"
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          AUTO SHORTLIST SELECTED
+                        </Button>
+                        <Button 
+                          onClick={handleBulkReject}
+                          className="bg-red-600 hover:bg-red-700"
+                          disabled={selectedApplicants.size === 0 || updateStatusMutation.isPending}
+                          data-testid="button-bulk-reject"
+                        >
+                          <XCircle className="w-4 h-4 mr-2" />
+                          AUTO NOT SHORTLIST SELECTED
+                        </Button>
+                      </div>
+                    )}
+                  </>
                 )}
-              </>
-            )}
+              </CardContent>
+            </Card>
           </div>
         </main>
       </div>
+
+      {/* Applicant Details Modal */}
+      <Dialog open={showApplicantDetails} onOpenChange={setShowApplicantDetails}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">
+              Candidate Profile: {selectedApplicant?.fullName || `${selectedApplicant?.firstName} ${selectedApplicant?.surname}`}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedApplicant && (
+            <Tabs defaultValue="profile" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="profile">Profile</TabsTrigger>
+                <TabsTrigger value="education">Education</TabsTrigger>
+                <TabsTrigger value="employment">Employment</TabsTrigger>
+                <TabsTrigger value="documents">Documents</TabsTrigger>
+              </TabsList>
+
+              {/* Profile Tab */}
+              <TabsContent value="profile" className="space-y-4 mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <User className="h-5 w-5" />
+                      Personal Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <Label className="text-sm font-semibold text-gray-600 flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          Full Name
+                        </Label>
+                        <p className="mt-1 text-lg">{selectedApplicant.fullName}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-semibold text-gray-600 flex items-center gap-2">
+                          <Mail className="h-4 w-4" />
+                          Email
+                        </Label>
+                        <p className="mt-1">{selectedApplicant.email || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-semibold text-gray-600 flex items-center gap-2">
+                          <Phone className="h-4 w-4" />
+                          Phone Number
+                        </Label>
+                        <p className="mt-1">{selectedApplicant.phoneNumber || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-semibold text-gray-600 flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          Date of Birth
+                        </Label>
+                        <p className="mt-1">{selectedApplicant.dateOfBirth || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-semibold text-gray-600">National ID</Label>
+                        <p className="mt-1">{selectedApplicant.nationalId || selectedApplicant.idNumber || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-semibold text-gray-600">Gender</Label>
+                        <p className="mt-1">{selectedApplicant.gender || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-semibold text-gray-600 flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          Location
+                        </Label>
+                        <p className="mt-1">
+                          {selectedApplicant.countyName && `${selectedApplicant.countyName}, `}
+                          {selectedApplicant.constituencyName && `${selectedApplicant.constituencyName}, `}
+                          {selectedApplicant.wardName}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-semibold text-gray-600">Application Status</Label>
+                        <Badge className={`mt-1 ${selectedApplicant.status === 'shortlisted' ? 'bg-green-600' : selectedApplicant.status === 'rejected' ? 'bg-red-600' : 'bg-blue-600'}`}>
+                          {selectedApplicant.status?.toUpperCase()}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Education Tab */}
+              <TabsContent value="education" className="space-y-4 mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <GraduationCap className="h-5 w-5" />
+                      Education History
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {selectedApplicant?.education?.length > 0 ? (
+                      <div className="space-y-4">
+                        {selectedApplicant.education.map((edu: any, index: number) => (
+                          <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-lg">{edu.courseName}</h4>
+                                <p className="text-gray-600 mt-1">{edu.institution}</p>
+                                <div className="flex items-center gap-4 mt-3">
+                                  <span className="text-sm text-gray-500 flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {edu.yearFrom} - {edu.yearCompleted}
+                                  </span>
+                                  {edu.grade && (
+                                    <Badge variant="outline" className="font-semibold">
+                                      Grade: {edu.grade}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <Award className="h-8 w-8 text-blue-600" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-center py-8">No education records available</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Employment Tab */}
+              <TabsContent value="employment" className="space-y-4 mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Briefcase className="h-5 w-5" />
+                      Employment History
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {selectedApplicant?.employmentHistory?.length > 0 ? (
+                      <div className="space-y-4">
+                        {selectedApplicant.employmentHistory.map((emp: any, index: number) => (
+                          <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-lg">{emp.position}</h4>
+                                <p className="text-gray-600 mt-1">{emp.employer}</p>
+                                <div className="flex items-center gap-4 mt-3">
+                                  <span className="text-sm text-gray-500 flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {emp.startDate} - {emp.endDate || 'Present'}
+                                  </span>
+                                </div>
+                                {emp.responsibilities && (
+                                  <p className="text-sm text-gray-600 mt-2">{emp.responsibilities}</p>
+                                )}
+                              </div>
+                              <Briefcase className="h-8 w-8 text-green-600" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-center py-8">No employment records available</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Documents Tab */}
+              <TabsContent value="documents" className="space-y-4 mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Supporting Documents
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {selectedApplicant?.documents?.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-4">
+                        {selectedApplicant.documents.map((doc: any, index: number) => (
+                          <div key={index} className="border rounded-lg p-4 bg-gray-50 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <FileText className="h-8 w-8 text-blue-600" />
+                              <div>
+                                <p className="font-medium">{doc.type}</p>
+                                <p className="text-sm text-gray-500">{doc.fileName}</p>
+                              </div>
+                            </div>
+                            <Button size="sm" variant="outline">View</Button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-center py-8">No documents uploaded</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          )}
+
+          {/* Action Buttons at Bottom of Modal */}
+          <div className="flex gap-3 pt-6 border-t mt-6">
+            {selectedApplicant?.status !== 'shortlisted' && (
+              <Button
+                onClick={handleIndividualShortlist}
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                disabled={updateStatusMutation.isPending}
+                data-testid="button-modal-shortlist"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                {updateStatusMutation.isPending ? 'Processing...' : 'Shortlist Candidate'}
+              </Button>
+            )}
+            {selectedApplicant?.status !== 'rejected' && (
+              <Button
+                onClick={handleIndividualReject}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+                disabled={updateStatusMutation.isPending}
+                data-testid="button-modal-reject"
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                {updateStatusMutation.isPending ? 'Processing...' : 'Reject Candidate'}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              onClick={() => setShowApplicantDetails(false)}
+              className="flex-1"
+              data-testid="button-modal-close"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
