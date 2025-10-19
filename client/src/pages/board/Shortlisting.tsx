@@ -161,9 +161,9 @@ export default function BoardShortlisting() {
       app.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesJob = !selectedJob || app.jobId?.toString() === selectedJob;
+    const matchesJob = !selectedJob || selectedJob === 'all' || app.jobId?.toString() === selectedJob;
     const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
-    const matchesSubCounty = !subCounty || app.constituencyName?.toLowerCase().includes(subCounty.toLowerCase());
+    const matchesSubCounty = !subCounty || subCounty === 'all' || app.constituencyName?.toLowerCase().includes(subCounty.toLowerCase());
 
     return matchesSearch && matchesJob && matchesStatus && matchesSubCounty;
   });
@@ -242,7 +242,7 @@ export default function BoardShortlisting() {
                         <SelectValue placeholder="Select a job" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Jobs</SelectItem>
+                        <SelectItem value="all">All Jobs</SelectItem>
                         {(jobs as any[]).map((job: any) => (
                           <SelectItem key={job.id} value={job.id.toString()}>
                             {job.advertNumb} - {job.title} [{job.jgName}]
@@ -300,7 +300,7 @@ export default function BoardShortlisting() {
                         <SelectValue placeholder="Select sub-county" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Sub-Counties</SelectItem>
+                        <SelectItem value="all">All Sub-Counties</SelectItem>
                         {(constituencies as any[]).map((constituency: any) => (
                           <SelectItem key={constituency.id} value={constituency.name}>
                             {constituency.name}
@@ -318,7 +318,7 @@ export default function BoardShortlisting() {
                         <SelectValue placeholder="--Select Required Mean Grade--" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Grades</SelectItem>
+                        <SelectItem value="all">All Grades</SelectItem>
                         <SelectItem value="A">A</SelectItem>
                         <SelectItem value="A-">A-</SelectItem>
                         <SelectItem value="B+">B+</SelectItem>
