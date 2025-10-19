@@ -2446,6 +2446,41 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     }
   });
 
+  // Bulk update applications (board)
+  app.post('/api/board/applications/bulk-update', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'board') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { applicationIds, status, shortlistedAt } = req.body;
+      
+      if (!applicationIds || !Array.isArray(applicationIds) || applicationIds.length === 0) {
+        return res.status(400).json({ message: 'applicationIds must be a non-empty array' });
+      }
+
+      if (!status) {
+        return res.status(400).json({ message: 'status is required' });
+      }
+
+      const updates = [];
+      for (const appId of applicationIds) {
+        const updateData: any = { status };
+        if (shortlistedAt) {
+          updateData.shortlistedAt = shortlistedAt;
+        }
+        const updated = await storage.updateApplication(appId, updateData);
+        updates.push(updated);
+      }
+
+      res.json({ success: true, updated: updates.length });
+    } catch (error) {
+      console.error('Error bulk updating applications:', error);
+      res.status(500).json({ message: 'Failed to bulk update applications' });
+    }
+  });
+
   // Document upload endpoint
   app.post('/api/applicant/documents', isAuthenticated, upload.single('document'), async (req: any, res) => {
     try {

@@ -1,517 +1,414 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { Link } from 'wouter';
 import Navigation from '@/components/layout/Navigation';
 import Sidebar from '@/components/layout/Sidebar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
-import { getApplications } from "@/lib/queryFns";
-import { isUnauthorizedError } from '@/lib/authUtils';
-import { usePublicConfig } from '@/hooks/usePublicConfig';
-import ApplicantDocument from "@/components/common/Documents"; 
-import { 
-  Search, 
-  Filter, 
-  FileText, 
-  CheckCircle, 
-  XCircle, 
-  Calendar,
-  Download,
-  Eye,
-  GraduationCap,
-  Award,
-  Briefcase,
-  Star
-} from 'lucide-react';
-import { log } from 'console';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 export default function BoardShortlisting() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [jobFilter, setJobFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('submitted');
-  const [selectedApplication, setSelectedApplication] = useState<any>(null);
-  const [showRemarks, setShowRemarks] = useState(false);
-  const [showShortlistDialog, setShowShortlistDialog] = useState(false);
-  const [remarks, setRemarks] = useState('');
-  const [score, setScore] = useState('');
-
-  const { data: applications = [], isLoading } = useQuery({
-   queryKey: [
-      "/api/board/applications",
-      { status: statusFilter, jobId: jobFilter !== "all" ? jobFilter : undefined },
-    ],
-    queryFn: async ({ queryKey }) => {
-      const [_key, params] = queryKey as [string, any];
-      const searchParams = new URLSearchParams();
-      if (params.status) searchParams.append('status', params.status);
-      if (params.jobId) searchParams.append('jobId', params.jobId);
-      return await apiRequest('GET', `/api/board/applications?${searchParams.toString()}`);
-    },
-    enabled: !!user && (user.role === 'board' || user.role === 'admin'),
-  });
+  const [selectedJob, setSelectedJob] = useState('');
+  const [yearsOfExperience, setYearsOfExperience] = useState('');
+  const [subCounty, setSubCounty] = useState('');
+  const [kcseMeanGrade, setKcseMeanGrade] = useState('');
+  const [selectedApplicants, setSelectedApplicants] = useState<Set<number>>(new Set());
+  const [filteredApplications, setFilteredApplications] = useState<any[]>([]);
+  const [showFiltered, setShowFiltered] = useState(false);
 
   const { data: jobs = [] } = useQuery({
     queryKey: ['/api/public/jobs'],
   });
-  
-  const { data: config } = usePublicConfig();
-  
-  const configData = config || {} as any;
-  // Initializing api from config data
-  const departments = configData?.departments || [];
-  const userData = configData?.userData || [];
-  
-  const updateApplicationMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      return await apiRequest('PUT', `/api/board/applications/${id}`, data);
+
+  const { data: allApplications = [] } = useQuery({
+    queryKey: ['/api/board/applications'],
+    enabled: !!user && user.role === 'board',
+  });
+
+  const { data: constituencies = [] } = useQuery({
+    queryKey: ['/api/constituencies'],
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ applicationIds, status }: { applicationIds: number[]; status: string }) => {
+      return await apiRequest('POST', '/api/board/applications/bulk-update', {
+        applicationIds,
+        status,
+        shortlistedAt: status === 'shortlisted' ? new Date().toISOString() : undefined
+      });
     },
     onSuccess: () => {
       toast({
-        title: 'Application Updated',
-        description: 'Application status has been updated successfully.',
+        title: 'Success',
+        description: 'Applications updated successfully.',
       });
       queryClient.invalidateQueries({ queryKey: ['/api/board/applications'] });
-      setSelectedApplication(null);
-      setShowRemarks(false);
-      setShowShortlistDialog(false);
-      setRemarks('');
-      setScore('');
+      setSelectedApplicants(new Set());
     },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: 'Unauthorized',
-          description: 'You are logged out. Logging in again...',
-          variant: 'destructive',
-        });
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 500);
-        return;
-      }
+    onError: (error: any) => {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update application',
+        description: error.message || 'Failed to update applications',
         variant: 'destructive',
       });
     },
   });
 
-  const handleStatusUpdate = (applicationId: number, newStatus: string, additionalData: any = {}) => {
-    updateApplicationMutation.mutate({
-      id: applicationId,
-      data: {
-        status: newStatus,
-        remarks: remarks || additionalData.remarks || '',
-        ...additionalData
-      }
-    });
+  const handleGetList = () => {
+    if (!selectedJob) {
+      toast({
+        title: 'Select a job',
+        description: 'Please select a job to filter applicants.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    let filtered = (allApplications as any[]).filter((app: any) => 
+      app.jobId?.toString() === selectedJob && app.status === 'submitted'
+    );
+
+    if (subCounty) {
+      filtered = filtered.filter((app: any) => 
+        app.subCountyName?.toLowerCase().includes(subCounty.toLowerCase())
+      );
+    }
+
+    setFilteredApplications(filtered);
+    setShowFiltered(true);
   };
 
-   const filteredApplications = (applications as any)?.filter((app: any) => {
-    // Use correct field names and allow empty search to match all
-    const matchesSearch =
-      !searchTerm ||
-      app.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.applicantSurname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase());
-  
-    const matchesJob = jobFilter === 'all' || app.job.id?.toString() === jobFilter || app.jobId?.toString() === jobFilter;
-     const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
-     return matchesSearch && matchesJob && matchesStatus;
-  });
-
-  const getQualificationMatch = (application: any) => {
-    // Mock qualification matching logic - in real app this would check against job requirements
-    const educationLevel = application?.education?.length || 0;
-    const experience = application?.employmentHistory?.length || 0;
-    
-    if (educationLevel >= 3 && experience >= 2) return { percentage: 100, color: 'text-green-600' };
-    if (educationLevel >= 2 && experience >= 1) return { percentage: 85, color: 'text-blue-600' };
-    if (educationLevel >= 1) return { percentage: 70, color: 'text-yellow-600' };
-    return { percentage: 50, color: 'text-red-600' };
+  const handleClearFilters = () => {
+    setSelectedJob('');
+    setYearsOfExperience('');
+    setSubCounty('');
+    setKcseMeanGrade('');
+    setFilteredApplications([]);
+    setShowFiltered(false);
+    setSelectedApplicants(new Set());
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'submitted':
-        return 'bg-blue-100 text-blue-800';
-      case 'shortlisted':
-        return 'bg-green-100 text-green-800';
-      case 'rejected':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = new Set(filteredApplications.map((app: any) => app.id));
+      setSelectedApplicants(allIds);
+    } else {
+      setSelectedApplicants(new Set());
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-neutral-50">
-        <Navigation />
-        <div className="flex">
-          <Sidebar userRole="board" />
-          <main className="flex-1 p-6">
-            <div className="animate-pulse space-y-6">
-              <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-              <div className="h-64 bg-gray-200 rounded"></div>
-            </div>
-          </main>
-        </div>
-      </div>
-    );
-  }
+  const handleSelectApplicant = (id: number, checked: boolean) => {
+    const newSelected = new Set(selectedApplicants);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedApplicants(newSelected);
+  };
+
+  const handleBulkShortlist = () => {
+    if (selectedApplicants.size === 0) {
+      toast({
+        title: 'No selection',
+        description: 'Please select applicants to shortlist.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    updateStatusMutation.mutate({
+      applicationIds: Array.from(selectedApplicants),
+      status: 'shortlisted'
+    });
+  };
+
+  const handleBulkReject = () => {
+    if (selectedApplicants.size === 0) {
+      toast({
+        title: 'No selection',
+        description: 'Please select applicants to reject.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    updateStatusMutation.mutate({
+      applicationIds: Array.from(selectedApplicants),
+      status: 'rejected'
+    });
+  };
+
+  const applicationsToDisplay = showFiltered ? filteredApplications : [];
+
+  const shortlistedCount = (allApplications as any[]).filter((app: any) => 
+    app.status === 'shortlisted' && app.jobId?.toString() === selectedJob
+  ).length;
+
+  const notShortlistedCount = (allApplications as any[]).filter((app: any) => 
+    app.status === 'rejected' && app.jobId?.toString() === selectedJob
+  ).length;
+
+  const pendingCount = (allApplications as any[]).filter((app: any) => 
+    app.status === 'submitted' && app.jobId?.toString() === selectedJob
+  ).length;
 
   return (
     <div className="min-h-screen bg-neutral-50">
       <Navigation />
-      
       <div className="flex">
         <Sidebar userRole="board" />
-        
         <main className="flex-1 p-6">
-          <div className="max-w-7xl mx-auto">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Shortlisting Panel</h1>
-                <p className="text-gray-600">
-                  Review applications and select candidates for interviews.
-                </p>
-              </div>
-              
-              <div className="flex space-x-2">
-                <Button variant="outline">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export List
-                </Button>
-                <Button>
-                  <FileText className="w-4 h-4 mr-2" />
-                  Print Sheet
-                </Button>
-              </div>
-            </div>
+          <div className="container mx-auto space-y-6">
+            <h1 className="text-2xl font-bold">Shortlisting Panel</h1>
 
-            {/* Filters */}
-            <Card className="mb-8">
-              <CardContent className="p-6">
-                <div className="flex flex-col lg:flex-row gap-4">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                      <Input
-                        placeholder="Search by applicant name or job title..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                      />
+            <Card>
+              <CardContent className="p-6 space-y-6">
+                {/* Job Selection */}
+                <div>
+                  <Label className="text-base font-semibold mb-3 block">Select a job here:</Label>
+                  <Select value={selectedJob} onValueChange={setSelectedJob}>
+                    <SelectTrigger data-testid="select-job">
+                      <SelectValue placeholder="Select job" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(jobs as any[]).map((job: any) => (
+                        <SelectItem key={job.id} value={job.id.toString()}>
+                          {job.advertNumb} - {job.title} [Job Group '{job.jgName}'] {job.posts} Post
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Years of Experience */}
+                <div>
+                  <Label className="text-base font-semibold mb-3 block">Choose the Required Years of Experience</Label>
+                  <RadioGroup value={yearsOfExperience} onValueChange={setYearsOfExperience}>
+                    <div className="flex gap-6">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="0-3" id="exp-0-3" data-testid="radio-exp-0-3" />
+                        <Label htmlFor="exp-0-3" className="font-normal cursor-pointer">0-3 Yrs</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="4-6" id="exp-4-6" data-testid="radio-exp-4-6" />
+                        <Label htmlFor="exp-4-6" className="font-normal cursor-pointer">4-6 Yrs</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="7-10" id="exp-7-10" data-testid="radio-exp-7-10" />
+                        <Label htmlFor="exp-7-10" className="font-normal cursor-pointer">7-10 Yrs</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="10+" id="exp-10plus" data-testid="radio-exp-10plus" />
+                        <Label htmlFor="exp-10plus" className="font-normal cursor-pointer">Over 10 Yrs</Label>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex gap-4">
-                    <Select value={jobFilter} onValueChange={setJobFilter}>
-                      <SelectTrigger className="w-48">
-                        <SelectValue placeholder="All Jobs" />
+                  </RadioGroup>
+                </div>
+
+                {/* Filters Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Sub-County */}
+                  <div>
+                    <Label className="text-base font-semibold mb-2 block">Sub-County</Label>
+                    <Select value={subCounty} onValueChange={setSubCounty}>
+                      <SelectTrigger data-testid="select-subcounty">
+                        <SelectValue placeholder="Select sub-county" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Jobs</SelectItem>
-                        {(jobs as any[]).map((job: any) => (
-                          <SelectItem key={job.id} value={job.id.toString()}>
-                            {job.title}
+                        {(constituencies as any[]).map((constituency: any) => (
+                          <SelectItem key={constituency.id} value={constituency.name}>
+                            {constituency.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
 
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="Status" />
+                  {/* KCSE Mean Grade */}
+                  <div>
+                    <Label className="text-base font-semibold mb-2 block">Choose the Required KCSE Mean Grade</Label>
+                    <Select value={kcseMeanGrade} onValueChange={setKcseMeanGrade}>
+                      <SelectTrigger data-testid="select-kcse-grade">
+                        <SelectValue placeholder="--Select Required Mean Grade--" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="submitted">Submitted</SelectItem>
-                        <SelectItem value="shortlisted">Shortlisted</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
+                        <SelectItem value="A">A</SelectItem>
+                        <SelectItem value="A-">A-</SelectItem>
+                        <SelectItem value="B+">B+</SelectItem>
+                        <SelectItem value="B">B</SelectItem>
+                        <SelectItem value="B-">B-</SelectItem>
+                        <SelectItem value="C+">C+</SelectItem>
+                        <SelectItem value="C">C</SelectItem>
+                        <SelectItem value="C-">C-</SelectItem>
+                        <SelectItem value="D+">D+</SelectItem>
+                        <SelectItem value="D">D</SelectItem>
+                        <SelectItem value="D-">D-</SelectItem>
                       </SelectContent>
                     </Select>
-
-                    <Button variant="outline">
-                      <Filter className="w-4 h-4 mr-2" />
-                      More Filters
-                    </Button>
                   </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <Button 
+                    onClick={handleGetList}
+                    className="bg-green-600 hover:bg-green-700"
+                    data-testid="button-get-list"
+                  >
+                    Get List
+                  </Button>
+                  <Button 
+                    onClick={handleClearFilters}
+                    className="bg-orange-500 hover:bg-orange-600"
+                    data-testid="button-clear-filters"
+                  >
+                    Clear Filters
+                  </Button>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Applications Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Applications for Review ({filteredApplications.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {filteredApplications.length === 0 ? (
-                  <div className="text-center py-12">
-                    <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Applications Found</h3>
-                    <p className="text-gray-600">
-                      No applications match your current filters.
-                    </p>
+            {/* Results Section */}
+            {showFiltered && selectedJob && (
+              <>
+                {/* Job Title and Stats */}
+                <div className="bg-white border rounded-lg p-4">
+                  <h2 className="text-lg font-semibold text-teal-700 mb-3" data-testid="text-job-title">
+                    {(jobs as any[]).find((j: any) => j.id.toString() === selectedJob)?.advertNumb} {(jobs as any[]).find((j: any) => j.id.toString() === selectedJob)?.title} Job Group 'J' 1 Post
+                  </h2>
+                  <div className="flex gap-3">
+                    <span className="text-sm">Total number of Applicants</span>
+                    <Badge className="bg-teal-600 hover:bg-teal-700" data-testid="badge-shortlisted">
+                      {shortlistedCount} Shortlisted
+                    </Badge>
+                    <Badge className="bg-red-600 hover:bg-red-700" data-testid="badge-not-shortlisted">
+                      {notShortlistedCount} Not Shortlisted
+                    </Badge>
+                    <Badge className="bg-orange-600 hover:bg-orange-700" data-testid="badge-pending">
+                      {pendingCount} Pending
+                    </Badge>
                   </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Applicant</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Qualification Match</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Documents</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Score</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredApplications.map((application: any) => {
-                          const qualMatch = getQualificationMatch(application);
-                          
-                          return (
-                            <tr key={application.id} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="py-3 px-4">
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                                    {application.firstName?.[0] || 'A'}
-                                    {application.surname?.[0] || ''}
-                                  </div>
-                                  <div>
-                                    <div className="font-medium text-gray-900">
-                                      {application.fullName}
-                                    </div>
-                                    <div className="text-sm text-gray-600 flex items-center">
-                                      <GraduationCap className="w-3 h-3 mr-1" />
-                                      {application.job.title}
-                                    </div>
-                                  </div>
-                                </div>
+                </div>
+
+                {/* Applications Table */}
+                <Card>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 border-b">
+                          <tr>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">
+                              <Checkbox
+                                checked={selectedApplicants.size === filteredApplications.length && filteredApplications.length > 0}
+                                onCheckedChange={handleSelectAll}
+                                data-testid="checkbox-select-all"
+                              />
+                            </th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">#</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Full Name</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">ID Number</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Contacts</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Location</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Ward</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">SubCounty</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">ShortListed?</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {applicationsToDisplay.length === 0 ? (
+                            <tr>
+                              <td colSpan={10} className="text-center py-8 text-gray-500">
+                                No applications found for selected filters
                               </td>
-                              <td className="py-3 px-4">
-                                <div className="flex items-center space-x-2">
-                                  <div className={`w-3 h-3 rounded-full ${qualMatch.percentage >= 85 ? 'bg-green-500' : qualMatch.percentage >= 70 ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
-                                  <span className={`text-sm font-medium ${qualMatch.color}`}>
-                                    {qualMatch.percentage}% Match
-                                  </span>
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                  Education, Experience verified
-                                </div>
-                              </td>
-                              <td className="py-3 px-4">
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  className="bg-blue-50 text-blue-700 hover:bg-blue-100"
-                                >
-                                  <FileText className="w-3 h-3 mr-1" />
-                                  View PDF
-                                </Button>
-                              </td>
-                              <td className="py-3 px-4">
-                                <Input 
-                                  type="number" 
-                                  placeholder="0-100" 
-                                  max="100"
-                                  className="w-20 text-sm"
-                                  value={score}
-                                  onChange={(e) => setScore(e.target.value)}
-                                />
-                              </td>
-                              <td className="py-3 px-4">
-                                <Badge className={getStatusColor(application.status)}>
-                                  {application.status?.charAt(0).toUpperCase() + application.status?.slice(1)}
-                                </Badge>
-                              </td>
-                              <td className="py-3 px-4">
-                                <div className="flex space-x-2">
-                                  {application.status === 'submitted' && (
-                                    <Dialog open={showShortlistDialog} onOpenChange={setShowShortlistDialog}>
-                                      <DialogTrigger asChild>
-                                        <Button 
-                                          size="sm" 
-                                          className="bg-secondary hover:bg-green-700"
-                                          onClick={() => setSelectedApplication(application)}
-                                          data-testid={`button-shortlist-${application.id}`}
-                                        >
-                                          <CheckCircle className="w-3 h-3 mr-1" />
-                                          Shortlist
-                                        </Button>
-                                      </DialogTrigger>
-                                      <DialogContent>
-                                        <DialogHeader>
-                                          <DialogTitle>Shortlist Candidate</DialogTitle>
-                                        </DialogHeader>
-                                        <div className="space-y-4">
-                                          <div>
-                                            <Label>Interview Date</Label>
-                                            <Input type="date" className="mt-1" />
-                                          </div>
-                                          <div>
-                                            <Label>Remarks</Label>
-                                            <Textarea 
-                                              placeholder="Add remarks about the candidate..."
-                                              value={remarks}
-                                              onChange={(e) => setRemarks(e.target.value)}
-                                              className="mt-1"
-                                            />
-                                          </div>
-                                          <div className="flex justify-end space-x-2">
-                                            <Button variant="outline" onClick={() => setShowShortlistDialog(false)}>Cancel</Button>
-                                            <Button 
-                                              onClick={() => handleStatusUpdate(selectedApplication?.id, 'shortlisted', { interviewDate: new Date().toISOString().split('T')[0] })}
-                                              disabled={updateApplicationMutation.isPending}
-                                              data-testid="button-confirm-shortlist"
-                                            >
-                                              {updateApplicationMutation.isPending ? 'Processing...' : 'Shortlist'}
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      </DialogContent>
-                                    </Dialog>
-                                  )}
-                                  
-                                  {application.status === 'shortlisted' && (
-                                    <Button 
-                                      asChild
-                                      size="sm" 
-                                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                                      data-testid={`button-score-${application.id}`}
-                                    >
-                                      <Link href="/board/scoring">
-                                        <Star className="w-3 h-3 mr-1" />
-                                        Score
-                                      </Link>
-                                    </Button>
-                                  )}
-                                  
+                            </tr>
+                          ) : (
+                            applicationsToDisplay.map((app: any, index: number) => (
+                              <tr key={app.id} className="border-b hover:bg-gray-50" data-testid={`row-applicant-${app.id}`}>
+                                <td className="py-3 px-4">
+                                  <Checkbox
+                                    checked={selectedApplicants.has(app.id)}
+                                    onCheckedChange={(checked) => handleSelectApplicant(app.id, checked as boolean)}
+                                    data-testid={`checkbox-applicant-${app.id}`}
+                                  />
+                                </td>
+                                <td className="py-3 px-4 text-sm">{index + 1}</td>
+                                <td className="py-3 px-4 text-sm" data-testid={`text-name-${app.id}`}>
+                                  {app.fullName || `${app.firstName || ''} ${app.surname || ''}`}
+                                </td>
+                                <td className="py-3 px-4 text-sm" data-testid={`text-id-${app.id}`}>
+                                  {app.nationalId || app.idNumber}
+                                </td>
+                                <td className="py-3 px-4 text-sm" data-testid={`text-contacts-${app.id}`}>
+                                  {app.email || app.phoneNumber || 'N/A'}
+                                  {app.phoneNumber && <div className="text-xs text-gray-500">{app.phoneNumber}</div>}
+                                </td>
+                                <td className="py-3 px-4 text-sm" data-testid={`text-location-${app.id}`}>
+                                  {app.countyName || 'N/A'}
+                                </td>
+                                <td className="py-3 px-4 text-sm" data-testid={`text-ward-${app.id}`}>
+                                  {app.wardName || 'N/A'}
+                                </td>
+                                <td className="py-3 px-4 text-sm" data-testid={`text-subcounty-${app.id}`}>
+                                  {app.subCountyName || app.constituencyName || 'N/A'}
+                                </td>
+                                <td className="py-3 px-4">
+                                  <Badge 
+                                    className={app.status === 'shortlisted' ? 'bg-green-600' : 'bg-gray-400'}
+                                    data-testid={`badge-status-${app.id}`}
+                                  >
+                                    {app.status === 'shortlisted' ? 'Yes' : 'No'}
+                                  </Badge>
+                                </td>
+                                <td className="py-3 px-4">
                                   <Button 
                                     size="sm" 
                                     variant="outline"
-                                    onClick={() => {
-                                      setSelectedApplication(application);
-                                      setShowRemarks(true);
-                                    }}
-                                    data-testid={`button-view-profile-${application.id}`}
+                                    className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                                    data-testid={`button-more-${app.id}`}
                                   >
-                                    <Eye className="w-3 h-3 mr-1" />
-                                    View Profile
+                                    More
                                   </Button>
-                                  
-                                  {application.status !== 'rejected' && (
-                                    <Button 
-                                      size="sm" 
-                                      variant="outline"
-                                      className="text-red-600 hover:bg-red-50"
-                                      onClick={() => handleStatusUpdate(application.id, 'rejected', { remarks: 'Did not meet requirements' })}
-                                      data-testid={`button-reject-${application.id}`}
-                                    >
-                                      <XCircle className="w-3 h-3 mr-1" />
-                                      Reject
-                                    </Button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Bulk Action Buttons */}
+                {applicationsToDisplay.length > 0 && (
+                  <div className="flex gap-3">
+                    <Button 
+                      onClick={handleBulkShortlist}
+                      className="bg-green-600 hover:bg-green-700"
+                      disabled={selectedApplicants.size === 0 || updateStatusMutation.isPending}
+                      data-testid="button-bulk-shortlist"
+                    >
+                      ✓ AUTO SHORTLIST SELECTED
+                    </Button>
+                    <Button 
+                      onClick={handleBulkReject}
+                      className="bg-red-600 hover:bg-red-700"
+                      disabled={selectedApplicants.size === 0 || updateStatusMutation.isPending}
+                      data-testid="button-bulk-reject"
+                    >
+                      ✗ AUTO NOT SHORTLIST SELECTED
+                    </Button>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Profile View Dialog */}
-            <Dialog open={showRemarks} onOpenChange={setShowRemarks}>
-              <DialogContent className="max-w-4xl">
-                <DialogHeader>
-                  <DialogTitle>
-                    Candidate Profile - {selectedApplication?.fullName}
-                  </DialogTitle>
-                </DialogHeader>
-                
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="font-semibold mb-3 flex items-center">
-                      <Award className="w-4 h-4 mr-2" />
-                      Qualifications
-                    </h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="font-medium">Education</p>
-                        <p className="text-gray-600">Bachelor's in Information Technology</p>
-                        <p className="text-gray-500 text-xs">University of Nairobi, 2020</p>
-                      </div>
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="font-medium">Professional Certification</p>
-                        <p className="text-gray-600">CISCO Certified Network Associate</p>
-                        <p className="text-gray-500 text-xs">Valid until 2025</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-semibold mb-3 flex items-center">
-                      <Briefcase className="w-4 h-4 mr-2" />
-                      Experience
-                    </h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="font-medium">IT Support Specialist</p>
-                        <p className="text-gray-600">TechCorp Ltd</p>
-                        <p className="text-gray-500 text-xs">2021 - Present (3 years)</p>
-                      </div>
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="font-medium">Junior Developer</p>
-                        <p className="text-gray-600">StartupXYZ</p>
-                        <p className="text-gray-500 text-xs">2020 - 2021 (1 year)</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <h4 className="font-semibold mb-3">Assessment & Remarks</h4>
-                  <Textarea 
-                    placeholder="Add your assessment and remarks about this candidate..."
-                    value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
-                    rows={4}
-                  />
-                </div>
-
-                <div className="flex justify-end space-x-2 mt-6">
-                  <Button variant="outline" onClick={() => setShowRemarks(false)}>
-                    Close
-                  </Button>
-                  <Button 
-                    onClick={() => handleStatusUpdate(selectedApplication?.id, 'shortlisted')}
-                    disabled={updateApplicationMutation.isPending}
-                  >
-                    Shortlist Candidate
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+              </>
+            )}
           </div>
         </main>
       </div>
