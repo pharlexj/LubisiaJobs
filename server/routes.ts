@@ -1,4 +1,5 @@
 import { sendEmail } from './lib/email-service';
+import { sendSms, sendBulkSms } from './lib/sms-service';
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import express from "express";
@@ -44,10 +45,10 @@ function generateOtp(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Simulate SMS sending (in production, integrate with SMS provider like Africa'stalking Twilio)
-function sendSms(phoneNumber: string, message: string): Promise<boolean> {
-  // In development, just log the OTP
-  return Promise.resolve(true);
+// Legacy SMS function for OTP (kept for backward compatibility)
+async function sendSmsOtp(phoneNumber: string, message: string): Promise<boolean> {
+  const result = await sendSms(phoneNumber, message);
+  return result.success;
 }
 // Document upload storage configuration with extensions preserved
 const documentStorage = multer.diskStorage({
@@ -1831,34 +1832,52 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       };
 
       const notification = await storage.createNotification(notificationData);
-      let sendResult = null;
+      let sendResult: any = { success: true, message: 'Notification created' };
+      let deliveredCount = 0;
+      
       if (!scheduledAt) {
         if (notificationType === 'sms') {
-          // Reuse SMS sending logic
           // Get recipients (phone numbers)
           const recipients = await storage.getNotificationRecipientsForAudience(notification.id, req.body.targetAudience);
           const phoneNumbers = recipients.map((r: any) => String(r.phoneNumber)).filter(Boolean);
+          
           if (phoneNumbers.length > 0) {
-            // sendSms expects a string, so send individually
-            sendResult = [];
-            for (const number of phoneNumbers) {
-              const result = await sendSms(number, req.body.message);
-              sendResult.push({ number, result });
-            }
+            sendResult = await sendBulkSms(phoneNumbers, req.body.message);
+            deliveredCount = sendResult.sentCount || 0;
+          } else {
+            sendResult = { success: false, error: 'No phone numbers found for recipients', sentCount: 0, failedCount: 0 };
           }
         } else if (notificationType === 'email') {
-          // Reuse email sending logic (assume sendEmail exists)
+          // Get recipients (emails)
           const recipients = await storage.getNotificationRecipientsForAudience(notification.id, req.body.targetAudience);
           const emails = recipients.map((r: any) => String(r.email)).filter(Boolean);
-          if (emails.length > 0 && typeof sendEmail === 'function') {
+          
+          if (emails.length > 0) {
             sendResult = await sendEmail(emails, req.body.title, req.body.message);
+            deliveredCount = sendResult.sentCount || 0;
+          } else {
+            sendResult = { success: false, error: 'No email addresses found for recipients', sentCount: 0 };
           }
         } else if (notificationType === 'system') {
-          // System alert: just save to DB, maybe trigger websocket/event
-          sendResult = 'system_alert_saved';
+          // System alert: just save to DB
+          sendResult = { success: true, message: 'System alert saved' };
+          deliveredCount = recipientCount;
+        }
+        
+        // Update notification with delivery status
+        if (deliveredCount > 0) {
+          await storage.updateNotification(notification.id, { deliveredCount });
         }
       }
-      res.json({ notification, sendResult });
+      
+      res.json({ 
+        notification, 
+        sendResult,
+        success: sendResult.success,
+        message: sendResult.success 
+          ? `Notification sent successfully to ${deliveredCount} recipient(s)` 
+          : `Failed to send: ${sendResult.error || 'Unknown error'}`
+      });
     } catch (error) {
       console.error('Error creating notification:', error);
       res.status(500).json({ message: 'Failed to create notification' });
