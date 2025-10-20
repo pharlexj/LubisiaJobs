@@ -1329,15 +1329,15 @@ useEffect(() => {
                           </DialogHeader>
                           <form onSubmit={constituencyForm.handleSubmit(handleCreateConstituency)} className="space-y-4">
                             <div>
-                              <Label htmlFor="constituency-county">County</Label>
+                              <Label htmlFor="constituency-county">County *</Label>
                               <Select 
                                 value={selectedCounty}
                                 onValueChange={(value) => {
                                   setSelectedCounty(value);
-                                  constituencyForm.setValue('countyId', value);
+                                  constituencyForm.setValue('countyId', value, { shouldValidate: true });
                                 }}
                               >
-                                <SelectTrigger>
+                                <SelectTrigger data-testid="select-constituency-county">
                                   <SelectValue placeholder="Select county" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1348,13 +1348,21 @@ useEffect(() => {
                                   ))}
                                 </SelectContent>
                               </Select>
+                              {/* Hidden field to ensure form registration */}
+                              <input type="hidden" {...constituencyForm.register('countyId')} value={selectedCounty} />
+                              {constituencyForm.formState.errors.countyId && (
+                                <p className="text-sm text-red-600 mt-1">
+                                  {constituencyForm.formState.errors.countyId.message}
+                                </p>
+                              )}
                             </div>
                             <div>
-                              <Label htmlFor="constituency-name">Constituency Name</Label>
+                              <Label htmlFor="constituency-name">Constituency Name *</Label>
                               <Input 
                                 id="constituency-name" 
                                 {...constituencyForm.register('name')} 
                                 placeholder="Enter constituency name"
+                                data-testid="input-constituency-name"
                               />
                               {constituencyForm.formState.errors.name && (
                                 <p className="text-sm text-red-600 mt-1">
@@ -1363,7 +1371,9 @@ useEffect(() => {
                               )}
                             </div>
                             <div className="flex justify-end space-x-2">
-                              <Button type="submit">Add Constituency</Button>
+                              <Button type="submit" data-testid="button-add-constituency">
+                                Add Constituency
+                              </Button>
                             </div>
                           </form>
                         </DialogContent>
@@ -1415,15 +1425,15 @@ useEffect(() => {
                           </DialogHeader>
                           <form onSubmit={wardForm.handleSubmit(handleCreateWard)} className="space-y-4">
                             <div>
-                              <Label htmlFor="ward-constituency">Constituency</Label>
+                              <Label htmlFor="ward-constituency">Constituency *</Label>
                               <Select 
                                 value={selectedConstituency}
                                 onValueChange={(value) => {
                                   setSelectedConstituency(value);
-                                  wardForm.setValue('constituencyId', value);
+                                  wardForm.setValue('constituencyId', value, { shouldValidate: true });
                                 }}
                               >
-                                <SelectTrigger>
+                                <SelectTrigger data-testid="select-ward-constituency">
                                   <SelectValue placeholder="Select constituency" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1434,13 +1444,21 @@ useEffect(() => {
                                   ))}
                                 </SelectContent>
                               </Select>
+                              {/* Hidden field to ensure form registration */}
+                              <input type="hidden" {...wardForm.register('constituencyId')} value={selectedConstituency} />
+                              {wardForm.formState.errors.constituencyId && (
+                                <p className="text-sm text-red-600 mt-1">
+                                  {wardForm.formState.errors.constituencyId.message}
+                                </p>
+                              )}
                             </div>
                             <div>
-                              <Label htmlFor="ward-name">Ward Name</Label>
+                              <Label htmlFor="ward-name">Ward Name *</Label>
                               <Input 
                                 id="ward-name" 
                                 {...wardForm.register('name')} 
                                 placeholder="Enter ward name"
+                                data-testid="input-ward-name"
                               />
                               {wardForm.formState.errors.name && (
                                 <p className="text-sm text-red-600 mt-1">
@@ -1449,7 +1467,9 @@ useEffect(() => {
                               )}
                             </div>
                             <div className="flex justify-end space-x-2">
-                              <Button type="submit">Add Ward</Button>
+                              <Button type="submit" data-testid="button-add-ward">
+                                Add Ward
+                              </Button>
                             </div>
                           </form>
                         </DialogContent>
