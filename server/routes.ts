@@ -1,4 +1,5 @@
 import { sendEmail } from './lib/email-service';
+import { sendSms, sendBulkSms } from './lib/sms-service';
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import express from "express";
@@ -17,6 +18,7 @@ import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
 import fs from "fs";
 import numberToWords from "number-to-words";
+import * as XLSX from "xlsx";
 
 // Board member validation schemas
 const insertBoardMemberSchema = createInsertSchema(boardMembers).omit({
@@ -43,10 +45,10 @@ function generateOtp(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Simulate SMS sending (in production, integrate with SMS provider like Africa'stalking Twilio)
-function sendSms(phoneNumber: string, message: string): Promise<boolean> {
-  // In development, just log the OTP
-  return Promise.resolve(true);
+// Legacy SMS function for OTP (kept for backward compatibility)
+async function sendSmsOtp(phoneNumber: string, message: string): Promise<boolean> {
+  const result = await sendSms(phoneNumber, message);
+  return result.success;
 }
 // Document upload storage configuration with extensions preserved
 const documentStorage = multer.diskStorage({
@@ -63,7 +65,16 @@ const upload = multer({
   storage: documentStorage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const allowedTypes = [
+      'application/pdf', 
+      'image/jpeg', 
+      'image/jpg', 
+      'image/png', 
+      'application/msword', 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -1821,34 +1832,52 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       };
 
       const notification = await storage.createNotification(notificationData);
-      let sendResult = null;
+      let sendResult: any = { success: true, message: 'Notification created' };
+      let deliveredCount = 0;
+      
       if (!scheduledAt) {
         if (notificationType === 'sms') {
-          // Reuse SMS sending logic
           // Get recipients (phone numbers)
           const recipients = await storage.getNotificationRecipientsForAudience(notification.id, req.body.targetAudience);
           const phoneNumbers = recipients.map((r: any) => String(r.phoneNumber)).filter(Boolean);
+          
           if (phoneNumbers.length > 0) {
-            // sendSms expects a string, so send individually
-            sendResult = [];
-            for (const number of phoneNumbers) {
-              const result = await sendSms(number, req.body.message);
-              sendResult.push({ number, result });
-            }
+            sendResult = await sendBulkSms(phoneNumbers, req.body.message);
+            deliveredCount = sendResult.sentCount || 0;
+          } else {
+            sendResult = { success: false, error: 'No phone numbers found for recipients', sentCount: 0, failedCount: 0 };
           }
         } else if (notificationType === 'email') {
-          // Reuse email sending logic (assume sendEmail exists)
+          // Get recipients (emails)
           const recipients = await storage.getNotificationRecipientsForAudience(notification.id, req.body.targetAudience);
           const emails = recipients.map((r: any) => String(r.email)).filter(Boolean);
-          if (emails.length > 0 && typeof sendEmail === 'function') {
+          
+          if (emails.length > 0) {
             sendResult = await sendEmail(emails, req.body.title, req.body.message);
+            deliveredCount = sendResult.sentCount || 0;
+          } else {
+            sendResult = { success: false, error: 'No email addresses found for recipients', sentCount: 0 };
           }
         } else if (notificationType === 'system') {
-          // System alert: just save to DB, maybe trigger websocket/event
-          sendResult = 'system_alert_saved';
+          // System alert: just save to DB
+          sendResult = { success: true, message: 'System alert saved' };
+          deliveredCount = recipientCount;
+        }
+        
+        // Update notification with delivery status
+        if (deliveredCount > 0) {
+          await storage.updateNotification(notification.id, { deliveredCount });
         }
       }
-      res.json({ notification, sendResult });
+      
+      res.json({ 
+        notification, 
+        sendResult,
+        success: sendResult.success,
+        message: sendResult.success 
+          ? `Notification sent successfully to ${deliveredCount} recipient(s)` 
+          : `Failed to send: ${sendResult.error || 'Unknown error'}`
+      });
     } catch (error) {
       console.error('Error creating notification:', error);
       res.status(500).json({ message: 'Failed to create notification' });
@@ -2745,6 +2774,45 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     }
   });
 
+  // Dedicated favicon upload endpoint
+  app.post('/api/admin/upload-favicon', isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied. Admin role required.' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      // Validate file type
+      const allowedMimeTypes = ['image/x-icon', 'image/vnd.microsoft.icon', 'image/png'];
+      if (!allowedMimeTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ message: 'Invalid file type. Only .ico and .png files are allowed.' });
+      }
+
+      // Determine the target filename based on mime type
+      const targetFilename = req.file.mimetype === 'image/png' ? 'favicon.png' : 'favicon.ico';
+      const sourcePath = req.file.path;
+      const targetPath = path.join('uploads', targetFilename);
+
+      // Use fs to rename/move the file
+      const fs = require('fs').promises;
+      await fs.rename(sourcePath, targetPath);
+
+      res.json({
+        success: true,
+        message: 'Favicon uploaded successfully',
+        filename: targetFilename,
+        url: `/uploads/${targetFilename}`
+      });
+    } catch (error) {
+      console.error('Error uploading favicon:', error);
+      res.status(500).json({ success: false, message: 'Failed to upload favicon' });
+    }
+  });
+
   // Job archiving routes
   app.post('/api/admin/jobs/archive-expired', isAuthenticated, async (req: any, res) => {
     try {
@@ -2921,6 +2989,309 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     } catch (error) {
       console.error('Error bulk scheduling interviews:', error);
       res.status(500).json({ message: 'Failed to bulk schedule interviews' });
+    }
+  });
+
+  // Bulk Interview Scheduling via Excel Upload
+  app.post('/api/board/bulk-schedule-interviews-excel', isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || (user.role !== 'admin' && user.role !== 'board')) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No Excel file uploaded' });
+      }
+
+      // Read and parse Excel file
+      const workbook = XLSX.readFile(req.file.path);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet);
+
+      // Validate and process data
+      const errors: any[] = [];
+      const updates: any[] = [];
+
+      for (let i = 0; i < data.length; i++) {
+        const row: any = data[i];
+        
+        // Validate required fields
+        if (!row.ApplicationId || !row.InterviewDate || !row.InterviewTime) {
+          errors.push({
+            row: i + 2, // +2 because Excel is 1-indexed and has header
+            message: 'Missing required fields (ApplicationId, InterviewDate, or InterviewTime)'
+          });
+          continue;
+        }
+
+        updates.push({
+          applicationId: parseInt(row.ApplicationId),
+          interviewDate: row.InterviewDate,
+          interviewTime: row.InterviewTime,
+          interviewVenue: row.InterviewVenue || 'TBD',
+          interviewDuration: 30
+        });
+      }
+
+      if (errors.length > 0 && updates.length === 0) {
+        // Clean up uploaded file
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({ 
+          message: 'Invalid Excel data', 
+          errors 
+        });
+      }
+
+      // Bulk update applications
+      for (const update of updates) {
+        try {
+          await storage.updateApplication(update.applicationId, {
+            interviewDate: update.interviewDate,
+            interviewTime: update.interviewTime,
+            interviewVenue: update.interviewVenue,
+            interviewDuration: update.interviewDuration,
+            status: 'interview_scheduled'
+          });
+        } catch (err) {
+          errors.push({
+            applicationId: update.applicationId,
+            message: 'Failed to update application'
+          });
+        }
+      }
+
+      // Clean up uploaded file
+      fs.unlinkSync(req.file.path);
+
+      res.json({ 
+        message: 'Bulk interview scheduling completed', 
+        success: updates.length - errors.length,
+        total: data.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error('Error in bulk interview scheduling:', error);
+      // Clean up uploaded file if it exists
+      if (req.file?.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      res.status(500).json({ message: 'Failed to process Excel file' });
+    }
+  });
+
+  // Bulk Appointments via Excel Upload
+  app.post('/api/board/bulk-appointments-excel', isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || (user.role !== 'admin' && user.role !== 'board')) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No Excel file uploaded' });
+      }
+
+      // Read and parse Excel file
+      const workbook = XLSX.readFile(req.file.path);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet);
+
+      // Validate and process data
+      const errors: any[] = [];
+      const updates: any[] = [];
+
+      for (let i = 0; i < data.length; i++) {
+        const row: any = data[i];
+        
+        // Validate required fields
+        if (!row.ApplicationId) {
+          errors.push({
+            row: i + 2,
+            message: 'Missing ApplicationId'
+          });
+          continue;
+        }
+
+        updates.push({
+          applicationId: parseInt(row.ApplicationId),
+          interviewScore: row.InterviewScore ? parseInt(row.InterviewScore) : null,
+          remarks: row.Remarks || ''
+        });
+      }
+
+      if (errors.length > 0 && updates.length === 0) {
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({ 
+          message: 'Invalid Excel data', 
+          errors 
+        });
+      }
+
+      // Bulk update applications to hired status
+      for (const update of updates) {
+        try {
+          await storage.updateApplication(update.applicationId, {
+            status: 'hired',
+            interviewScore: update.interviewScore,
+            remarks: update.remarks,
+            hiredAt: new Date()
+          });
+        } catch (err) {
+          errors.push({
+            applicationId: update.applicationId,
+            message: 'Failed to update application'
+          });
+        }
+      }
+
+      // Clean up uploaded file
+      fs.unlinkSync(req.file.path);
+
+      res.json({ 
+        message: 'Bulk appointments completed', 
+        success: updates.length - errors.length,
+        total: data.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error('Error in bulk appointments:', error);
+      if (req.file?.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      res.status(500).json({ message: 'Failed to process Excel file' });
+    }
+  });
+
+  // Download Excel Template for Interview Scheduling
+  app.get('/api/board/download-interview-template', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || (user.role !== 'admin' && user.role !== 'board')) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      // Get query params for filtering
+      const { jobId, status } = req.query;
+
+      // Get applications to populate template
+      let applications = await storage.getApplications();
+      
+      // Filter by job if specified
+      if (jobId) {
+        applications = applications.filter(app => app.jobId === parseInt(jobId as string));
+      }
+      
+      // Filter by status if specified (default to shortlisted)
+      const filterStatus = status || 'shortlisted';
+      applications = applications.filter(app => app.status === filterStatus);
+
+      // Create workbook with sample data
+      const templateData = applications.map(app => ({
+        ApplicationId: app.id,
+        JobTitle: app.job?.title || '',
+        Name: app.fullName || '',
+        IdNumber: app.nationalId || '',
+        Gender: app.gender || '',
+        Ward: app.wardName || '',
+        InterviewDate: '', // Empty for user to fill
+        InterviewTime: '', // Empty for user to fill
+        InterviewVenue: '' // Empty for user to fill
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(templateData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Interview Schedule');
+
+      // Set column widths
+      worksheet['!cols'] = [
+        { wch: 15 }, // ApplicationId
+        { wch: 30 }, // JobTitle
+        { wch: 25 }, // Name
+        { wch: 15 }, // IdNumber
+        { wch: 10 }, // Gender
+        { wch: 20 }, // Ward
+        { wch: 15 }, // InterviewDate
+        { wch: 15 }, // InterviewTime
+        { wch: 25 }  // InterviewVenue
+      ];
+
+      // Generate buffer
+      const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+      // Set headers for download
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename=interview-schedule-template-${Date.now()}.xlsx`);
+      res.send(buffer);
+    } catch (error) {
+      console.error('Error generating interview template:', error);
+      res.status(500).json({ message: 'Failed to generate template' });
+    }
+  });
+
+  // Download Excel Template for Bulk Appointments
+  app.get('/api/board/download-appointment-template', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || (user.role !== 'admin' && user.role !== 'board')) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      // Get query params for filtering
+      const { jobId, status } = req.query;
+
+      // Get applications to populate template
+      let applications = await storage.getApplications();
+      
+      // Filter by job if specified
+      if (jobId) {
+        applications = applications.filter(app => app.jobId === parseInt(jobId as string));
+      }
+      
+      // Filter by status if specified (default to interviewed)
+      const filterStatus = status || 'interviewed';
+      applications = applications.filter(app => app.status === filterStatus);
+
+      // Create workbook with sample data
+      const templateData = applications.map(app => ({
+        ApplicationId: app.id,
+        JobTitle: app.job?.title || '',
+        Name: app.fullName || '',
+        IdNumber: app.nationalId || '',
+        Gender: app.gender || '',
+        Ward: app.wardName || '',
+        InterviewScore: app.interviewScore || '', // Show existing score if any
+        Remarks: app.remarks || '' // Show existing remarks if any
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(templateData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Appointments');
+
+      // Set column widths
+      worksheet['!cols'] = [
+        { wch: 15 }, // ApplicationId
+        { wch: 30 }, // JobTitle
+        { wch: 25 }, // Name
+        { wch: 15 }, // IdNumber
+        { wch: 10 }, // Gender
+        { wch: 20 }, // Ward
+        { wch: 15 }, // InterviewScore
+        { wch: 40 }  // Remarks
+      ];
+
+      // Generate buffer
+      const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+      // Set headers for download
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename=appointment-template-${Date.now()}.xlsx`);
+      res.send(buffer);
+    } catch (error) {
+      console.error('Error generating appointment template:', error);
+      res.status(500).json({ message: 'Failed to generate template' });
     }
   });
 

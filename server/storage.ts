@@ -177,6 +177,7 @@ export interface IStorage {
   // Notification operations
   getNotifications(): Promise<Notification[]>;
   createNotification(data: InsertNotification): Promise<Notification>;
+  updateNotification(id: number, data: Partial<InsertNotification>): Promise<Notification>;
   getNotificationStats(): Promise<{
     totalSent: number;
     openRate: number;
@@ -189,6 +190,7 @@ export interface IStorage {
   getNotificationRecipients(notificationId: number, status?: string): Promise<NotificationRecipient[]>;
   retryFailedRecipients(notificationId: number): Promise<void>;
   trackNotificationOpen(trackingToken: string): Promise<boolean>;
+  getNotificationRecipientsForAudience(notificationId: number, audience: string): Promise<any[]>;
   
   // Board member operations
   getBoardMembers(): Promise<BoardMember[]>;
@@ -1228,6 +1230,67 @@ async getFaq() {
       .values(data)
       .returning();
     return notification;
+  }
+
+  async updateNotification(id: number, data: Partial<InsertNotification>): Promise<Notification> {
+    const [notification] = await db
+      .update(notifications)
+      .set({ ...data, updatedAt: sql`now()` })
+      .where(eq(notifications.id, id))
+      .returning();
+    return notification;
+  }
+
+  async getNotificationRecipientsForAudience(notificationId: number, audience: string): Promise<any[]> {
+    // Return users based on audience filter
+    let recipients: any[] = [];
+    
+    if (audience === 'all') {
+      recipients = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          phoneNumber: users.phoneNumber,
+          firstName: users.firstName,
+          surname: users.surname,
+        })
+        .from(users);
+    } else if (audience === 'applicants') {
+      recipients = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          phoneNumber: users.phoneNumber,
+          firstName: users.firstName,
+          surname: users.surname,
+        })
+        .from(users)
+        .where(eq(users.role, 'applicant'));
+    } else if (audience === 'admins') {
+      recipients = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          phoneNumber: users.phoneNumber,
+          firstName: users.firstName,
+          surname: users.surname,
+        })
+        .from(users)
+        .where(eq(users.role, 'admin'));
+    } else if (audience === 'board') {
+      recipients = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          phoneNumber: users.phoneNumber,
+          firstName: users.firstName,
+          surname: users.surname,
+        })
+        .from(users)
+        .where(eq(users.role, 'board'));
+    }
+    
+    return recipients;
   }
 
   async getNotificationStats(): Promise<{
@@ -2478,15 +2541,4 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
     return employeeUsers;
   }
 }
-// Add a method to filter notification recipients by audience if needed
-export class DatabaseStorageWithAudience extends DatabaseStorage {
-  async getNotificationRecipientsForAudience(notificationId: number, audience: string): Promise<NotificationRecipient[]> {
-    // Example: filter by status or other audience criteria
-    const allRecipients = await this.getNotificationRecipients(notificationId);
-    // You can filter by audience if needed, e.g. status, type, etc.
-    // For now, just return all
-    return allRecipients;
-  }
-}
-
-export const storage = new DatabaseStorageWithAudience();
+export const storage = new DatabaseStorage();

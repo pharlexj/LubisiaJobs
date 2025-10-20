@@ -48,6 +48,7 @@
     "@types/memoizee": "^0.4.12",
     "@types/multer": "^2.0.0",
     "@types/number-to-words": "^1.2.3",
+    "@types/xlsx": "^0.0.35",
     "africastalking": "^0.7.4",
     "bcrypt": "^6.0.0",
     "class-variance-authority": "^0.7.1",
@@ -96,6 +97,7 @@
     "vaul": "^1.1.2",
     "wouter": "^3.3.5",
     "ws": "^8.18.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.2",
     "zod-validation-error": "^3.4.0",
     "zustand": "^5.0.8"

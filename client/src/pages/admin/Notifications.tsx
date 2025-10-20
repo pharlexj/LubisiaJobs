@@ -139,11 +139,21 @@ export default function AdminNotifications() {
     mutationFn: async (data: NotificationFormData) => {
       return await apiRequest('POST', '/api/admin/notifications', data);
     },
-    onSuccess: () => {
-      toast({
-        title: 'Notification Sent',
-        description: 'Your notification has been sent successfully.',
-      });
+    onSuccess: (response: any) => {
+      // Check if the notification was successfully created but failed to send
+      if (response.sendResult && !response.sendResult.success) {
+        toast({
+          title: 'Notification Created with Issues',
+          description: response.message || response.sendResult.error || 'The notification was created but may not have been delivered to all recipients.',
+          variant: 'default',
+        });
+      } else {
+        toast({
+          title: 'Success',
+          description: response.message || 'Your notification has been sent successfully.',
+        });
+      }
+      
       // Invalidate both notifications list and stats
       queryClient.invalidateQueries({ queryKey: ['/api/admin/notifications'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/notification-stats'] });
@@ -215,6 +225,9 @@ export default function AdminNotifications() {
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">Notifications</h1>
                 <p className="text-gray-600">Send notifications to users and manage communication</p>
+                <p className="text-sm text-amber-600 mt-1">
+                  <strong>Note:</strong> Email and SMS services require configuration. Add EMAIL_USER, EMAIL_PASSWORD, SMS_API_KEY, and SMS_USERNAME in Secrets.
+                </p>
               </div>
               
               <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
@@ -237,6 +250,7 @@ export default function AdminNotifications() {
                           id="title" 
                           {...form.register('title')} 
                           placeholder="Enter notification title"
+                          data-testid="input-notification-title"
                         />
                         {form.formState.errors.title && (
                           <p className="text-sm text-red-600 mt-1">
@@ -248,7 +262,7 @@ export default function AdminNotifications() {
                       <div>
                         <Label htmlFor="type">Notification Type</Label>
                         <Select onValueChange={(value) => form.setValue('type', value)}>
-                          <SelectTrigger>
+                          <SelectTrigger data-testid="select-notification-type">
                             <SelectValue placeholder="Select notification type" />
                           </SelectTrigger>
                           <SelectContent>
@@ -274,7 +288,7 @@ export default function AdminNotifications() {
                       <div>
                         <Label htmlFor="targetAudience">Target Audience</Label>
                         <Select onValueChange={(value) => form.setValue('targetAudience', value)}>
-                          <SelectTrigger>
+                          <SelectTrigger data-testid="select-target-audience">
                             <SelectValue placeholder="Select audience" />
                           </SelectTrigger>
                           <SelectContent>
@@ -295,7 +309,7 @@ export default function AdminNotifications() {
                       <div>
                         <Label htmlFor="priority">Priority Level</Label>
                         <Select onValueChange={(value) => form.setValue('priority', value)}>
-                          <SelectTrigger>
+                          <SelectTrigger data-testid="select-priority">
                             <SelectValue placeholder="Select priority" />
                           </SelectTrigger>
                           <SelectContent>
@@ -321,6 +335,7 @@ export default function AdminNotifications() {
                         {...form.register('message')}
                         placeholder="Enter your notification message..."
                         rows={4}
+                        data-testid="textarea-notification-message"
                       />
                       {form.formState.errors.message && (
                         <p className="text-sm text-red-600 mt-1">
@@ -335,6 +350,7 @@ export default function AdminNotifications() {
                         id="scheduledAt"
                         type="datetime-local"
                         {...form.register('scheduledAt')}
+                        data-testid="input-scheduled-at"
                       />
                     </div>
 
@@ -343,10 +359,15 @@ export default function AdminNotifications() {
                         type="button"
                         variant="outline"
                         onClick={() => setIsCreateModalOpen(false)}
+                        data-testid="button-cancel-notification"
                       >
                         Cancel
                       </Button>
-                      <Button type="submit" disabled={createNotificationMutation.isPending}>
+                      <Button 
+                        type="submit" 
+                        disabled={createNotificationMutation.isPending}
+                        data-testid="button-send-notification"
+                      >
                         <Send className="w-4 h-4 mr-2" />
                         {createNotificationMutation.isPending ? 'Sending...' : 'Send Notification'}
                       </Button>
