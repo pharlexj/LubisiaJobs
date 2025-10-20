@@ -998,6 +998,12 @@ useEffect(() => {
         imageUrl: item.imageUrl || '',
         eventDate: item.eventDate || ''
       });
+    } else if (type === 'role') {
+      roleAssignmentForm.reset({
+        userId: item.id,
+        role: item.role,
+        assignedBy: item.assignedBy || ''
+      });
     }
   };
 
@@ -1126,7 +1132,7 @@ useEffect(() => {
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Create New Notice</DialogTitle>
+                          <DialogTitle>{editingItem && editingType === 'notice' ? 'Edit Notice' : 'Create New Notice'}</DialogTitle>
                         </DialogHeader>
                         <form onSubmit={noticeForm.handleSubmit(handleCreateNotice)} className="space-y-4">
                           <div>
@@ -1135,6 +1141,7 @@ useEffect(() => {
                               id="notice-title" 
                               {...noticeForm.register('title')} 
                               placeholder="Notice title"
+                              data-testid="input-notice-title"
                             />
                             {noticeForm.formState.errors.title && (
                               <p className="text-sm text-red-600 mt-1">
@@ -1149,6 +1156,7 @@ useEffect(() => {
                               {...noticeForm.register('content')} 
                               placeholder="Notice content"
                               rows={4}
+                              data-testid="textarea-notice-content"
                             />
                             {noticeForm.formState.errors.content && (
                               <p className="text-sm text-red-600 mt-1">
@@ -1159,8 +1167,11 @@ useEffect(() => {
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <Label htmlFor="notice-type">Type</Label>
-                              <Select onValueChange={(value) => noticeForm.setValue('type', value)}>
-                                <SelectTrigger>
+                              <Select 
+                                value={noticeForm.watch('type')}
+                                onValueChange={(value) => noticeForm.setValue('type', value)}
+                              >
+                                <SelectTrigger data-testid="select-notice-type">
                                   <SelectValue placeholder="Select type" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1172,8 +1183,11 @@ useEffect(() => {
                             </div>
                             <div>
                               <Label htmlFor="notice-priority">Priority</Label>
-                              <Select onValueChange={(value) => noticeForm.setValue('priority', value)}>
-                                <SelectTrigger>
+                              <Select 
+                                value={noticeForm.watch('priority')}
+                                onValueChange={(value) => noticeForm.setValue('priority', value)}
+                              >
+                                <SelectTrigger data-testid="select-notice-priority">
                                   <SelectValue placeholder="Select priority" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1875,22 +1889,25 @@ useEffect(() => {
                       <CardTitle>FAQ Management</CardTitle>
                       <p className="text-sm text-gray-600 mt-1">Manage frequently asked questions</p>
                     </div>
-                    <Dialog>
+                    <Dialog open={isModalOpen && activeTab === 'faqs'} onOpenChange={setIsModalOpen}>
                       <DialogTrigger asChild>
-                        <Button>
+                        <Button onClick={() => setActiveTab('faqs')}>
                           <Plus className="w-4 h-4 mr-2" />
                           Add FAQ
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="max-w-2xl">
                         <DialogHeader>
-                          <DialogTitle>Add New FAQ</DialogTitle>
+                          <DialogTitle>{editingItem && editingType === 'faq' ? 'Edit FAQ' : 'Add New FAQ'}</DialogTitle>
                         </DialogHeader>
                         <form onSubmit={faqForm.handleSubmit(handleCreateFaq)} className="space-y-4">
                           <div>
                             <Label htmlFor="faq-category">Category</Label>
-                            <Select onValueChange={(value) => faqForm.setValue('category', value)}>
-                              <SelectTrigger>
+                            <Select 
+                              value={faqForm.watch('category')}
+                              onValueChange={(value) => faqForm.setValue('category', value)}
+                            >
+                              <SelectTrigger data-testid="select-faq-category">
                                 <SelectValue placeholder="Select category" />
                               </SelectTrigger>
                               <SelectContent>
@@ -1914,6 +1931,7 @@ useEffect(() => {
                               id="faq-question" 
                               {...faqForm.register('question')} 
                               placeholder="Enter the question"
+                              data-testid="input-faq-question"
                             />
                             {faqForm.formState.errors.question && (
                               <p className="text-sm text-red-600 mt-1">
@@ -1928,6 +1946,7 @@ useEffect(() => {
                               {...faqForm.register('answer')} 
                               placeholder="Enter the answer"
                               rows={5}
+                              data-testid="textarea-faq-answer"
                             />
                             {faqForm.formState.errors.answer && (
                               <p className="text-sm text-red-600 mt-1">
@@ -1944,8 +1963,8 @@ useEffect(() => {
                             }}>
                               Cancel
                             </Button>
-                            <Button type="submit">
-                              {editingItem ? 'Update FAQ' : 'Add FAQ'}
+                            <Button type="submit" data-testid="button-submit-faq">
+                              {editingItem && editingType === 'faq' ? 'Update FAQ' : 'Add FAQ'}
                             </Button>
                           </div>
                         </form>
@@ -2001,16 +2020,16 @@ useEffect(() => {
                       <CardTitle>Role Assignments</CardTitle>
                       <p className="text-sm text-gray-600 mt-1">Assign roles to users in the system</p>
                     </div>
-                    <Dialog>
+                    <Dialog open={isModalOpen && activeTab === 'roles'} onOpenChange={setIsModalOpen}>
                       <DialogTrigger asChild>
-                        <Button>
+                        <Button onClick={() => setActiveTab('roles')}>
                           <Plus className="w-4 h-4 mr-2" />
                           Assign Role
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Assign Role to User</DialogTitle>
+                          <DialogTitle>{editingItem && editingType === 'role' ? 'Change User Role' : 'Assign Role to User'}</DialogTitle>
                         </DialogHeader>
                         <form onSubmit={roleAssignmentForm.handleSubmit(handleCreateRoleAssignment)} className="space-y-4">
                           <div>
@@ -2021,9 +2040,14 @@ useEffect(() => {
                                 value={userSearchTerm}
                                 onChange={(e) => setUserSearchTerm(e.target.value)}
                                 className="mb-2"
+                                data-testid="input-search-users"
                               />
-                              <Select onValueChange={(value) => roleAssignmentForm.setValue('userId', value)}>
-                                <SelectTrigger>
+                              <Select 
+                                value={roleAssignmentForm.watch('userId')}
+                                onValueChange={(value) => roleAssignmentForm.setValue('userId', value)}
+                                disabled={editingItem && editingType === 'role'}
+                              >
+                                <SelectTrigger data-testid="select-user">
                                   <SelectValue placeholder="Select user" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -2054,8 +2078,11 @@ useEffect(() => {
                           </div>
                           <div>
                             <Label htmlFor="role-assignment">Role</Label>
-                            <Select onValueChange={(value) => roleAssignmentForm.setValue('role', value)}>
-                              <SelectTrigger>
+                            <Select 
+                              value={roleAssignmentForm.watch('role')}
+                              onValueChange={(value) => roleAssignmentForm.setValue('role', value)}
+                            >
+                              <SelectTrigger data-testid="select-role">
                                 <SelectValue placeholder="Select role" />
                               </SelectTrigger>
                               <SelectContent>
@@ -2074,7 +2101,18 @@ useEffect(() => {
                             )}
                           </div>
                           <div className="flex justify-end space-x-2">
-                            <Button type="submit">Assign Role</Button>
+                            <Button type="button" variant="outline" onClick={() => {
+                              setIsModalOpen(false);
+                              setEditingItem(null);
+                              setEditingType('');
+                              roleAssignmentForm.reset();
+                              setUserSearchTerm('');
+                            }}>
+                              Cancel
+                            </Button>
+                            <Button type="submit" data-testid="button-submit-role">
+                              {editingItem && editingType === 'role' ? 'Update Role' : 'Assign Role'}
+                            </Button>
                           </div>
                         </form>
                       </DialogContent>
@@ -2099,7 +2137,8 @@ useEffect(() => {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => handleEditItem(user.id, '/api/admin/role-assignments', 'Role')}
+                                        onClick={() => handleEditItem(user, 'role', '/api/admin/role-assignments')}
+                                        data-testid={`button-edit-role-${user.id}`}
                                       >
                                         <Edit className="w-4 h-4" />
                                       </Button>
@@ -2540,9 +2579,9 @@ useEffect(() => {
                       <CardTitle>Gallery Management</CardTitle>
                       <p className="text-sm text-gray-600 mt-1">Manage gallery items and images</p>
                     </div>
-                    <Dialog>
+                    <Dialog open={isModalOpen && activeTab === 'gallery'} onOpenChange={setIsModalOpen}>
                       <DialogTrigger asChild>
-                        <Button>
+                        <Button onClick={() => setActiveTab('gallery')}>
                           <Plus className="w-4 h-4 mr-2" />
                           Add Gallery Item
                         </Button>
@@ -2723,7 +2762,19 @@ useEffect(() => {
                             />
                           </div>
                           <div className="flex justify-end space-x-2">
-                            <Button type="submit">Add Gallery Item</Button>
+                            <Button type="button" variant="outline" onClick={() => {
+                              setIsModalOpen(false);
+                              setEditingItem(null);
+                              setEditingType('');
+                              galleryItemForm.reset();
+                              setUploadedImageFile(null);
+                              setPreviewImageUrl('');
+                            }}>
+                              Cancel
+                            </Button>
+                            <Button type="submit" data-testid="button-submit-gallery">
+                              {editingItem && editingType === 'gallery' ? 'Update Gallery Item' : 'Add Gallery Item'}
+                            </Button>
                           </div>
                         </form>
                       </DialogContent>
