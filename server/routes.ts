@@ -17,6 +17,7 @@ import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
 import fs from "fs";
 import numberToWords from "number-to-words";
+import * as XLSX from "xlsx";
 
 // Board member validation schemas
 const insertBoardMemberSchema = createInsertSchema(boardMembers).omit({
@@ -63,7 +64,16 @@ const upload = multer({
   storage: documentStorage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const allowedTypes = [
+      'application/pdf', 
+      'image/jpeg', 
+      'image/jpg', 
+      'image/png', 
+      'application/msword', 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -2921,6 +2931,309 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     } catch (error) {
       console.error('Error bulk scheduling interviews:', error);
       res.status(500).json({ message: 'Failed to bulk schedule interviews' });
+    }
+  });
+
+  // Bulk Interview Scheduling via Excel Upload
+  app.post('/api/board/bulk-schedule-interviews-excel', isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || (user.role !== 'admin' && user.role !== 'board')) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No Excel file uploaded' });
+      }
+
+      // Read and parse Excel file
+      const workbook = XLSX.readFile(req.file.path);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet);
+
+      // Validate and process data
+      const errors: any[] = [];
+      const updates: any[] = [];
+
+      for (let i = 0; i < data.length; i++) {
+        const row: any = data[i];
+        
+        // Validate required fields
+        if (!row.ApplicationId || !row.InterviewDate || !row.InterviewTime) {
+          errors.push({
+            row: i + 2, // +2 because Excel is 1-indexed and has header
+            message: 'Missing required fields (ApplicationId, InterviewDate, or InterviewTime)'
+          });
+          continue;
+        }
+
+        updates.push({
+          applicationId: parseInt(row.ApplicationId),
+          interviewDate: row.InterviewDate,
+          interviewTime: row.InterviewTime,
+          interviewVenue: row.InterviewVenue || 'TBD',
+          interviewDuration: 30
+        });
+      }
+
+      if (errors.length > 0 && updates.length === 0) {
+        // Clean up uploaded file
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({ 
+          message: 'Invalid Excel data', 
+          errors 
+        });
+      }
+
+      // Bulk update applications
+      for (const update of updates) {
+        try {
+          await storage.updateApplication(update.applicationId, {
+            interviewDate: update.interviewDate,
+            interviewTime: update.interviewTime,
+            interviewVenue: update.interviewVenue,
+            interviewDuration: update.interviewDuration,
+            status: 'interview_scheduled'
+          });
+        } catch (err) {
+          errors.push({
+            applicationId: update.applicationId,
+            message: 'Failed to update application'
+          });
+        }
+      }
+
+      // Clean up uploaded file
+      fs.unlinkSync(req.file.path);
+
+      res.json({ 
+        message: 'Bulk interview scheduling completed', 
+        success: updates.length - errors.length,
+        total: data.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error('Error in bulk interview scheduling:', error);
+      // Clean up uploaded file if it exists
+      if (req.file?.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      res.status(500).json({ message: 'Failed to process Excel file' });
+    }
+  });
+
+  // Bulk Appointments via Excel Upload
+  app.post('/api/board/bulk-appointments-excel', isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || (user.role !== 'admin' && user.role !== 'board')) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No Excel file uploaded' });
+      }
+
+      // Read and parse Excel file
+      const workbook = XLSX.readFile(req.file.path);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet);
+
+      // Validate and process data
+      const errors: any[] = [];
+      const updates: any[] = [];
+
+      for (let i = 0; i < data.length; i++) {
+        const row: any = data[i];
+        
+        // Validate required fields
+        if (!row.ApplicationId) {
+          errors.push({
+            row: i + 2,
+            message: 'Missing ApplicationId'
+          });
+          continue;
+        }
+
+        updates.push({
+          applicationId: parseInt(row.ApplicationId),
+          interviewScore: row.InterviewScore ? parseInt(row.InterviewScore) : null,
+          remarks: row.Remarks || ''
+        });
+      }
+
+      if (errors.length > 0 && updates.length === 0) {
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({ 
+          message: 'Invalid Excel data', 
+          errors 
+        });
+      }
+
+      // Bulk update applications to hired status
+      for (const update of updates) {
+        try {
+          await storage.updateApplication(update.applicationId, {
+            status: 'hired',
+            interviewScore: update.interviewScore,
+            remarks: update.remarks,
+            hiredAt: new Date()
+          });
+        } catch (err) {
+          errors.push({
+            applicationId: update.applicationId,
+            message: 'Failed to update application'
+          });
+        }
+      }
+
+      // Clean up uploaded file
+      fs.unlinkSync(req.file.path);
+
+      res.json({ 
+        message: 'Bulk appointments completed', 
+        success: updates.length - errors.length,
+        total: data.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error('Error in bulk appointments:', error);
+      if (req.file?.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      res.status(500).json({ message: 'Failed to process Excel file' });
+    }
+  });
+
+  // Download Excel Template for Interview Scheduling
+  app.get('/api/board/download-interview-template', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || (user.role !== 'admin' && user.role !== 'board')) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      // Get query params for filtering
+      const { jobId, status } = req.query;
+
+      // Get applications to populate template
+      let applications = await storage.getApplications();
+      
+      // Filter by job if specified
+      if (jobId) {
+        applications = applications.filter(app => app.jobId === parseInt(jobId as string));
+      }
+      
+      // Filter by status if specified (default to shortlisted)
+      const filterStatus = status || 'shortlisted';
+      applications = applications.filter(app => app.status === filterStatus);
+
+      // Create workbook with sample data
+      const templateData = applications.map(app => ({
+        ApplicationId: app.id,
+        JobTitle: app.job?.title || '',
+        Name: app.fullName || '',
+        IdNumber: app.nationalId || '',
+        Gender: app.gender || '',
+        Ward: app.wardName || '',
+        InterviewDate: '', // Empty for user to fill
+        InterviewTime: '', // Empty for user to fill
+        InterviewVenue: '' // Empty for user to fill
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(templateData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Interview Schedule');
+
+      // Set column widths
+      worksheet['!cols'] = [
+        { wch: 15 }, // ApplicationId
+        { wch: 30 }, // JobTitle
+        { wch: 25 }, // Name
+        { wch: 15 }, // IdNumber
+        { wch: 10 }, // Gender
+        { wch: 20 }, // Ward
+        { wch: 15 }, // InterviewDate
+        { wch: 15 }, // InterviewTime
+        { wch: 25 }  // InterviewVenue
+      ];
+
+      // Generate buffer
+      const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+      // Set headers for download
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename=interview-schedule-template-${Date.now()}.xlsx`);
+      res.send(buffer);
+    } catch (error) {
+      console.error('Error generating interview template:', error);
+      res.status(500).json({ message: 'Failed to generate template' });
+    }
+  });
+
+  // Download Excel Template for Bulk Appointments
+  app.get('/api/board/download-appointment-template', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || (user.role !== 'admin' && user.role !== 'board')) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      // Get query params for filtering
+      const { jobId, status } = req.query;
+
+      // Get applications to populate template
+      let applications = await storage.getApplications();
+      
+      // Filter by job if specified
+      if (jobId) {
+        applications = applications.filter(app => app.jobId === parseInt(jobId as string));
+      }
+      
+      // Filter by status if specified (default to interviewed)
+      const filterStatus = status || 'interviewed';
+      applications = applications.filter(app => app.status === filterStatus);
+
+      // Create workbook with sample data
+      const templateData = applications.map(app => ({
+        ApplicationId: app.id,
+        JobTitle: app.job?.title || '',
+        Name: app.fullName || '',
+        IdNumber: app.nationalId || '',
+        Gender: app.gender || '',
+        Ward: app.wardName || '',
+        InterviewScore: app.interviewScore || '', // Show existing score if any
+        Remarks: app.remarks || '' // Show existing remarks if any
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(templateData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Appointments');
+
+      // Set column widths
+      worksheet['!cols'] = [
+        { wch: 15 }, // ApplicationId
+        { wch: 30 }, // JobTitle
+        { wch: 25 }, // Name
+        { wch: 15 }, // IdNumber
+        { wch: 10 }, // Gender
+        { wch: 20 }, // Ward
+        { wch: 15 }, // InterviewScore
+        { wch: 40 }  // Remarks
+      ];
+
+      // Generate buffer
+      const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+      // Set headers for download
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename=appointment-template-${Date.now()}.xlsx`);
+      res.send(buffer);
+    } catch (error) {
+      console.error('Error generating appointment template:', error);
+      res.status(500).json({ message: 'Failed to generate template' });
     }
   });
 
