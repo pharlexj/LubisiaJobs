@@ -148,18 +148,22 @@ export default function HeroCarousel() {
                   {/* ✅ Image background if available */}
                   {(slide.imageUrl || slide.mobileImageUrl) && (
                     <>
-                      <img
-                        src={slide.imageUrl}
-                        alt={slide.altText || slide.title}
-                        className="hidden lg:block absolute inset-0 w-full h-full object-cover object-center z-0"
-                        loading="lazy"
-                      />
-                      <img
-                        src={slide.mobileImageUrl || slide.imageUrl}
-                        alt={slide.altText || slide.title}
-                        className="block lg:hidden absolute inset-0 w-full h-full object-cover object-center z-0"
-                        loading="lazy"
-                      />
+                      <div className="hidden lg:block absolute inset-0 overflow-hidden">
+                        <img
+                          src={slide.imageUrl}
+                          alt={slide.altText || slide.title}
+                          className="w-full h-full object-cover object-center"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className="block lg:hidden absolute inset-0 overflow-hidden">
+                        <img
+                          src={slide.mobileImageUrl || slide.imageUrl}
+                          alt={slide.altText || slide.title}
+                          className="w-full h-full object-cover object-center"
+                          loading="lazy"
+                        />
+                      </div>
                       <div className="absolute inset-0 bg-black/40 z-0" />
                     </>
                   )}
