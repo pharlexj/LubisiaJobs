@@ -2755,6 +2755,45 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     }
   });
 
+  // Dedicated favicon upload endpoint
+  app.post('/api/admin/upload-favicon', isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied. Admin role required.' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      // Validate file type
+      const allowedMimeTypes = ['image/x-icon', 'image/vnd.microsoft.icon', 'image/png'];
+      if (!allowedMimeTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ message: 'Invalid file type. Only .ico and .png files are allowed.' });
+      }
+
+      // Determine the target filename based on mime type
+      const targetFilename = req.file.mimetype === 'image/png' ? 'favicon.png' : 'favicon.ico';
+      const sourcePath = req.file.path;
+      const targetPath = path.join('uploads', targetFilename);
+
+      // Use fs to rename/move the file
+      const fs = require('fs').promises;
+      await fs.rename(sourcePath, targetPath);
+
+      res.json({
+        success: true,
+        message: 'Favicon uploaded successfully',
+        filename: targetFilename,
+        url: `/uploads/${targetFilename}`
+      });
+    } catch (error) {
+      console.error('Error uploading favicon:', error);
+      res.status(500).json({ success: false, message: 'Failed to upload favicon' });
+    }
+  });
+
   // Job archiving routes
   app.post('/api/admin/jobs/archive-expired', isAuthenticated, async (req: any, res) => {
     try {

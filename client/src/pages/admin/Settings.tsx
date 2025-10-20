@@ -2809,28 +2809,39 @@ useEffect(() => {
                                 onChange={(e) => {
                                   const file = e.target.files?.[0];
                                   if (file) {
+                                    // Validate file type
+                                    const validTypes = ['image/x-icon', 'image/vnd.microsoft.icon', 'image/png'];
+                                    if (!validTypes.includes(file.type) && !file.name.endsWith('.ico')) {
+                                      toast({
+                                        title: 'Error',
+                                        description: 'Invalid file type. Please upload a .ico or .png file.',
+                                        variant: 'destructive',
+                                      });
+                                      return;
+                                    }
+
                                     // Create FormData and upload
                                     const formData = new FormData();
                                     formData.append('file', file);
                                     
-                                    // Upload with specific filename
-                                    fetch('/api/upload', {
+                                    // Upload using dedicated favicon endpoint
+                                    fetch('/api/admin/upload-favicon', {
                                       method: 'POST',
                                       body: formData
                                     })
                                     .then(response => response.json())
                                     .then(data => {
                                       if (data.success) {
-                                        // Move the uploaded file to favicon.ico
-                                        const faviconPath = '/uploads/favicon.ico';
                                         toast({
                                           title: 'Success',
                                           description: 'Favicon uploaded successfully! Please refresh the page to see changes.',
                                         });
+                                        // Reset the file input
+                                        (e.target as HTMLInputElement).value = '';
                                       } else {
                                         toast({
                                           title: 'Error',
-                                          description: 'Failed to upload favicon',
+                                          description: data.message || 'Failed to upload favicon',
                                           variant: 'destructive',
                                         });
                                       }
@@ -2838,12 +2849,13 @@ useEffect(() => {
                                     .catch(error => {
                                       toast({
                                         title: 'Error',
-                                        description: 'Failed to upload favicon',
+                                        description: 'Failed to upload favicon. Please try again.',
                                         variant: 'destructive',
                                       });
                                     });
                                   }
                                 }}
+                                data-testid="input-favicon-upload"
                               />
                             </div>
                           </div>
