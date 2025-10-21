@@ -56,6 +56,14 @@ import AIEDashboard from "@/pages/aie/Dashboard";
 import AIERequests from "@/pages/aie/Requests";
 import AIEMIRR from "@/pages/aie/MIR";
 
+// RMS pages
+import RecordsOfficer from "@/pages/rms/RecordsOfficer";
+import BoardSecretary from "@/pages/rms/BoardSecretary";
+import BoardChair from "@/pages/rms/BoardChair";
+import ChiefOfficer from "@/pages/rms/ChiefOfficer";
+import BoardCommittee from "@/pages/rms/BoardCommittee";
+import HR from "@/pages/rms/HR";
+
 import { useEffect } from "react";
 import { AuthProvider, useAuthContext } from "@/context/AuthContext";
 import AuthDrawer from "@/components/layout/AuthDrawer";
@@ -263,6 +271,38 @@ function Router() {
         path="/aie/mir"
         component={AIEMIRR}
         allowedRoles={["a.i.e Holder"]}
+      />
+
+      {/* RMS routes */}
+      <ProtectedRoute
+        path="/rms/records-officer"
+        component={RecordsOfficer}
+        allowedRoles={["recordsOfficer", "admin"]}
+      />
+      <ProtectedRoute
+        path="/rms/board-secretary"
+        component={BoardSecretary}
+        allowedRoles={["boardSecretary", "admin"]}
+      />
+      <ProtectedRoute
+        path="/rms/board-chair"
+        component={BoardChair}
+        allowedRoles={["boardChair", "admin"]}
+      />
+      <ProtectedRoute
+        path="/rms/chief-officer"
+        component={ChiefOfficer}
+        allowedRoles={["chiefOfficer", "admin"]}
+      />
+      <ProtectedRoute
+        path="/rms/board-committee"
+        component={BoardCommittee}
+        allowedRoles={["boardCommittee", "admin"]}
+      />
+      <ProtectedRoute
+        path="/rms/hr"
+        component={HR}
+        allowedRoles={["HR", "admin"]}
       />
 
       {/* Fallback */}

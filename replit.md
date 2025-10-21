@@ -87,3 +87,35 @@ The accounting module provides financial management for two roles: Accountant an
 - **Memoizee**: Function memoization
 - **docxtemplater**: .docx template processing for document generation
 - **WebSocket**: Real-time communication support
+
+### Records Management System (RMS) Module
+The Records Management System provides comprehensive document tracking and workflow management for the Trans Nzoia County Public Service Board, following the electronic document flow process.
+
+**User Roles**:
+- **Records Officer**: Document intake, registration, and dispatch
+- **Board Secretary**: Document review and commenting
+- **Board Chairperson**: Final review and remarks
+- **Chief Officer**: Decision input and oversight
+- **Board Committee**: Collaborative review
+- **HR Office**: Agenda management and filing
+
+**Key Features**:
+- **Document Registry**: Central repository for all incoming documents with metadata tracking (reference number, subject, department, priority, type)
+- **Workflow Tracking**: Complete audit trail of document movement through 12 defined statuses from receipt to dispatch
+- **Electronic Comments**: Role-based commenting system allowing authorized users to add remarks, recommendations, and decisions
+- **Priority Management**: Urgent, high, normal, and low priority classification
+- **File Attachments**: Upload and store PDF/DOC documents securely
+- **Status Visualization**: Real-time dashboard with document statistics and workflow progress
+- **Dispatch Mechanism**: Automated communication of board decisions back to initiating departments
+
+**Database Tables**:
+- `rms_documents`: Main document registry with full metadata
+- `rms_comments`: Comments and remarks with role attribution
+- `rms_workflow_log`: Complete audit trail of all document movements and actions
+
+**Document Workflow States**:
+1. received → 2. forwarded_to_secretary → 3. commented_by_secretary → 4. sent_to_chair → 
+5. commented_by_chair → 6. sent_to_hr → 7. sent_to_committee → 8. agenda_set → 
+9. board_meeting → 10. decision_made → 11. dispatched → 12. filed
+
+**UI/UX**: Teal gradient theme consistent with board module design, responsive layouts, role-based access control, real-time statistics dashboard, proper data-testid attributes for testing.
