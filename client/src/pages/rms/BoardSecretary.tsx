@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import Navigation from '@/components/layout/Navigation';
 import Sidebar from '@/components/layout/Sidebar';
+import DocumentViewer from '@/components/documents/DocumentViewer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,7 +23,8 @@ import {
   Calendar,
   Building2,
   User,
-  FileCheck
+  FileCheck,
+  FileScan
 } from 'lucide-react';
 
 export default function BoardSecretary() {
@@ -30,6 +32,8 @@ export default function BoardSecretary() {
   const { toast } = useToast();
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [showDocumentViewer, setShowDocumentViewer] = useState(false);
+  const [documentToView, setDocumentToView] = useState<any>(null);
   const [comment, setComment] = useState('');
   const [recommendation, setRecommendation] = useState<'approve' | 'reject' | 'revise' | ''>('');
 
@@ -151,6 +155,27 @@ export default function BoardSecretary() {
         });
       }
     });
+  };
+
+  const handleViewDocument = (doc: any) => {
+    if (doc.filePath) {
+      // Transform to match DocumentViewer interface
+      setDocumentToView({
+        id: doc.id,
+        type: doc.documentType,
+        fileName: doc.referenceNumber + '.pdf',
+        filePath: doc.filePath,
+        mimeType: 'application/pdf',
+        createdAt: doc.createdAt
+      });
+      setShowDocumentViewer(true);
+    } else {
+      toast({
+        title: 'No Document',
+        description: 'No document file attached to this record',
+        variant: 'destructive',
+      });
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -307,6 +332,17 @@ export default function BoardSecretary() {
                               </div>
                             </div>
                             <div className="flex gap-2">
+                              {doc.filePath && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleViewDocument(doc)}
+                                  data-testid={`button-view-${doc.id}`}
+                                >
+                                  <FileScan className="w-4 h-4 mr-1" />
+                                  View PDF
+                                </Button>
+                              )}
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -488,6 +524,18 @@ export default function BoardSecretary() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Document Viewer */}
+      {documentToView && (
+        <DocumentViewer
+          document={documentToView}
+          isOpen={showDocumentViewer}
+          onClose={() => {
+            setShowDocumentViewer(false);
+            setDocumentToView(null);
+          }}
+        />
+      )}
     </div>
   );
 }

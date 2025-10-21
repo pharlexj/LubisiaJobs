@@ -4154,6 +4154,23 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     }
   });
 
+  // Get comments for a document
+  app.get('/api/rms/comments/:documentId', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !hasRmsAccess(user.role)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const documentId = parseInt(req.params.documentId);
+      const comments = await storage.getRmsComments(documentId);
+      res.json(comments);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      res.status(500).json({ message: 'Failed to fetch comments' });
+    }
+  });
+
   // Add comment/remark to document
   app.post('/api/rms/documents/:id/comments', isAuthenticated, async (req: any, res) => {
     try {
