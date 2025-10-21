@@ -29,7 +29,22 @@ export const sessions = pgTable(
 );
 
 // User roles enum
-export const userRoleEnum = pgEnum("user_role", ["applicant", "admin", "board","accountant","records","procurement","hod","a.i.e Holder"]);
+export const userRoleEnum = pgEnum("user_role", [
+  "applicant", 
+  "admin", 
+  "board",
+  "accountant",
+  "records",
+  "procurement",
+  "hod",
+  "a.i.e Holder",
+  "recordsOfficer",
+  "boardSecretary",
+  "chiefOfficer",
+  "boardChair",
+  "boardCommittee",
+  "HR"
+]);
 
 // Application status enum
 export const applicationStatusEnum = pgEnum("application_status", [
@@ -827,6 +842,80 @@ export const audits = pgTable("audits", {
   deletedAt: timestamp("deleted_at"),
 });
 
+// ========================================
+// RECORDS MANAGEMENT SYSTEM (RMS) TABLES
+// ========================================
+
+// Document status enum for workflow tracking
+export const rmsDocumentStatusEnum = pgEnum("rms_document_status", [
+  "received",
+  "forwarded_to_secretary",
+  "commented_by_secretary",
+  "sent_to_chair",
+  "commented_by_chair",
+  "sent_to_hr",
+  "sent_to_committee",
+  "agenda_set",
+  "board_meeting",
+  "decision_made",
+  "dispatched",
+  "filed"
+]);
+
+// Main documents table
+export const rmsDocuments = pgTable("rms_documents", {
+  id: serial("id").primaryKey(),
+  referenceNumber: varchar("reference_number", { length: 100 }).unique().notNull(),
+  subject: varchar("subject", { length: 500 }).notNull(),
+  initiatorDepartment: varchar("initiator_department", { length: 200 }).notNull(),
+  initiatorName: varchar("initiator_name", { length: 200 }),
+  initiatorEmail: varchar("initiator_email", { length: 200 }),
+  initiatorPhone: varchar("initiator_phone", { length: 20 }),
+  documentDate: date("document_date").notNull(),
+  receivedDate: timestamp("received_date").defaultNow().notNull(),
+  documentType: varchar("document_type", { length: 100 }).notNull(), // memo, letter, report, application, etc.
+  priority: varchar("priority", { length: 20 }).default("normal"), // urgent, high, normal, low
+  status: rmsDocumentStatusEnum("status").default("received").notNull(),
+  filePath: varchar("file_path", { length: 500 }),
+  currentHandler: varchar("current_handler", { length: 200 }), // Current user/role handling the document
+  agendaItemNumber: varchar("agenda_item_number", { length: 50 }),
+  boardMeetingDate: date("board_meeting_date"),
+  decisionSummary: text("decision_summary"),
+  dispatchedDate: timestamp("dispatched_date"),
+  dispatchedBy: varchar("dispatched_by").references(() => users.id),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+  deletedAt: timestamp("deleted_at"),
+});
+
+// Comments and remarks table
+export const rmsComments = pgTable("rms_comments", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").notNull().references(() => rmsDocuments.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  userRole: varchar("user_role", { length: 50 }).notNull(),
+  commentType: varchar("comment_type", { length: 50 }).notNull(), // remark, recommendation, decision, note
+  comment: text("comment").notNull(),
+  isPrivate: boolean("is_private").default(false), // Private notes vs public comments
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
+// Workflow audit log
+export const rmsWorkflowLog = pgTable("rms_workflow_log", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").notNull().references(() => rmsDocuments.id),
+  fromStatus: varchar("from_status", { length: 50 }),
+  toStatus: varchar("to_status", { length: 50 }).notNull(),
+  fromHandler: varchar("from_handler", { length: 200 }),
+  toHandler: varchar("to_handler", { length: 200 }),
+  actionBy: varchar("action_by").notNull().references(() => users.id),
+  actionType: varchar("action_type", { length: 100 }).notNull(), // received, forwarded, commented, filed, etc.
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas for OTP
 export const insertOtpSchema = createInsertSchema(otpVerification).omit({
   id: true,
@@ -957,3 +1046,35 @@ export const insertAudit = createInsertSchema(audits).omit({
 });
 export type InsertAudit = z.infer<typeof insertAudit>;
 export type Audit = typeof audits.$inferSelect;
+
+// ========================================
+// RECORDS MANAGEMENT SYSTEM INSERT SCHEMAS & TYPES
+// ========================================
+
+// RMS Documents
+export const insertRmsDocument = createInsertSchema(rmsDocuments).omit({ 
+  id: true, 
+  receivedDate: true,
+  createdAt: true,
+  updatedAt: true,
+  deletedAt: true 
+});
+export type InsertRmsDocument = z.infer<typeof insertRmsDocument>;
+export type RmsDocument = typeof rmsDocuments.$inferSelect;
+
+// RMS Comments
+export const insertRmsComment = createInsertSchema(rmsComments).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true 
+});
+export type InsertRmsComment = z.infer<typeof insertRmsComment>;
+export type RmsComment = typeof rmsComments.$inferSelect;
+
+// RMS Workflow Log
+export const insertRmsWorkflowLog = createInsertSchema(rmsWorkflowLog).omit({ 
+  id: true, 
+  createdAt: true 
+});
+export type InsertRmsWorkflowLog = z.infer<typeof insertRmsWorkflowLog>;
+export type RmsWorkflowLog = typeof rmsWorkflowLog.$inferSelect;
