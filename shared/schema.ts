@@ -220,6 +220,7 @@ export const applications = pgTable("applications", {
   remarks: text("remarks"),
   interviewDate: date("interview_date"),
   interviewTime: varchar("interview_time", { length: 10 }),
+  interviewVenue: varchar("interview_venue", { length: 200 }),
   interviewDuration: integer("interview_duration"),
   interviewScore: integer("interview_score"),
   shortlistedAt: timestamp("shortlisted_at"),
