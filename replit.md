@@ -30,8 +30,12 @@ The backend is an Express.js REST API:
 The system uses Replit's OpenID Connect for authentication and implements role-based access control:
 - **Authentication Provider**: Replit OIDC
 - **Session Storage**: PostgreSQL-backed sessions using `connect-pg-simple`
-- **Authorization**: Role-based access control for five user types (applicant, admin, board, accountant, a.i.e Holder)
+- **Authorization**: Role-based access control for 14 user types
+  - **Core Roles**: applicant, admin, board, accountant
+  - **Management Roles**: records, procurement, hod, a.i.e Holder
+  - **RMS Roles**: recordsOfficer, boardSecretary, chiefOfficer, boardChair, boardCommittee, HR
 - **User Management**: Automatic user creation and profile management on first login
+- **Role Assignment**: Admin interface with dynamic role dropdown fetching all available roles from `/api/admin/roles` endpoint
 
 ### Database Design
 PostgreSQL is used with a comprehensive schema supporting recruitment and financial workflows:

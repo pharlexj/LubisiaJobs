@@ -204,6 +204,12 @@ export default function AdminSettings() {
     enabled: !!user && user.role === 'admin',
   });
 
+  // Fetch available roles
+  const { data: availableRoles = [] } = useQuery<Array<{ value: string; label: string; description: string }>>({
+    queryKey: ['/api/admin/roles'],
+    enabled: !!user && user.role === 'admin',
+  });
+
   // Fetch board members
   const { data: boardMembers = [] } = useQuery<any[]>({
     queryKey: ['/api/public/board-members'],
@@ -2086,12 +2092,16 @@ useEffect(() => {
                                 <SelectValue placeholder="Select role" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="admin">Administrator</SelectItem>
-                                <SelectItem value="board">Board Member</SelectItem>
-                                <SelectItem value="accountant">Accountant</SelectItem>
-                                <SelectItem value="aie">A.i.E Holder</SelectItem>
-                                <SelectItem value="records">Records</SelectItem>
-                                <SelectItem value="procurement">Procurement</SelectItem>
+                                {availableRoles.map((role) => (
+                                  <SelectItem key={role.value} value={role.value}>
+                                    {role.label}
+                                  </SelectItem>
+                                ))}
+                                {availableRoles.length === 0 && (
+                                  <SelectItem value="" disabled>
+                                    Loading roles...
+                                  </SelectItem>
+                                )}
                               </SelectContent>
                             </Select>
                             {roleAssignmentForm.formState.errors.role && (
@@ -2146,8 +2156,7 @@ useEffect(() => {
                                 </div>
                                 <p className="text-sm text-gray-600">{user.email}</p>
                                 <Badge className="mt-2" variant="secondary">
-                                  {user.role === 'admin' ? 'Administrator' : 
-                                   user.role === 'board' ? 'Board Member' : user.role}
+                                  {availableRoles.find(r => r.value === user.role)?.label || user.role}
                                 </Badge>
                               </CardContent>
                             </Card>
