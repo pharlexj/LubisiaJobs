@@ -57,6 +57,13 @@ export default function RecordsOfficer() {
     queryKey: ['/api/rms/documents'],
   });
 
+  // Fetch departments from existing API
+  const { data: config } = useQuery({
+    queryKey: ['/api/public/config'],
+  });
+  
+  const departments = config?.departments || [];
+
   // Register document mutation
   const registerDocumentMutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -306,13 +313,27 @@ export default function RecordsOfficer() {
                     </div>
                     <div>
                       <Label htmlFor="initiator-dept">Initiating Department *</Label>
-                      <Input
-                        id="initiator-dept"
+                      <Select 
                         value={documentForm.initiatorDepartment}
-                        onChange={(e) => setDocumentForm(prev => ({ ...prev, initiatorDepartment: e.target.value }))}
-                        placeholder="e.g., Health, Education, Finance"
-                        data-testid="input-initiator-department"
-                      />
+                        onValueChange={(value) => setDocumentForm(prev => ({ ...prev, initiatorDepartment: value }))}
+                      >
+                        <SelectTrigger id="initiator-dept" data-testid="select-initiator-department">
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {departments.length === 0 ? (
+                            <SelectItem value="" disabled>
+                              Loading departments...
+                            </SelectItem>
+                          ) : (
+                            departments.map((dept: any) => (
+                              <SelectItem key={dept.id} value={dept.name}>
+                                {dept.name}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>

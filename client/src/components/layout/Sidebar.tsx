@@ -153,33 +153,27 @@ export default function Sidebar({ userRole }: SidebarProps) {
   ];
 
   const recordsOfficerNavItems = [
-    { href: '/rms/records-officer', icon: LayoutDashboard, label: 'Dashboard', description: 'Records overview' },
-    { href: '/rms/records-officer', icon: FileText, label: 'Documents', description: 'Document registry' },
+    { href: '/rms/records-officer', icon: LayoutDashboard, label: 'Dashboard', description: 'Document registry & overview' },
   ];
 
   const boardSecretaryNavItems = [
-    { href: '/rms/board-secretary', icon: LayoutDashboard, label: 'Dashboard', description: 'Secretary overview' },
-    { href: '/rms/board-secretary', icon: FileText, label: 'Documents', description: 'Review documents' },
+    { href: '/rms/board-secretary', icon: LayoutDashboard, label: 'Dashboard', description: 'Document review & overview' },
   ];
 
   const boardChairNavItems = [
-    { href: '/rms/board-chair', icon: LayoutDashboard, label: 'Dashboard', description: 'Chair overview' },
-    { href: '/rms/board-chair', icon: FileText, label: 'Documents', description: 'Review & remark' },
+    { href: '/rms/board-chair', icon: LayoutDashboard, label: 'Dashboard', description: 'Document review & remarks' },
   ];
 
   const chiefOfficerNavItems = [
-    { href: '/rms/chief-officer', icon: LayoutDashboard, label: 'Dashboard', description: 'Decision oversight' },
-    { href: '/rms/chief-officer', icon: FileText, label: 'Documents', description: 'Review documents' },
+    { href: '/rms/chief-officer', icon: LayoutDashboard, label: 'Dashboard', description: 'Decision oversight & review' },
   ];
 
   const boardCommitteeNavItems = [
-    { href: '/rms/board-committee', icon: LayoutDashboard, label: 'Dashboard', description: 'Committee overview' },
-    { href: '/rms/board-committee', icon: FileText, label: 'Documents', description: 'Committee review' },
+    { href: '/rms/board-committee', icon: LayoutDashboard, label: 'Dashboard', description: 'Committee review & documents' },
   ];
 
   const hrNavItems = [
-    { href: '/rms/hr', icon: LayoutDashboard, label: 'Dashboard', description: 'HR overview' },
-    { href: '/rms/hr', icon: FileText, label: 'Documents', description: 'Agenda & filing' },
+    { href: '/rms/hr', icon: LayoutDashboard, label: 'Dashboard', description: 'Agenda management & filing' },
   ];
 
   const getNavItems = () => {
