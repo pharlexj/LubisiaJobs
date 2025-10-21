@@ -36,7 +36,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import ProfileSettingsDrawer from '@/components/common/ProfileSettingsDrawer';
 
 interface SidebarProps {
-  userRole: 'applicant' | 'admin' | 'board' | 'accountant' | 'a.i.e Holder';
+  userRole: 'applicant' | 'admin' | 'board' | 'accountant' | 'a.i.e Holder' | 'recordsOfficer' | 'boardSecretary' | 'chiefOfficer' | 'boardChair' | 'boardCommittee' | 'HR';
 }
 
 export default function Sidebar({ userRole }: SidebarProps) {
@@ -152,6 +152,36 @@ export default function Sidebar({ userRole }: SidebarProps) {
     },
   ];
 
+  const recordsOfficerNavItems = [
+    { href: '/rms/records-officer', icon: LayoutDashboard, label: 'Dashboard', description: 'Records overview' },
+    { href: '/rms/records-officer', icon: FileText, label: 'Documents', description: 'Document registry' },
+  ];
+
+  const boardSecretaryNavItems = [
+    { href: '/rms/board-secretary', icon: LayoutDashboard, label: 'Dashboard', description: 'Secretary overview' },
+    { href: '/rms/board-secretary', icon: FileText, label: 'Documents', description: 'Review documents' },
+  ];
+
+  const boardChairNavItems = [
+    { href: '/rms/board-chair', icon: LayoutDashboard, label: 'Dashboard', description: 'Chair overview' },
+    { href: '/rms/board-chair', icon: FileText, label: 'Documents', description: 'Review & remark' },
+  ];
+
+  const chiefOfficerNavItems = [
+    { href: '/rms/chief-officer', icon: LayoutDashboard, label: 'Dashboard', description: 'Decision oversight' },
+    { href: '/rms/chief-officer', icon: FileText, label: 'Documents', description: 'Review documents' },
+  ];
+
+  const boardCommitteeNavItems = [
+    { href: '/rms/board-committee', icon: LayoutDashboard, label: 'Dashboard', description: 'Committee overview' },
+    { href: '/rms/board-committee', icon: FileText, label: 'Documents', description: 'Committee review' },
+  ];
+
+  const hrNavItems = [
+    { href: '/rms/hr', icon: LayoutDashboard, label: 'Dashboard', description: 'HR overview' },
+    { href: '/rms/hr', icon: FileText, label: 'Documents', description: 'Agenda & filing' },
+  ];
+
   const getNavItems = () => {
     switch (userRole) {
       case 'applicant': return applicantNavItems;
@@ -159,6 +189,12 @@ export default function Sidebar({ userRole }: SidebarProps) {
       case 'board': return boardNavItems;
       case 'accountant': return accountNavItems;
       case 'a.i.e Holder': return aieNavItems;
+      case 'recordsOfficer': return recordsOfficerNavItems;
+      case 'boardSecretary': return boardSecretaryNavItems;
+      case 'boardChair': return boardChairNavItems;
+      case 'chiefOfficer': return chiefOfficerNavItems;
+      case 'boardCommittee': return boardCommitteeNavItems;
+      case 'HR': return hrNavItems;
       default: return [];
     }
   };
