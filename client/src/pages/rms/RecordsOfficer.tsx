@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import Navigation from '@/components/layout/Navigation';
 import Sidebar from '@/components/layout/Sidebar';
+import DocumentViewer from '@/components/documents/DocumentViewer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +23,8 @@ import {
   AlertCircle,
   FileCheck,
   TrendingUp,
-  Activity
+  Activity,
+  FileScan
 } from 'lucide-react';
 
 export default function RecordsOfficer() {
@@ -33,6 +35,8 @@ export default function RecordsOfficer() {
   const [showDispatchDialog, setShowDispatchDialog] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [showDocumentViewer, setShowDocumentViewer] = useState(false);
+  const [documentToView, setDocumentToView] = useState<any>(null);
 
   // Form state for new document registration
   const [documentForm, setDocumentForm] = useState({
@@ -184,6 +188,26 @@ export default function RecordsOfficer() {
     });
   };
 
+  const handleViewDocument = (doc: any) => {
+    if (doc.filePath) {
+      setDocumentToView({
+        id: doc.id,
+        type: doc.documentType,
+        fileName: doc.referenceNumber + '.pdf',
+        filePath: doc.filePath,
+        mimeType: 'application/pdf',
+        createdAt: doc.createdAt
+      });
+      setShowDocumentViewer(true);
+    } else {
+      toast({
+        title: 'No Document',
+        description: 'No document file attached to this record',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; className: string }> = {
       received: { label: 'Received', className: 'bg-blue-500' },
@@ -192,6 +216,7 @@ export default function RecordsOfficer() {
       sent_to_hr: { label: 'With HR', className: 'bg-indigo-500' },
       board_meeting: { label: 'Board Meeting', className: 'bg-orange-500' },
       decision_made: { label: 'Decision Made', className: 'bg-green-500' },
+      sent_to_records: { label: 'Ready to Dispatch', className: 'bg-teal-500' },
       dispatched: { label: 'Dispatched', className: 'bg-gray-500' },
       filed: { label: 'Filed', className: 'bg-slate-500' },
     };
@@ -489,6 +514,17 @@ export default function RecordsOfficer() {
                             </td>
                             <td className="p-3">
                               <div className="flex gap-2">
+                                {doc.filePath && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleViewDocument(doc)}
+                                    data-testid={`button-view-${doc.id}`}
+                                  >
+                                    <FileScan className="w-4 h-4 mr-1" />
+                                    View
+                                  </Button>
+                                )}
                                 {doc.status === 'received' && (
                                   <Button
                                     size="sm"
@@ -503,7 +539,7 @@ export default function RecordsOfficer() {
                                     Forward
                                   </Button>
                                 )}
-                                {doc.status === 'decision_made' && (
+                                {(doc.status === 'decision_made' || doc.status === 'sent_to_records') && (
                                   <Button
                                     size="sm"
                                     className="bg-green-600 hover:bg-green-700 text-white"
@@ -608,6 +644,18 @@ export default function RecordsOfficer() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Document Viewer */}
+      {documentToView && (
+        <DocumentViewer
+          document={documentToView}
+          isOpen={showDocumentViewer}
+          onClose={() => {
+            setShowDocumentViewer(false);
+            setDocumentToView(null);
+          }}
+        />
+      )}
     </div>
   );
 }
