@@ -129,13 +129,13 @@ export default function Gallery() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredItems.map((item) => (
-              <Card key={item.id} className="hover:shadow-lg transition-shadow cursor-pointer" data-testid={`card-gallery-${item.id}`}>
-                <div className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 relative overflow-hidden">
+              <Card key={item.id} className="hover:shadow-lg transition-shadow cursor-pointer overflow-hidden" data-testid={`card-gallery-${item.id}`}>
+                <div className="relative w-full h-64 bg-gradient-to-br from-primary/20 to-secondary/20 overflow-hidden">
                   {item.imageUrl ? (
                     <img 
                       src={item.imageUrl} 
                       alt={item.title || 'Gallery image'}
-                      className="w-full h-full object-cover"
+                      className="absolute inset-0 w-full h-full object-cover object-center"
                     />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
