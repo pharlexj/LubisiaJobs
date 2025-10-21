@@ -1202,6 +1202,7 @@ switch (req.user?.role) {
         remarks: null,
         interviewDate: null,
         interviewTime: null,
+        interviewVenue: null,
         interviewDuration: null,
         interviewScore: null,
         shortlistedAt: null,
