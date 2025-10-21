@@ -10,10 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { isUnauthorizedError } from '@/lib/authUtils';
-import { Award, X, Users, TrendingUp, CheckCircle } from 'lucide-react';
+import { Award, X, Users, TrendingUp, CheckCircle, FileSpreadsheet, Download, Upload } from 'lucide-react';
 
 export default function BoardHiring() {
   const { user } = useAuth();
@@ -23,6 +24,8 @@ export default function BoardHiring() {
   const [passmark, setPassmark] = useState(0);
   const [selectedApplications, setSelectedApplications] = useState<number[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [showBulkAppointDialog, setShowBulkAppointDialog] = useState(false);
+  const [appointExcelFile, setAppointExcelFile] = useState<File | null>(null);
 
   const { data: jobs = [] } = useQuery({
     queryKey: ['/api/public/jobs'],
@@ -164,6 +167,87 @@ export default function BoardHiring() {
     },
   });
 
+  // Bulk Appointment via Excel
+  const bulkAppointExcelMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('/api/board/bulk-appointments-excel', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to upload Excel file');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Bulk Appointment Complete',
+        description: `Successfully appointed ${data.success} out of ${data.total} candidates.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/board/applications'] });
+      setShowBulkAppointDialog(false);
+      setAppointExcelFile(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Upload Failed',
+        description: error.message || 'Failed to process Excel file',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleBulkAppointUpload = () => {
+    if (!appointExcelFile) {
+      toast({
+        title: 'No File Selected',
+        description: 'Please select an Excel file to upload',
+        variant: 'destructive',
+      });
+      return;
+    }
+    bulkAppointExcelMutation.mutate(appointExcelFile);
+  };
+
+  const handleDownloadAppointmentTemplate = async () => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (selectedJob) {
+        queryParams.append('jobId', selectedJob);
+      }
+      queryParams.append('status', 'interviewed');
+      
+      const response = await fetch(`/api/board/download-appointment-template?${queryParams}`, {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) throw new Error('Failed to download template');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `appointment-template-${Date.now()}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      toast({
+        title: 'Download Failed',
+        description: 'Failed to download template',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const calculateAge = (dateOfBirth: string | null) => {
     if (!dateOfBirth) return 'N/A';
     const today = new Date();
@@ -183,10 +267,21 @@ export default function BoardHiring() {
         <Sidebar userRole={user?.role || 'applicant'} />
         <main className="flex-1 p-4 md:p-6 lg:p-8 md:ml-64">
           <div className="max-w-7xl mx-auto">
-            <div className="mb-6">
+            <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900" data-testid="text-hiring-title">
                 Selection of Suitable Applicants
               </h1>
+              <Dialog open={showBulkAppointDialog} onOpenChange={setShowBulkAppointDialog}>
+                <DialogTrigger asChild>
+                  <Button 
+                    className="bg-gradient-to-r from-teal-600 to-teal-700 text-white hover:from-teal-700 hover:to-teal-800"
+                    data-testid="button-bulk-appoint"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Bulk Appointment
+                  </Button>
+                </DialogTrigger>
+              </Dialog>
             </div>
 
             {/* Selection Card */}
@@ -394,6 +489,72 @@ export default function BoardHiring() {
           </div>
         </main>
       </div>
+
+      {/* Bulk Appointment via Excel Dialog */}
+      <Dialog open={showBulkAppointDialog} onOpenChange={setShowBulkAppointDialog}>
+        <DialogContent data-testid="dialog-bulk-appoint">
+          <DialogHeader>
+            <DialogTitle>Bulk Appointments via Excel</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-teal-50 rounded-lg border border-teal-200">
+              <h4 className="font-medium text-teal-900 mb-2">Instructions:</h4>
+              <ol className="list-decimal list-inside space-y-1 text-sm text-teal-800">
+                <li>Download the Excel template with interviewed candidates</li>
+                <li>Fill in InterviewScore and Remarks columns</li>
+                <li>Save the file and upload it to appoint candidates</li>
+              </ol>
+            </div>
+            
+            <Button 
+              onClick={handleDownloadAppointmentTemplate}
+              variant="outline"
+              className="w-full"
+              data-testid="button-download-appoint-template-in-dialog"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download Template with Interviewed Candidates
+            </Button>
+            
+            <div>
+              <Label htmlFor="appoint-excel-file">Upload Completed Excel File</Label>
+              <Input 
+                id="appoint-excel-file"
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => setAppointExcelFile(e.target.files?.[0] || null)}
+                data-testid="input-appoint-excel-file"
+              />
+              {appointExcelFile && (
+                <p className="text-sm text-gray-600 mt-2">
+                  Selected: {appointExcelFile.name}
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowBulkAppointDialog(false);
+                setAppointExcelFile(null);
+              }}
+              data-testid="button-cancel-bulk-appoint"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleBulkAppointUpload}
+              disabled={bulkAppointExcelMutation.isPending || !appointExcelFile}
+              className="bg-gradient-to-r from-teal-600 to-teal-700 text-white"
+              data-testid="button-upload-appoint-excel"
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              {bulkAppointExcelMutation.isPending ? 'Uploading...' : 'Upload & Appoint'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
