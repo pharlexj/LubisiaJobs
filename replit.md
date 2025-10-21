@@ -93,20 +93,21 @@ The accounting module provides financial management for two roles: Accountant an
 - **WebSocket**: Real-time communication support
 
 ### Records Management System (RMS) Module
-The Records Management System provides comprehensive document tracking and workflow management for the Trans Nzoia County Public Service Board, following the electronic document flow process.
+The Records Management System provides comprehensive document tracking and workflow management for the Trans Nzoia County Public Service Board, with Board Secretary as the central workflow coordinator.
 
 **User Roles**:
 - **Records Officer**: Document intake, registration, and dispatch
-- **Board Secretary**: Document review and commenting
-- **Board Chairperson**: Final review and remarks
-- **Chief Officer**: Decision input and oversight
-- **Board Committee**: Collaborative review
-- **HR Office**: Agenda management and filing
+- **Board Secretary**: Central workflow coordinator - receives, reviews, routes, and manages agenda
+- **Board Chairperson**: Executive review with decision-making authority (Approve/Reject/Defer)
+- **Chief Officer**: Decision input and oversight (role defined but not actively used in current workflow)
+- **Board Committee**: Collaborative review and position recommendations
+- **HR Office**: Committee coordination bridge between Board Secretary and Committee
 
 **Key Features**:
 - **Document Registry**: Central repository for all incoming documents with metadata tracking (reference number, subject, department, priority, type)
-- **Workflow Tracking**: Complete audit trail of document movement through 12 defined statuses from receipt to dispatch
-- **Electronic Comments**: Role-based commenting system allowing authorized users to add remarks, recommendations, and decisions
+- **PDF Document Preview**: All RMS roles can preview attached PDF documents using integrated DocumentViewer component with zoom, rotate, and pagination
+- **Workflow Tracking**: Complete audit trail of document movement with status transitions and role-specific actions
+- **Electronic Comments**: Role-based commenting system with required commentType field (remark, recommendation, decision, note)
 - **Priority Management**: Urgent, high, normal, and low priority classification
 - **File Attachments**: Upload and store PDF/DOC documents securely
 - **Status Visualization**: Real-time dashboard with document statistics and workflow progress
@@ -114,12 +115,24 @@ The Records Management System provides comprehensive document tracking and workf
 
 **Database Tables**:
 - `rms_documents`: Main document registry with full metadata
-- `rms_comments`: Comments and remarks with role attribution
-- `rms_workflow_log`: Complete audit trail of all document movements and actions
+- `rms_comments`: Comments and remarks with role attribution and required commentType field
+- `rms_workflow_log`: Complete audit trail with fromStatus and toStatus tracking
 
-**Document Workflow States**:
-1. received → 2. forwarded_to_secretary → 3. commented_by_secretary → 4. sent_to_chair → 
-5. commented_by_chair → 6. sent_to_hr → 7. sent_to_committee → 8. agenda_set → 
-9. board_meeting → 10. decision_made → 11. dispatched → 12. filed
+**Document Workflow** (Board Secretary as Central Hub):
+1. **Records Officer** registers document (received) → forwards to Board Secretary (forwarded_to_secretary)
+2. **Board Secretary** reviews → forwards to Board Chair (sent_to_chair)
+3. **Board Chair** reviews with PDF preview → makes decision → returns to Board Secretary (returned_to_secretary_from_chair)
+4. **Board Secretary** receives from Chair → forwards to HR Office (sent_to_hr)
+5. **HR Office** forwards to Board Committee (sent_to_committee)
+6. **Board Committee** reviews collaboratively → returns to HR (returned_to_hr_from_committee)
+7. **HR Office** receives from Committee → returns to Board Secretary (returned_to_secretary_from_hr)
+8. **Board Secretary** sets agenda → schedules meeting → forwards to Records Officer (sent_to_records)
+9. **Records Officer** dispatches final decision to initiating department (dispatched) → files (filed)
 
-**UI/UX**: Teal gradient theme consistent with board module design, responsive layouts, role-based access control, real-time statistics dashboard, proper data-testid attributes for testing.
+**New Workflow Statuses** (as of October 2025):
+- `returned_to_secretary_from_chair`: Document returned from Chair to Board Secretary
+- `returned_to_hr_from_committee`: Document returned from Committee to HR Office
+- `returned_to_secretary_from_hr`: Document returned from HR to Board Secretary after committee review
+- `sent_to_records`: Document sent from Board Secretary to Records Officer for final dispatch
+
+**UI/UX**: Role-specific gradient themes (Secretary: teal, Chair: purple, HR: indigo, Committee: purple, Records: teal), tabbed interfaces for multi-path workflows, responsive layouts, role-based access control, real-time statistics dashboard, proper data-testid attributes for testing, consistent DocumentViewer integration across all roles.

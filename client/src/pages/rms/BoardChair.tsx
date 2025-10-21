@@ -90,7 +90,7 @@ export default function BoardChair() {
     onSuccess: () => {
       toast({
         title: 'Document Forwarded',
-        description: 'Document has been forwarded to HR Office.',
+        description: 'Document has been returned to Board Secretary.',
       });
       queryClient.invalidateQueries({ queryKey: ['/api/rms/documents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/rms/stats'] });
@@ -150,12 +150,12 @@ export default function BoardChair() {
       }
     }, {
       onSuccess: () => {
-        // After remark is added, forward the document
+        // After remark is added, forward back to Board Secretary
         forwardDocumentMutation.mutate({
           id: selectedDocument.id,
           data: {
-            toHandler: 'HR',
-            toStatus: 'sent_to_hr',
+            toHandler: 'boardSecretary',
+            toStatus: 'returned_to_secretary_from_chair',
             notes: `Reviewed by Board Chairperson - ${decision ? decision.toUpperCase() : 'REMARKS ADDED'}`
           }
         });
@@ -537,10 +537,10 @@ export default function BoardChair() {
               onClick={handleForwardToHR}
               disabled={forwardDocumentMutation.isPending || addRemarkMutation.isPending || !remarks.trim()}
               className="bg-gradient-to-r from-purple-600 to-purple-700 text-white"
-              data-testid="button-forward-to-hr"
+              data-testid="button-return-to-secretary"
             >
               <Send className="w-4 h-4 mr-2" />
-              {forwardDocumentMutation.isPending ? 'Forwarding...' : 'Forward to HR Office'}
+              {forwardDocumentMutation.isPending ? 'Returning...' : 'Return to Board Secretary'}
             </Button>
           </DialogFooter>
         </DialogContent>
