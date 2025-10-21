@@ -36,6 +36,7 @@ import BoardShortlisting from "@/pages/board/Shortlisting";
 import BoardInterviews from "@/pages/board/Interviews";
 import BoardScheduling from "@/pages/board/Scheduling";
 import BoardScoring from "@/pages/board/Scoring";
+import BoardHiring from "@/pages/board/Hiring";
 import BoardReports from "@/pages/board/Reports";
 
 // Accountant pages
@@ -182,6 +183,11 @@ function Router() {
       <ProtectedRoute
         path="/board/scoring"
         component={BoardScoring}
+        allowedRoles={["board"]}
+      />
+      <ProtectedRoute
+        path="/board/hiring"
+        component={BoardHiring}
         allowedRoles={["board"]}
       />
       <ProtectedRoute

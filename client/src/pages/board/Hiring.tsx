@@ -180,7 +180,7 @@ export default function BoardHiring() {
     <div className="min-h-screen bg-gray-50">
       <Navigation />
       <div className="flex">
-        <Sidebar role={user?.role || 'applicant'} />
+        <Sidebar userRole={user?.role || 'applicant'} />
         <main className="flex-1 p-4 md:p-6 lg:p-8 md:ml-64">
           <div className="max-w-7xl mx-auto">
             <div className="mb-6">

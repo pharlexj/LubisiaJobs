@@ -85,6 +85,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
     { href: '/board/schedule', icon: Calendar, label: 'Schedule', description: 'Schedule for Interviews' },
     { href: '/board/interviews', icon: Calendar, label: 'Interviews', description: 'Schedule & conduct' },
     { href: '/board/scoring', icon: Award, label: 'Scoring', description: 'Interview assessment' },
+    { href: '/board/hiring', icon: Users, label: 'Hiring', description: 'Award jobs to candidates' },
     { href: '/board/reports', icon: BarChart3, label: 'Reports', description: 'Selection reports' },
   ];
 
