@@ -11,8 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { isUnauthorizedError } from '@/lib/authUtils';
 import { 
   MessageSquare,
   Send,
@@ -24,8 +26,19 @@ import {
   CheckCircle,
   AlertCircle,
   DollarSign,
-  Filter
+  Filter,
+  Plus,
+  Download,
+  Upload
 } from 'lucide-react';
+
+interface InterviewScheduleForm {
+  jobId: string;
+  interviewDate: string;
+  interviewTime: string;
+  interviewVenue: string;
+  duration: number;
+}
 
 export default function BoardScheduling() {
   const { user } = useAuth();
@@ -37,6 +50,17 @@ export default function BoardScheduling() {
   const [interviewDate, setInterviewDate] = useState('');
   const [interviewVenue, setInterviewVenue] = useState('');
   const [smsMessage, setSmsMessage] = useState('');
+  
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [showBulkScheduleDialog, setShowBulkScheduleDialog] = useState(false);
+  const [scheduleExcelFile, setScheduleExcelFile] = useState<File | null>(null);
+  const [scheduleForm, setScheduleForm] = useState<InterviewScheduleForm>({
+    jobId: '',
+    interviewDate: '',
+    interviewTime: '',
+    interviewVenue: '',
+    duration: 30
+  });
 
   const { data: jobs = [], isLoading: jobsLoading } = useQuery({
     queryKey: ['/api/public/jobs'],
@@ -76,6 +100,97 @@ export default function BoardScheduling() {
     setSmsMessage(message);
   }, [selectedJob, selectedJobData, interviewDate, interviewVenue]);
 
+  // Schedule interview mutation
+  const scheduleInterviewMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const selectedJobData = (jobs as any[]).find(j => j.id.toString() === data.jobId);
+      if (!selectedJobData) throw new Error('Job not found');
+
+      const jobApplications = (allApplications as any[]).filter(
+        app => app.jobId.toString() === data.jobId && app.status === 'shortlisted'
+      );
+
+      return await apiRequest('POST', '/api/board/applications/bulk-update', {
+        applicationIds: jobApplications.map(app => app.id),
+        updates: {
+          interviewDate: data.interviewDate,
+          interviewTime: data.interviewTime,
+          interviewVenue: data.interviewVenue,
+          interviewDuration: data.duration,
+          status: 'interview_scheduled'
+        }
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Interview Scheduled',
+        description: 'Interview has been scheduled successfully for all shortlisted candidates.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/board/applications'] });
+      setShowScheduleDialog(false);
+      setScheduleForm({
+        jobId: '',
+        interviewDate: '',
+        interviewTime: '',
+        interviewVenue: '',
+        duration: 30
+      });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: 'Unauthorized',
+          description: 'You are logged out. Logging in again...',
+          variant: 'destructive',
+        });
+        setTimeout(() => window.location.href = '/', 500);
+        return;
+      }
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to schedule interview',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Bulk Schedule via Excel
+  const bulkScheduleExcelMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('/api/board/bulk-schedule-interviews-excel', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to upload Excel file');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Bulk Schedule Complete',
+        description: `Successfully scheduled ${data.success} out of ${data.total} interviews.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/board/applications'] });
+      setShowBulkScheduleDialog(false);
+      setScheduleExcelFile(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Upload Failed',
+        description: error.message || 'Failed to process Excel file',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const sendSMSMutation = useMutation({
     mutationFn: async (data: { applicationIds: number[]; message: string; interviewDate: string; interviewVenue: string }) => {
       return await apiRequest('POST', '/api/board/send-interview-sms', data);
@@ -96,6 +211,62 @@ export default function BoardScheduling() {
       });
     },
   });
+
+  const handleScheduleInterview = () => {
+    if (!scheduleForm.jobId || !scheduleForm.interviewDate || !scheduleForm.interviewTime || !scheduleForm.interviewVenue) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+    scheduleInterviewMutation.mutate(scheduleForm);
+  };
+
+  const handleBulkScheduleUpload = () => {
+    if (!scheduleExcelFile) {
+      toast({
+        title: 'No File Selected',
+        description: 'Please select an Excel file to upload',
+        variant: 'destructive',
+      });
+      return;
+    }
+    bulkScheduleExcelMutation.mutate(scheduleExcelFile);
+  };
+
+  const handleDownloadScheduleTemplate = async () => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (selectedJob && selectedJob !== 'all') {
+        queryParams.append('jobId', selectedJob);
+      }
+      queryParams.append('status', shortlistedFilter === 'yes' ? 'shortlisted' : 'all');
+      
+      const response = await fetch(`/api/board/download-interview-template?${queryParams}`, {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) throw new Error('Failed to download template');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `interview-schedule-template-${Date.now()}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      toast({
+        title: 'Download Failed',
+        description: 'Failed to download template',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -183,22 +354,62 @@ export default function BoardScheduling() {
           <div className="container mx-auto space-y-6">
             {/* Header */}
             <div className="bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-lg p-4 md:p-6 shadow-lg">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <h1 className="text-xl md:text-3xl font-bold mb-2 flex items-center gap-3">
-                    <MessageSquare className="w-6 h-6 md:w-8 md:h-8" />
-                    SEND SMS TO INTERNAL SHORTLISTED APPLICANTS
-                  </h1>
-                  <p className="text-teal-100 text-xs md:text-base">
-                    Send interview invitations via SMS to selected candidates
-                  </p>
-                </div>
-                <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/30 self-start">
-                  <div className="flex items-center gap-2 text-xs md:text-sm">
-                    <DollarSign className="w-4 h-4" />
-                    <span className="font-semibold">Current Balance:</span>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div>
+                    <h1 className="text-xl md:text-3xl font-bold mb-2 flex items-center gap-3">
+                      <Calendar className="w-6 h-6 md:w-8 md:h-8" />
+                      Interview Scheduling & SMS
+                    </h1>
+                    <p className="text-teal-100 text-xs md:text-base">
+                      Schedule interviews and send SMS invitations to candidates
+                    </p>
                   </div>
-                  <div className="text-lg md:text-2xl font-bold mt-1">KES 2,429.9999</div>
+                  <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/30 self-start">
+                    <div className="flex items-center gap-2 text-xs md:text-sm">
+                      <DollarSign className="w-4 h-4" />
+                      <span className="font-semibold">Current Balance:</span>
+                    </div>
+                    <div className="text-lg md:text-2xl font-bold mt-1">KES 2,429.9999</div>
+                  </div>
+                </div>
+                
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-2">
+                  <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        className="bg-white text-teal-700 hover:bg-gray-100"
+                        data-testid="button-schedule-interview"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Schedule Interview
+                      </Button>
+                    </DialogTrigger>
+                  </Dialog>
+                  
+                  <Button 
+                    onClick={handleDownloadScheduleTemplate}
+                    variant="outline"
+                    className="bg-white text-teal-700 hover:bg-gray-100 border-white"
+                    data-testid="button-download-schedule-template"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Interview Template
+                  </Button>
+                  
+                  <Dialog open={showBulkScheduleDialog} onOpenChange={setShowBulkScheduleDialog}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline"
+                        className="bg-white text-teal-700 hover:bg-gray-100 border-white"
+                        data-testid="button-bulk-schedule"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Bulk Schedule
+                      </Button>
+                    </DialogTrigger>
+                  </Dialog>
                 </div>
               </div>
             </div>
@@ -428,6 +639,162 @@ export default function BoardScheduling() {
           </div>
         </main>
       </div>
+
+      {/* Schedule Interview Dialog */}
+      <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
+        <DialogContent data-testid="dialog-schedule-interview">
+          <DialogHeader>
+            <DialogTitle>Schedule New Interview</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="job-select">Job Position *</Label>
+              <Select 
+                value={scheduleForm.jobId} 
+                onValueChange={(value) => setScheduleForm(prev => ({ ...prev, jobId: value }))}
+              >
+                <SelectTrigger id="job-select" data-testid="select-job-position">
+                  <SelectValue placeholder="Select job position" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(jobs as any[]).map((job: any) => (
+                    <SelectItem key={job.id} value={job.id.toString()}>
+                      {job.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="interview-date">Interview Date *</Label>
+                <Input 
+                  id="interview-date"
+                  type="date" 
+                  value={scheduleForm.interviewDate}
+                  onChange={(e) => setScheduleForm(prev => ({ ...prev, interviewDate: e.target.value }))}
+                  data-testid="input-interview-date"
+                />
+              </div>
+              <div>
+                <Label htmlFor="interview-time">Time *</Label>
+                <Input 
+                  id="interview-time"
+                  type="time" 
+                  value={scheduleForm.interviewTime}
+                  onChange={(e) => setScheduleForm(prev => ({ ...prev, interviewTime: e.target.value }))}
+                  data-testid="input-interview-time"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="interview-venue">Venue *</Label>
+              <Input 
+                id="interview-venue"
+                placeholder="e.g., CPSB Boardroom" 
+                value={scheduleForm.interviewVenue}
+                onChange={(e) => setScheduleForm(prev => ({ ...prev, interviewVenue: e.target.value }))}
+                data-testid="input-interview-venue"
+              />
+            </div>
+            <div>
+              <Label htmlFor="interview-duration">Duration (minutes)</Label>
+              <Input 
+                id="interview-duration"
+                type="number" 
+                placeholder="30" 
+                value={scheduleForm.duration}
+                onChange={(e) => setScheduleForm(prev => ({ ...prev, duration: parseInt(e.target.value) || 30 }))}
+                data-testid="input-interview-duration"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowScheduleDialog(false)}
+              data-testid="button-cancel-schedule"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleScheduleInterview}
+              disabled={scheduleInterviewMutation.isPending}
+              className="bg-gradient-to-r from-teal-600 to-teal-700 text-white"
+              data-testid="button-confirm-schedule"
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              {scheduleInterviewMutation.isPending ? 'Scheduling...' : 'Schedule Interview'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Schedule Interview via Excel Dialog */}
+      <Dialog open={showBulkScheduleDialog} onOpenChange={setShowBulkScheduleDialog}>
+        <DialogContent data-testid="dialog-bulk-schedule">
+          <DialogHeader>
+            <DialogTitle>Bulk Interview Scheduling via Excel</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-teal-50 rounded-lg border border-teal-200">
+              <h4 className="font-medium text-teal-900 mb-2">Instructions:</h4>
+              <ol className="list-decimal list-inside space-y-1 text-sm text-teal-800">
+                <li>Download the Excel template with pre-filled candidate data</li>
+                <li>Fill in InterviewDate, InterviewTime, and InterviewVenue columns</li>
+                <li>Save the file and upload it here</li>
+              </ol>
+            </div>
+            
+            <Button 
+              onClick={handleDownloadScheduleTemplate}
+              variant="outline"
+              className="w-full"
+              data-testid="button-download-template-in-dialog"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download Template with Candidates
+            </Button>
+            
+            <div>
+              <Label htmlFor="schedule-excel-file">Upload Completed Excel File</Label>
+              <Input 
+                id="schedule-excel-file"
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => setScheduleExcelFile(e.target.files?.[0] || null)}
+                data-testid="input-schedule-excel-file"
+              />
+              {scheduleExcelFile && (
+                <p className="text-sm text-gray-600 mt-2">
+                  Selected: {scheduleExcelFile.name}
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowBulkScheduleDialog(false);
+                setScheduleExcelFile(null);
+              }}
+              data-testid="button-cancel-bulk-schedule"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleBulkScheduleUpload}
+              disabled={bulkScheduleExcelMutation.isPending || !scheduleExcelFile}
+              className="bg-gradient-to-r from-teal-600 to-teal-700 text-white"
+              data-testid="button-upload-schedule-excel"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              {bulkScheduleExcelMutation.isPending ? 'Uploading...' : 'Upload & Schedule'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
