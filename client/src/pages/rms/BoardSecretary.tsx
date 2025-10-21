@@ -110,6 +110,7 @@ export default function BoardSecretary() {
       documentId: selectedDocument.id,
       commentData: {
         comment: comment.trim(),
+        commentType: 'recommendation',
         recommendation,
         role: 'boardSecretary'
       }
@@ -133,6 +134,7 @@ export default function BoardSecretary() {
       documentId: selectedDocument.id,
       commentData: {
         comment: comment.trim(),
+        commentType: 'recommendation',
         recommendation,
         role: 'boardSecretary'
       }
