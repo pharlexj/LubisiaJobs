@@ -68,11 +68,13 @@ export default function BoardLeadershipCarousel({
                   className="flex-[0_0_100%] sm:flex-[0_0_50%] md:flex-[0_0_33.33%] p-4"
                 >
                   <div className="bg-white rounded-lg shadow-md p-6 flex flex-col items-center text-center">
-                    <img
-                      src={leader.image}
-                      alt={leader.name}
-                      className="w-32 h-32 rounded-full object-cover mb-4"
-                    />
+                    <div className="relative w-32 h-32 rounded-full overflow-hidden mb-4 bg-gray-100">
+                      <img
+                        src={leader.image}
+                        alt={leader.name}
+                        className="absolute inset-0 w-full h-full object-cover object-center"
+                      />
+                    </div>
                     <h3 className="font-semibold text-lg">{leader.name}</h3>
                     <p className="text-sm text-gray-500">{leader.position}</p>
                   </div>
