@@ -41,6 +41,9 @@ import {
   budgets,
   transactions,
   masterImprestRegister,
+  rmsDocuments,
+  rmsComments,
+  rmsWorkflowLog,
   type User,
   type UpsertUser,
   type Applicant,
@@ -88,6 +91,12 @@ import {
   type Budget,
   type Transaction,
   type MasterImprestRegister,
+  type RmsDocument,
+  type InsertRmsDocument,
+  type RmsComment,
+  type InsertRmsComment,
+  type RmsWorkflowLog,
+  type InsertRmsWorkflowLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, like, sql, lt, PromiseOf, or, ne, isNull, not, isNotNull } from "drizzle-orm";
@@ -2539,6 +2548,77 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
       .where(or(eq(users.role, 'applicant'), eq(users.role, 'accountant')));
     
     return employeeUsers;
+  }
+
+  // ========================================
+  // RECORDS MANAGEMENT SYSTEM (RMS) METHODS
+  // ========================================
+
+  async createRmsDocument(data: InsertRmsDocument): Promise<RmsDocument> {
+    const [document] = await db.insert(rmsDocuments).values(data).returning();
+    return document;
+  }
+
+  async getRmsDocuments(status?: string | null, priority?: string | null): Promise<RmsDocument[]> {
+    let query = db.select().from(rmsDocuments).where(isNull(rmsDocuments.deletedAt));
+    
+    if (status) {
+      query = query.where(eq(rmsDocuments.status, status as any)) as any;
+    }
+    if (priority) {
+      query = query.where(eq(rmsDocuments.priority, priority)) as any;
+    }
+    
+    return await query.orderBy(desc(rmsDocuments.receivedDate));
+  }
+
+  async getRmsDocument(id: number): Promise<RmsDocument> {
+    const [document] = await db
+      .select()
+      .from(rmsDocuments)
+      .where(and(eq(rmsDocuments.id, id), isNull(rmsDocuments.deletedAt)));
+    
+    if (!document) {
+      throw new Error('Document not found');
+    }
+    
+    return document;
+  }
+
+  async updateRmsDocument(id: number, updates: Partial<RmsDocument>): Promise<RmsDocument> {
+    const [updated] = await db
+      .update(rmsDocuments)
+      .set(updates)
+      .where(eq(rmsDocuments.id, id))
+      .returning();
+    
+    return updated;
+  }
+
+  async createRmsComment(data: InsertRmsComment): Promise<RmsComment> {
+    const [comment] = await db.insert(rmsComments).values(data).returning();
+    return comment;
+  }
+
+  async getRmsComments(documentId: number): Promise<RmsComment[]> {
+    return await db
+      .select()
+      .from(rmsComments)
+      .where(eq(rmsComments.documentId, documentId))
+      .orderBy(rmsComments.createdAt);
+  }
+
+  async createRmsWorkflowLog(data: InsertRmsWorkflowLog): Promise<RmsWorkflowLog> {
+    const [log] = await db.insert(rmsWorkflowLog).values(data).returning();
+    return log;
+  }
+
+  async getRmsWorkflowLog(documentId: number): Promise<RmsWorkflowLog[]> {
+    return await db
+      .select()
+      .from(rmsWorkflowLog)
+      .where(eq(rmsWorkflowLog.documentId, documentId))
+      .orderBy(rmsWorkflowLog.createdAt);
   }
 }
 export const storage = new DatabaseStorage();

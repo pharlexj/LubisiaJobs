@@ -3947,6 +3947,254 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     }
   });
 
+  // ========================================
+  // RECORDS MANAGEMENT SYSTEM (RMS) ROUTES
+  // ========================================
+
+  // Helper function to check RMS access
+  const hasRmsAccess = (role: string) => {
+    return ['recordsOfficer', 'boardSecretary', 'chiefOfficer', 'boardChair', 'boardCommittee', 'HR', 'admin'].includes(role);
+  };
+
+  // Create/Upload new document (Records Officer)
+  app.post('/api/rms/documents', isAuthenticated, upload.single('document'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'recordsOfficer') {
+        return res.status(403).json({ message: 'Access denied. Only Records Officer can register documents.' });
+      }
+
+      const documentData = {
+        ...req.body,
+        filePath: req.file?.path,
+        createdBy: req.user.id,
+        currentHandler: 'recordsOfficer',
+        status: 'received' as const
+      };
+
+      const document = await storage.createRmsDocument(documentData);
+      
+      // Log the action
+      await storage.createRmsWorkflowLog({
+        documentId: document.id,
+        fromStatus: null,
+        toStatus: 'received',
+        fromHandler: null,
+        toHandler: 'recordsOfficer',
+        actionBy: req.user.id,
+        actionType: 'Document Received',
+        notes: `Document registered: ${document.subject}`
+      });
+
+      res.json(document);
+    } catch (error) {
+      console.error('Error creating document:', error);
+      res.status(500).json({ message: 'Failed to create document' });
+    }
+  });
+
+  // Get all documents (role-based filtering)
+  app.get('/api/rms/documents', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !hasRmsAccess(user.role)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { status, priority } = req.query;
+      const documents = await storage.getRmsDocuments(status, priority);
+      res.json(documents);
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+      res.status(500).json({ message: 'Failed to fetch documents' });
+    }
+  });
+
+  // Get single document with comments and workflow log
+  app.get('/api/rms/documents/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !hasRmsAccess(user.role)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const documentId = parseInt(req.params.id);
+      const document = await storage.getRmsDocument(documentId);
+      const comments = await storage.getRmsComments(documentId);
+      const workflowLog = await storage.getRmsWorkflowLog(documentId);
+
+      res.json({ document, comments, workflowLog });
+    } catch (error) {
+      console.error('Error fetching document:', error);
+      res.status(500).json({ message: 'Failed to fetch document' });
+    }
+  });
+
+  // Forward document to next handler
+  app.post('/api/rms/documents/:id/forward', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !hasRmsAccess(user.role)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const documentId = parseInt(req.params.id);
+      const { toHandler, toStatus, notes } = req.body;
+
+      const document = await storage.getRmsDocument(documentId);
+      
+      // Update document
+      const updated = await storage.updateRmsDocument(documentId, {
+        status: toStatus,
+        currentHandler: toHandler,
+        updatedAt: new Date()
+      });
+
+      // Log the action
+      await storage.createRmsWorkflowLog({
+        documentId,
+        fromStatus: document.status,
+        toStatus,
+        fromHandler: document.currentHandler,
+        toHandler,
+        actionBy: req.user.id,
+        actionType: 'Document Forwarded',
+        notes
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error('Error forwarding document:', error);
+      res.status(500).json({ message: 'Failed to forward document' });
+    }
+  });
+
+  // Add comment/remark to document
+  app.post('/api/rms/documents/:id/comments', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !hasRmsAccess(user.role)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const documentId = parseInt(req.params.id);
+      const commentData = {
+        documentId,
+        userId: req.user.id,
+        userRole: user.role,
+        ...req.body
+      };
+
+      const comment = await storage.createRmsComment(commentData);
+      
+      // Log the action
+      await storage.createRmsWorkflowLog({
+        documentId,
+        fromStatus: null,
+        toStatus: null,
+        fromHandler: null,
+        toHandler: null,
+        actionBy: req.user.id,
+        actionType: `Comment Added (${req.body.commentType})`,
+        notes: req.body.comment.substring(0, 100)
+      });
+
+      res.json(comment);
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      res.status(500).json({ message: 'Failed to add comment' });
+    }
+  });
+
+  // Update document status and details
+  app.patch('/api/rms/documents/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !hasRmsAccess(user.role)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const documentId = parseInt(req.params.id);
+      const updates = { ...req.body, updatedAt: new Date() };
+      
+      const updated = await storage.updateRmsDocument(documentId, updates);
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating document:', error);
+      res.status(500).json({ message: 'Failed to update document' });
+    }
+  });
+
+  // Dispatch document (Records Officer)
+  app.post('/api/rms/documents/:id/dispatch', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'recordsOfficer') {
+        return res.status(403).json({ message: 'Access denied. Only Records Officer can dispatch documents.' });
+      }
+
+      const documentId = parseInt(req.params.id);
+      const { decisionSummary } = req.body;
+
+      const updated = await storage.updateRmsDocument(documentId, {
+        status: 'dispatched',
+        dispatchedDate: new Date(),
+        dispatchedBy: req.user.id,
+        decisionSummary,
+        updatedAt: new Date()
+      });
+
+      // Log the action
+      await storage.createRmsWorkflowLog({
+        documentId,
+        fromStatus: 'decision_made',
+        toStatus: 'dispatched',
+        fromHandler: user.role,
+        toHandler: 'initiator',
+        actionBy: req.user.id,
+        actionType: 'Document Dispatched',
+        notes: 'Decision communicated to initiator'
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error('Error dispatching document:', error);
+      res.status(500).json({ message: 'Failed to dispatch document' });
+    }
+  });
+
+  // Get RMS dashboard statistics
+  app.get('/api/rms/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !hasRmsAccess(user.role)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const documents = await storage.getRmsDocuments();
+      
+      const stats = {
+        total: documents.length,
+        received: documents.filter(d => d.status === 'received').length,
+        inProgress: documents.filter(d => 
+          ['forwarded_to_secretary', 'commented_by_secretary', 'sent_to_chair', 
+           'commented_by_chair', 'sent_to_hr', 'sent_to_committee', 'agenda_set'].includes(d.status)
+        ).length,
+        atBoardMeeting: documents.filter(d => d.status === 'board_meeting').length,
+        decided: documents.filter(d => d.status === 'decision_made').length,
+        dispatched: documents.filter(d => d.status === 'dispatched').length,
+        filed: documents.filter(d => d.status === 'filed').length,
+        urgent: documents.filter(d => d.priority === 'urgent').length,
+        high: documents.filter(d => d.priority === 'high').length
+      };
+
+      res.json(stats);
+    } catch (error) {
+      console.error('Error fetching RMS stats:', error);
+      res.status(500).json({ message: 'Failed to fetch statistics' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
