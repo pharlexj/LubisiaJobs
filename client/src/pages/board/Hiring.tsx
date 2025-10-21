@@ -192,50 +192,54 @@ export default function BoardHiring() {
             {/* Selection Card */}
             <Card className="mb-6">
               <CardContent className="p-4 sm:p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="md:col-span-2 lg:col-span-1">
-                    <Label htmlFor="job-select">Select a Job here:</Label>
-                    <Select value={selectedJob} onValueChange={(value) => {
-                      setSelectedJob(value);
-                      setShowResults(false);
-                      setSelectedApplications([]);
-                    }}>
-                      <SelectTrigger id="job-select" data-testid="select-job-hiring" className="mt-1.5">
-                        <SelectValue placeholder="Select a job" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(jobs as any[]).map((job: any) => (
-                          <SelectItem key={job.id} value={job.id.toString()}>
-                            {job.refNumber} = {job.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <Label htmlFor="job-select" className="text-sm font-medium">Select a Job here:</Label>
+                      <Select value={selectedJob} onValueChange={(value) => {
+                        setSelectedJob(value);
+                        setShowResults(false);
+                        setSelectedApplications([]);
+                      }}>
+                        <SelectTrigger id="job-select" data-testid="select-job-hiring" className="mt-1.5 w-full">
+                          <SelectValue placeholder="Select a job" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(jobs as any[]).map((job: any) => (
+                            <SelectItem key={job.id} value={job.id.toString()}>
+                              {job.refNumber} = {job.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="passmark">Passmark</Label>
-                    <Input
-                      id="passmark"
-                      type="number"
-                      value={passmark}
-                      onChange={(e) => setPassmark(parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                      min="0"
-                      max="100"
-                      className="mt-1.5"
-                      data-testid="input-passmark"
-                    />
-                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="passmark" className="text-sm font-medium">Passmark</Label>
+                      <Input
+                        id="passmark"
+                        type="number"
+                        value={passmark}
+                        onChange={(e) => setPassmark(parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                        min="0"
+                        max="100"
+                        className="mt-1.5 w-full"
+                        data-testid="input-passmark"
+                      />
+                    </div>
 
-                  <div className="flex items-end">
-                    <Button
-                      onClick={handleGetList}
-                      className="bg-gradient-to-r from-teal-600 to-teal-700 text-white w-full"
-                      data-testid="button-get-list"
-                    >
-                      Get List
-                    </Button>
+                    <div className="flex items-end">
+                      <Button
+                        onClick={handleGetList}
+                        className="bg-gradient-to-r from-teal-600 to-teal-700 text-white w-full hover:from-teal-700 hover:to-teal-800"
+                        data-testid="button-get-list"
+                      >
+                        Get List
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
