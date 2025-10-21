@@ -222,10 +222,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 switch (req.user?.role) {
   case "admin":
+    redirectUrl = "/admin";
+    break;
   case "board":
+    redirectUrl = "/board";
+    break;
   case "accountant":
-  
-    redirectUrl = `/${req.user?.role}`;
+    redirectUrl = "/accountant";
+    break;
+  case "a.i.e Holder":
+    redirectUrl = "/aie";
+    break;
+  case "recordsOfficer":
+    redirectUrl = "/rms/records-officer";
+    break;
+  case "boardSecretary":
+    redirectUrl = "/rms/board-secretary";
+    break;
+  case "boardChair":
+    redirectUrl = "/rms/board-chair";
+    break;
+  case "chiefOfficer":
+    redirectUrl = "/rms/chief-officer";
+    break;
+  case "boardCommittee":
+    redirectUrl = "/rms/board-committee";
+    break;
+  case "HR":
+    redirectUrl = "/rms/hr";
+    break;
+  case "records":
+    redirectUrl = "/records";
+    break;
+  case "procurement":
+    redirectUrl = "/procurement";
+    break;
+  case "hod":
+    redirectUrl = "/hod";
     break;
   case "applicant":
     redirectUrl = "/dashboard";
@@ -459,6 +492,26 @@ switch (req.user?.role) {
         redirectUrl = '/board';      
       } else if (user.role === 'accountant') {
         redirectUrl = '/accountant';
+      } else if (user.role === 'a.i.e Holder') {
+        redirectUrl = '/aie';
+      } else if (user.role === 'recordsOfficer') {
+        redirectUrl = '/rms/records-officer';
+      } else if (user.role === 'boardSecretary') {
+        redirectUrl = '/rms/board-secretary';
+      } else if (user.role === 'boardChair') {
+        redirectUrl = '/rms/board-chair';
+      } else if (user.role === 'chiefOfficer') {
+        redirectUrl = '/rms/chief-officer';
+      } else if (user.role === 'boardCommittee') {
+        redirectUrl = '/rms/board-committee';
+      } else if (user.role === 'HR') {
+        redirectUrl = '/rms/hr';
+      } else if (user.role === 'records') {
+        redirectUrl = '/records';
+      } else if (user.role === 'procurement') {
+        redirectUrl = '/procurement';
+      } else if (user.role === 'hod') {
+        redirectUrl = '/hod';
       }
 
       res.json({ ...user, applicantProfile, redirectUrl });
@@ -888,11 +941,31 @@ switch (req.user?.role) {
           navigation = [];
       }
 
+      // Determine redirect URL based on role
+      let redirectUrl = '/';
+      switch (user.role) {
+        case 'admin': redirectUrl = '/admin'; break;
+        case 'board': redirectUrl = '/board'; break;
+        case 'accountant': redirectUrl = '/accountant'; break;
+        case 'a.i.e Holder': redirectUrl = '/aie'; break;
+        case 'recordsOfficer': redirectUrl = '/rms/records-officer'; break;
+        case 'boardSecretary': redirectUrl = '/rms/board-secretary'; break;
+        case 'boardChair': redirectUrl = '/rms/board-chair'; break;
+        case 'chiefOfficer': redirectUrl = '/rms/chief-officer'; break;
+        case 'boardCommittee': redirectUrl = '/rms/board-committee'; break;
+        case 'HR': redirectUrl = '/rms/hr'; break;
+        case 'records': redirectUrl = '/records'; break;
+        case 'procurement': redirectUrl = '/procurement'; break;
+        case 'hod': redirectUrl = '/hod'; break;
+        case 'applicant': redirectUrl = '/dashboard'; break;
+        default: redirectUrl = '/';
+      }
+
       res.json({
         role: user.role,
         permissions,
         navigation,
-        redirectUrl: user.role === 'admin' ? '/admin' : user.role === 'board' ? '/board' : user.role === 'applicant' ? '/dashboard' : user.role === 'accountant' ? '/accountant' : '/'
+        redirectUrl
       });
     } catch (error) {
       console.error('Error fetching user permissions:', error);
@@ -908,9 +981,20 @@ switch (req.user?.role) {
       }
 
       const roles = [
+        { value: 'applicant', label: 'Applicant', description: 'Job application and profile management' },
         { value: 'admin', label: 'Administrator', description: 'Full system access and management' },
         { value: 'board', label: 'Board Member', description: 'Interview and selection management' },
-        { value: 'applicant', label: 'Applicant', description: 'Job application and profile management' }
+        { value: 'accountant', label: 'Accountant', description: 'Financial management and accounting' },
+        { value: 'records', label: 'Records Officer', description: 'Records management and filing' },
+        { value: 'procurement', label: 'Procurement Officer', description: 'Procurement and purchasing' },
+        { value: 'hod', label: 'Head of Department', description: 'Department management and oversight' },
+        { value: 'a.i.e Holder', label: 'A.I.E Holder', description: 'Accounting and imprest expenditure approval' },
+        { value: 'recordsOfficer', label: 'RMS Records Officer', description: 'Document intake and dispatch' },
+        { value: 'boardSecretary', label: 'Board Secretary', description: 'Board document review and management' },
+        { value: 'chiefOfficer', label: 'Chief Officer', description: 'Decision oversight and input' },
+        { value: 'boardChair', label: 'Board Chairperson', description: 'Board leadership and final review' },
+        { value: 'boardCommittee', label: 'Board Committee', description: 'Collaborative board review' },
+        { value: 'HR', label: 'HR Office', description: 'Agenda management and filing' }
       ];
 
       res.json(roles);
