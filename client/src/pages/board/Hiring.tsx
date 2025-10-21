@@ -191,16 +191,16 @@ export default function BoardHiring() {
 
             {/* Selection Card */}
             <Card className="mb-6">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div>
+              <CardContent className="p-4 sm:p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="md:col-span-2 lg:col-span-1">
                     <Label htmlFor="job-select">Select a Job here:</Label>
                     <Select value={selectedJob} onValueChange={(value) => {
                       setSelectedJob(value);
                       setShowResults(false);
                       setSelectedApplications([]);
                     }}>
-                      <SelectTrigger id="job-select" data-testid="select-job-hiring">
+                      <SelectTrigger id="job-select" data-testid="select-job-hiring" className="mt-1.5">
                         <SelectValue placeholder="Select a job" />
                       </SelectTrigger>
                       <SelectContent>
@@ -223,17 +223,20 @@ export default function BoardHiring() {
                       placeholder="0"
                       min="0"
                       max="100"
+                      className="mt-1.5"
                       data-testid="input-passmark"
                     />
                   </div>
 
-                  <Button
-                    onClick={handleGetList}
-                    className="bg-gradient-to-r from-teal-600 to-teal-700 text-white"
-                    data-testid="button-get-list"
-                  >
-                    Get List
-                  </Button>
+                  <div className="flex items-end">
+                    <Button
+                      onClick={handleGetList}
+                      className="bg-gradient-to-r from-teal-600 to-teal-700 text-white w-full"
+                      data-testid="button-get-list"
+                    >
+                      Get List
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -243,31 +246,31 @@ export default function BoardHiring() {
               <>
                 {/* Job Title and Stats */}
                 <div className="mb-6">
-                  <h2 className="text-xl font-semibold text-teal-700 mb-4 text-center" data-testid="text-selected-job">
+                  <h2 className="text-lg sm:text-xl font-semibold text-teal-700 mb-4 text-center break-words px-2" data-testid="text-selected-job">
                     {(jobs as any[]).find(j => j.id.toString() === selectedJob)?.refNumber} {(jobs as any[]).find(j => j.id.toString() === selectedJob)?.title}
                   </h2>
-                  <div className="flex justify-center items-center gap-4 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">Total:</span>
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200" data-testid="badge-total">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto">
+                    <div className="flex flex-col items-center gap-2 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                      <span className="font-medium text-sm text-gray-700">Total</span>
+                      <Badge variant="outline" className="bg-white text-blue-700 border-blue-300 text-lg font-bold" data-testid="badge-total">
                         {stats.total}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">Awarded:</span>
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200" data-testid="badge-awarded">
+                    <div className="flex flex-col items-center gap-2 bg-green-50 p-3 rounded-lg border border-green-200">
+                      <span className="font-medium text-sm text-gray-700">Awarded</span>
+                      <Badge variant="outline" className="bg-white text-green-700 border-green-300 text-lg font-bold" data-testid="badge-awarded">
                         {stats.awarded}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">Not Awarded:</span>
-                      <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200" data-testid="badge-not-awarded">
+                    <div className="flex flex-col items-center gap-2 bg-red-50 p-3 rounded-lg border border-red-200">
+                      <span className="font-medium text-sm text-gray-700">Not Awarded</span>
+                      <Badge variant="outline" className="bg-white text-red-700 border-red-300 text-lg font-bold" data-testid="badge-not-awarded">
                         {stats.notAwarded}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">Pending:</span>
-                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200" data-testid="badge-pending">
+                    <div className="flex flex-col items-center gap-2 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                      <span className="font-medium text-sm text-gray-700">Pending</span>
+                      <Badge variant="outline" className="bg-white text-yellow-700 border-yellow-300 text-lg font-bold" data-testid="badge-pending">
                         {stats.pending}
                       </Badge>
                     </div>
@@ -276,7 +279,7 @@ export default function BoardHiring() {
 
                 {/* Applications Table */}
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-3 sm:p-4 md:p-6">
                     {isLoading ? (
                       <div className="text-center py-8">Loading...</div>
                     ) : filteredApplications.length === 0 ? (
@@ -286,28 +289,28 @@ export default function BoardHiring() {
                       </div>
                     ) : (
                       <>
-                        <div className="overflow-x-auto">
-                          <table className="w-full" data-testid="table-hiring">
+                        <div className="overflow-x-auto -mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6">
+                          <table className="w-full min-w-[900px]" data-testid="table-hiring">
                             <thead>
                               <tr className="border-b border-gray-200 bg-gray-50">
-                                <th className="text-left py-3 px-4">#</th>
-                                <th className="text-left py-3 px-4">
+                                <th className="text-left py-3 px-2 sm:px-4 text-xs sm:text-sm font-semibold">#</th>
+                                <th className="text-left py-3 px-2 sm:px-4">
                                   <Checkbox
                                     checked={selectedApplications.length === filteredApplications.length && filteredApplications.length > 0}
                                     onCheckedChange={handleSelectAll}
                                     data-testid="checkbox-select-all"
                                   />
                                 </th>
-                                <th className="text-left py-3 px-4">Name</th>
-                                <th className="text-left py-3 px-4">ID Number</th>
-                                <th className="text-left py-3 px-4">Gender</th>
-                                <th className="text-left py-3 px-4">Age</th>
-                                <th className="text-left py-3 px-4">Ethnicity</th>
-                                <th className="text-left py-3 px-4">County</th>
-                                <th className="text-left py-3 px-4">Ward</th>
-                                <th className="text-left py-3 px-4">Phone Number</th>
-                                <th className="text-left py-3 px-4">Total Marks</th>
-                                <th className="text-left py-3 px-4">Status</th>
+                                <th className="text-left py-3 px-2 sm:px-4 text-xs sm:text-sm font-semibold">Name</th>
+                                <th className="text-left py-3 px-2 sm:px-4 text-xs sm:text-sm font-semibold">ID Number</th>
+                                <th className="text-left py-3 px-2 sm:px-4 text-xs sm:text-sm font-semibold">Gender</th>
+                                <th className="text-left py-3 px-2 sm:px-4 text-xs sm:text-sm font-semibold">Age</th>
+                                <th className="text-left py-3 px-2 sm:px-4 text-xs sm:text-sm font-semibold">Ethnicity</th>
+                                <th className="text-left py-3 px-2 sm:px-4 text-xs sm:text-sm font-semibold">County</th>
+                                <th className="text-left py-3 px-2 sm:px-4 text-xs sm:text-sm font-semibold">Ward</th>
+                                <th className="text-left py-3 px-2 sm:px-4 text-xs sm:text-sm font-semibold">Phone Number</th>
+                                <th className="text-left py-3 px-2 sm:px-4 text-xs sm:text-sm font-semibold">Total Marks</th>
+                                <th className="text-left py-3 px-2 sm:px-4 text-xs sm:text-sm font-semibold">Status</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -317,36 +320,36 @@ export default function BoardHiring() {
                                   className="border-b border-gray-100 hover:bg-gray-50"
                                   data-testid={`row-hiring-${application.id}`}
                                 >
-                                  <td className="py-3 px-4">{index + 1}</td>
-                                  <td className="py-3 px-4">
+                                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{index + 1}</td>
+                                  <td className="py-3 px-2 sm:px-4">
                                     <Checkbox
                                       checked={selectedApplications.includes(application.id)}
                                       onCheckedChange={(checked) => handleSelectApplication(application.id, checked as boolean)}
                                       data-testid={`checkbox-select-${application.id}`}
                                     />
                                   </td>
-                                  <td className="py-3 px-4">{application.fullName}</td>
-                                  <td className="py-3 px-4">{application.nationalId}</td>
-                                  <td className="py-3 px-4">{application.gender}</td>
-                                  <td className="py-3 px-4">{calculateAge(application.dateOfBirth)}</td>
-                                  <td className="py-3 px-4">{application.ethnicityName || 'N/A'}</td>
-                                  <td className="py-3 px-4">{application.countyName || 'N/A'}</td>
-                                  <td className="py-3 px-4">{application.wardName || 'N/A'}</td>
-                                  <td className="py-3 px-4">{application.phoneNumber}</td>
-                                  <td className="py-3 px-4 font-semibold">{application.interviewScore || 0}</td>
-                                  <td className="py-3 px-4">
+                                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{application.fullName}</td>
+                                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{application.nationalId}</td>
+                                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{application.gender}</td>
+                                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{calculateAge(application.dateOfBirth)}</td>
+                                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{application.ethnicityName || 'N/A'}</td>
+                                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{application.countyName || 'N/A'}</td>
+                                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{application.wardName || 'N/A'}</td>
+                                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{application.phoneNumber}</td>
+                                  <td className="py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm">{application.interviewScore || 0}</td>
+                                  <td className="py-3 px-2 sm:px-4">
                                     {application.status === 'hired' && (
-                                      <Badge className="bg-green-500 text-white" data-testid={`status-hired-${application.id}`}>
+                                      <Badge className="bg-green-500 text-white text-xs" data-testid={`status-hired-${application.id}`}>
                                         AwardedJob
                                       </Badge>
                                     )}
                                     {application.status === 'rejected' && (
-                                      <Badge className="bg-red-500 text-white" data-testid={`status-rejected-${application.id}`}>
+                                      <Badge className="bg-red-500 text-white text-xs" data-testid={`status-rejected-${application.id}`}>
                                         NotAwardedJob
                                       </Badge>
                                     )}
                                     {application.status === 'interviewed' && (
-                                      <Badge variant="secondary" data-testid={`status-pending-${application.id}`}>
+                                      <Badge variant="secondary" className="text-xs" data-testid={`status-pending-${application.id}`}>
                                         Pending
                                       </Badge>
                                     )}
@@ -358,24 +361,24 @@ export default function BoardHiring() {
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex gap-4 mt-6">
+                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-6">
                           <Button
                             onClick={() => awardJobMutation.mutate()}
                             disabled={selectedApplications.length === 0 || awardJobMutation.isPending}
-                            className="bg-green-600 hover:bg-green-700 text-white"
+                            className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
                             data-testid="button-award-job"
                           >
                             <Award className="w-4 h-4 mr-2" />
-                            Award Job
+                            Award Job {selectedApplications.length > 0 && `(${selectedApplications.length})`}
                           </Button>
                           <Button
                             onClick={() => notAwardJobMutation.mutate()}
                             disabled={selectedApplications.length === 0 || notAwardJobMutation.isPending}
-                            className="bg-red-600 hover:bg-red-700 text-white"
+                            className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"
                             data-testid="button-not-award-job"
                           >
                             <X className="w-4 h-4 mr-2" />
-                            Not Award Job
+                            Not Award Job {selectedApplications.length > 0 && `(${selectedApplications.length})`}
                           </Button>
                         </div>
                       </>
