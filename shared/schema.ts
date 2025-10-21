@@ -847,19 +847,23 @@ export const audits = pgTable("audits", {
 // ========================================
 
 // Document status enum for workflow tracking
+// Board Secretary is central coordinator: Records → BS → Chair → BS → HR → Committee → HR → BS → Meeting → Records
 export const rmsDocumentStatusEnum = pgEnum("rms_document_status", [
-  "received",
-  "forwarded_to_secretary",
-  "commented_by_secretary",
-  "sent_to_chair",
-  "commented_by_chair",
-  "sent_to_hr",
-  "sent_to_committee",
-  "agenda_set",
-  "board_meeting",
-  "decision_made",
-  "dispatched",
-  "filed"
+  "received",                          // Initial receipt by Records Officer
+  "forwarded_to_secretary",            // Records Officer → Board Secretary
+  "sent_to_chair",                     // Board Secretary → Board Chair
+  "commented_by_chair",                // Board Chair reviews and comments
+  "returned_to_secretary_from_chair",  // Board Chair → Board Secretary (with decision)
+  "sent_to_hr",                        // Board Secretary → HR Office
+  "sent_to_committee",                 // HR Office → Board Committee
+  "returned_to_hr_from_committee",     // Board Committee → HR Office
+  "returned_to_secretary_from_hr",     // HR Office → Board Secretary
+  "agenda_set",                        // Board Secretary sets meeting agenda
+  "board_meeting",                     // Document in board meeting
+  "decision_made",                     // Decision made in meeting
+  "sent_to_records",                   // Board Secretary → Records Officer
+  "dispatched",                        // Records Officer dispatches document
+  "filed"                              // Records Officer files document
 ]);
 
 // Main documents table
