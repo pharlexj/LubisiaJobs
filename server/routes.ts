@@ -4163,6 +4163,13 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       }
 
       const documentId = parseInt(req.params.id);
+      
+      // Get current document to get its status
+      const document = await storage.getRmsDocument(documentId);
+      if (!document) {
+        return res.status(404).json({ message: 'Document not found' });
+      }
+      
       const commentData = {
         documentId,
         userId: req.user.id,
@@ -4172,13 +4179,13 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
 
       const comment = await storage.createRmsComment(commentData);
       
-      // Log the action
+      // Log the action - status doesn't change when just adding a comment
       await storage.createRmsWorkflowLog({
         documentId,
-        fromStatus: null,
-        toStatus: null,
-        fromHandler: null,
-        toHandler: null,
+        fromStatus: document.status,
+        toStatus: document.status,
+        fromHandler: document.currentHandler,
+        toHandler: document.currentHandler,
         actionBy: req.user.id,
         actionType: `Comment Added (${req.body.commentType})`,
         notes: req.body.comment.substring(0, 100)
