@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -66,6 +66,23 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
     setLoadError(null);
   }, []);
 
+  // Measure the PDF container width so Page can render to available width
+  const pdfContainerRef = useRef<HTMLDivElement | null>(null);
+  const [pageWidth, setPageWidth] = useState<number>(800);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = pdfContainerRef.current;
+      if (el) {
+        // subtract a small margin so scrollbars don't cause overflow
+        setPageWidth(Math.max(200, el.clientWidth - 16));
+      }
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [isOpen]);
+
   const onDocumentLoadError = useCallback((error: Error) => {
     console.error('PDF load error:', error);
     setLoadError('Failed to load PDF document');
@@ -93,7 +110,8 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
   }, []);
 
   const downloadDocument = useCallback(() => {
-    window.open(document.filePath, '_blank');
+    const url = normalizePath(document.filePath);
+    window.open(url, '_blank');
   }, [document.filePath]);
 
   const resetView = useCallback(() => {
@@ -115,10 +133,53 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
     return `${mb.toFixed(1)} MB`;
   };
 
+  // Normalize legacy RMS upload paths to canonical /uploads/
+  const normalizePath = (p: string) => p.replace(/\/rms\/uploads\//g, '/uploads/');
+
+  // Map dynamic scale to nearest Tailwind scale class
+  const getScaleClass = (s: number) => {
+    // available Tailwind scale classes we rely on
+    const steps = [0.5, 0.75, 0.9, 0.95, 1, 1.05, 1.1, 1.25, 1.5, 2, 3];
+    let best = steps[0];
+    let bestDiff = Math.abs(s - best);
+    for (const step of steps) {
+      const d = Math.abs(s - step);
+      if (d < bestDiff) {
+        best = step;
+        bestDiff = d;
+      }
+    }
+    const clsMap: Record<number, string> = {
+      0.5: 'scale-50',
+      0.75: 'scale-75',
+      0.9: 'scale-90',
+      0.95: 'scale-95',
+      1: 'scale-100',
+      1.05: 'scale-105',
+      1.1: 'scale-110',
+      1.25: 'scale-125',
+      1.5: 'scale-150',
+      2: 'scale-200',
+      3: 'scale-300',
+    };
+    return clsMap[best] ?? 'scale-100';
+  };
+
+  const getRotateClass = (r: number) => {
+    const normalized = ((Math.round(r / 90) * 90) % 360 + 360) % 360;
+    const map: Record<number, string> = {
+      0: 'rotate-0',
+      90: 'rotate-90',
+      180: 'rotate-180',
+      270: 'rotate-270',
+    };
+    return map[normalized] ?? 'rotate-0';
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl w-full h-[90vh] flex flex-col" data-testid="document-viewer-modal">
-        <DialogHeader className="flex-shrink-0 pb-2">
+      <DialogContent className="max-w-6xl w-full h-[92vh] flex flex-col p-2" data-testid="document-viewer-modal">
+          <DialogHeader className="flex-shrink-0 pb-1">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <DialogTitle className="text-lg font-semibold truncate pr-4" data-testid="document-title">
@@ -133,15 +194,15 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
                 </Badge>
               </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={onClose} data-testid="button-close">
-              <X className="w-4 h-4" />
-            </Button>
+              <Button variant="ghost" size="sm" onClick={onClose} data-testid="button-close">
+                <X className="w-4 h-4" />
+              </Button>
           </div>
         </DialogHeader>
 
         {/* Toolbar for PDF controls */}
         {isPDF && (
-          <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg mb-2 flex-shrink-0">
+          <div className="flex items-center justify-between p-1 bg-gray-50 rounded-lg mb-1 flex-shrink-0">
             <div className="flex items-center space-x-2">
               <Button
                 variant="outline"
@@ -185,7 +246,7 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
         )}
 
         {/* Document content */}
-        <div className="flex-1 overflow-auto bg-gray-100 rounded-lg p-1">
+        <div className="flex-1 overflow-auto bg-gray-100 rounded-lg p-0">
           {isLoading && (
             <div className="flex items-center space-x-2" data-testid="loading-indicator">
               <Loader2 className="w-6 h-6 animate-spin" />
@@ -203,10 +264,10 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
           )}
 
           {!loadError && isPDF && (
-            <div className="w-full flex justify-center" data-testid="pdf-content">
-              <div className="bg-white shadow-lg">
+            <div className="w-full h-full flex justify-center items-start" data-testid="pdf-content" ref={pdfContainerRef}>
+              <div className="bg-white shadow-lg w-full max-w-none h-full flex items-start justify-center overflow-auto pt-2">
                 <Document
-                  file={document.filePath}
+                  file={normalizePath(document.filePath)}
                   onLoadSuccess={onDocumentLoadSuccess}
                   onLoadError={onDocumentLoadError}
                   loading={<div className="p-4">Loading PDF...</div>}
@@ -214,7 +275,7 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
                 >
                   <Page
                     pageNumber={pageNumber}
-                    scale={scale}
+                    width={Math.max(200, Math.round(pageWidth * scale))}
                     rotate={rotation}
                     renderTextLayer={true}
                     renderAnnotationLayer={true}
@@ -228,10 +289,9 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
             <div className="max-w-full max-h-full flex items-center justify-center" data-testid="image-content">
               {isLoading && <div className="flex items-center space-x-2"><Loader2 className="w-6 h-6 animate-spin" /><span>Loading image...</span></div>}
               <img
-                src={document.filePath}
+                src={normalizePath(document.filePath)}
                 alt={document.fileName}
-                className={`max-w-full max-h-full object-contain shadow-lg rounded ${isLoading ? 'hidden' : ''}`}
-                style={{ transform: `scale(${scale}) rotate(${rotation}deg)` }}
+                className={`max-w-full max-h-full object-contain shadow-lg rounded ${isLoading ? 'hidden' : ''} ${getScaleClass(scale)} ${getRotateClass(rotation)}`}
                 onLoad={() => setIsLoading(false)}
                 onError={() => {
                   setLoadError('Failed to load image');
@@ -253,7 +313,7 @@ export default function DocumentViewer({ document, isOpen, onClose }: DocumentVi
 
         {/* Bottom controls for images and PDFs */}
         {(isPDF || isImage) && (
-          <div className="flex items-center justify-center space-x-2 mt-4 flex-shrink-0">
+          <div className="flex items-center justify-center space-x-2 mt-2 flex-shrink-0">
             {!isPDF && (
               <>
                 <Button variant="outline" size="sm" onClick={zoomOut} data-testid="button-zoom-out-image">

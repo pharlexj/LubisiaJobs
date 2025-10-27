@@ -49,6 +49,7 @@ export default function BoardScheduling() {
   const [selectedApplicants, setSelectedApplicants] = useState<Set<number>>(new Set());
   const [interviewDate, setInterviewDate] = useState('');
   const [interviewVenue, setInterviewVenue] = useState('');
+  const [interviewTime, setInterviewTime] = useState('');
   const [smsMessage, setSmsMessage] = useState('');
   
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
@@ -66,13 +67,19 @@ export default function BoardScheduling() {
     queryKey: ['/api/public/jobs'],
   });
 
+  // Fetch SMS balance for display
+  type SmsBalanceResp = { balance: number | null };
+  const { data: smsBalanceData } = useQuery<SmsBalanceResp>({
+    queryKey: ['/api/sms/balance'],
+    enabled: !!user,
+  });
+
   const { data: allApplications = [], isLoading: appsLoading } = useQuery({
     queryKey: ['/api/board/applications'],
     enabled: !!user && user.role === 'board',
   });
 
-  const selectedJobData = (jobs as any[]).find((j: any) => j.id.toString() === selectedJob);
-
+  const selectedJobData = (jobs as any[]).find((j: any) => j.id.toString() === selectedJob);  
   useEffect(() => {
     let message = 'We are pleased to invite you to an interview for the position of ';
     
@@ -90,7 +97,7 @@ export default function BoardScheduling() {
         month: 'long', 
         year: 'numeric' 
       });
-      message += `The interview is scheduled for ${formattedDate} at ${interviewVenue}. `;
+      message += `The interview is scheduled for ${formattedDate} ${interviewTime} at ${interviewVenue}. `;
     } else {
       message += 'Kindly select the interview date and venue to complete this message. ';
     }
@@ -107,7 +114,7 @@ export default function BoardScheduling() {
       if (!selectedJobData) throw new Error('Job not found');
 
       const jobApplications = (allApplications as any[]).filter(
-        app => app.jobId.toString() === data.jobId && app.status === 'shortlisted'
+        app => app.job.id.toString() === data.job.id && app.status === 'shortlisted'
       );
 
       return await apiRequest('POST', '/api/board/applications/bulk-update', {
@@ -192,7 +199,7 @@ export default function BoardScheduling() {
   });
 
   const sendSMSMutation = useMutation({
-    mutationFn: async (data: { applicationIds: number[]; message: string; interviewDate: string; interviewVenue: string }) => {
+    mutationFn: async (data: { applicationIds: number[]; message: string; interviewDate: string; interviewTime: string; interviewVenue: string }) => {
       return await apiRequest('POST', '/api/board/send-interview-sms', data);
     },
     onSuccess: () => {
@@ -297,10 +304,10 @@ export default function BoardScheduling() {
       return;
     }
 
-    if (!interviewDate || !interviewVenue) {
+    if (!interviewDate || !interviewTime || !interviewVenue) {
       toast({
         title: 'Missing information',
-        description: 'Please provide interview date and venue.',
+        description: 'Please provide interview date, time and venue.',
         variant: 'destructive',
       });
       return;
@@ -310,12 +317,13 @@ export default function BoardScheduling() {
       applicationIds: Array.from(selectedApplicants),
       message: smsMessage,
       interviewDate,
+      interviewTime,
       interviewVenue
     });
   };
 
   let filteredApplications = (allApplications as any[]).filter((app: any) => {
-    const matchesJob = !selectedJob || selectedJob === 'all' || app.jobId?.toString() === selectedJob;
+    const matchesJob = !selectedJob || selectedJob === 'all' || app.job.id?.toString() === selectedJob;
     const matchesShortlisted = shortlistedFilter === 'all' || 
       (shortlistedFilter === 'yes' && app.status === 'shortlisted') ||
       (shortlistedFilter === 'no' && app.status !== 'shortlisted');
@@ -370,7 +378,11 @@ export default function BoardScheduling() {
                       <DollarSign className="w-4 h-4" />
                       <span className="font-semibold">Current Balance:</span>
                     </div>
-                    <div className="text-lg md:text-2xl font-bold mt-1">KES 2,429.9999</div>
+                    <div className="text-lg md:text-2xl font-bold mt-1">
+                      {smsBalanceData && smsBalanceData.balance !== null
+                        ? `KES ${Number(smsBalanceData.balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : 'KES -'}
+                    </div>
                   </div>
                 </div>
                 
@@ -428,7 +440,7 @@ export default function BoardScheduling() {
                       <SelectItem value="all">All Jobs</SelectItem>
                       {(jobs as any[]).map((job: any) => (
                         <SelectItem key={job.id} value={job.id.toString()}>
-                          {job.advertNumb} =&gt; {job.title} [II] Job Group {job.jgName}
+                          {job.advertNumb} =&gt; {job.title} [II] Job Group {job.jg}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -540,7 +552,7 @@ export default function BoardScheduling() {
                               {app.nationalId || app.idNumber || 'N/A'}
                             </td>
                             <td className="py-3 px-3 md:px-4 text-xs md:text-sm" data-testid={`text-ward-${app.id}`}>
-                              {app.wardName || 'N/A'}
+                              {app.ward || 'N/A'}
                             </td>
                             <td className="py-3 px-3 md:px-4 text-xs md:text-sm" data-testid={`text-interview-date-${app.id}`}>
                               {app.interviewDate ? new Date(app.interviewDate).toLocaleDateString() : '-'}
@@ -572,7 +584,7 @@ export default function BoardScheduling() {
             <Card className="border-teal-200 shadow-md">
               <CardContent className="p-4 md:p-6 space-y-6">
                 {/* Interview Date & Venue */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="interview-date" className="text-sm font-semibold mb-2 block">
                       Scheduled Interview Date
@@ -589,15 +601,29 @@ export default function BoardScheduling() {
                   </div>
 
                   <div>
+                    <Label htmlFor="interview-time" className="text-sm font-semibold mb-2 block">
+                      Interview time
+                    </Label>
+                    <Input
+                      id="interview-time"
+                      type="text"
+                      value={interviewTime}
+                      onChange={(e) => setInterviewTime(e.target.value)}
+                      placeholder="9:30 AM or Morning"
+                      className="border-teal-300 focus:border-teal-500"
+                      data-testid="input-interview-time"
+                    />
+                  </div>
+                  <div>
                     <Label htmlFor="interview-venue" className="text-sm font-semibold mb-2 block">
-                      Interview Venue & time
+                      Interview Venue
                     </Label>
                     <Input
                       id="interview-venue"
                       type="text"
                       value={interviewVenue}
                       onChange={(e) => setInterviewVenue(e.target.value)}
-                      placeholder="Type the interview venue and time..."
+                      placeholder="CPSB Building..."
                       className="border-teal-300 focus:border-teal-500"
                       data-testid="input-interview-venue"
                     />
@@ -626,7 +652,7 @@ export default function BoardScheduling() {
                 <div className="flex justify-center pt-4">
                   <Button
                     onClick={handleSendSMS}
-                    disabled={selectedApplicants.size === 0 || sendSMSMutation.isPending || !interviewDate || !interviewVenue}
+                    disabled={selectedApplicants.size === 0 || sendSMSMutation.isPending || !interviewDate || !interviewTime || !interviewVenue}
                     className="bg-green-600 hover:bg-green-700 text-white px-6 md:px-8 py-4 md:py-6 text-base md:text-lg font-semibold shadow-lg hover:shadow-xl transition-all w-full md:w-auto"
                     data-testid="button-send-sms"
                   >

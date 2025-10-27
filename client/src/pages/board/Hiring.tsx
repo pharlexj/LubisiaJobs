@@ -15,12 +15,13 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { isUnauthorizedError } from '@/lib/authUtils';
 import { Award, X, Users, TrendingUp, CheckCircle, FileSpreadsheet, Download, Upload } from 'lucide-react';
-
+import { getApplications } from "@/lib/queryFns";
 export default function BoardHiring() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedJob, setSelectedJob] = useState('');
+  const [filterParam, setFilterParam] = useState('interviewed');
   const [passmark, setPassmark] = useState(0);
   const [selectedApplications, setSelectedApplications] = useState<number[]>([]);
   const [showResults, setShowResults] = useState(false);
@@ -32,10 +33,10 @@ export default function BoardHiring() {
   });
 
   const { data: applications = [], isLoading } = useQuery({
-    queryKey: ['/api/board/applications', { status: 'interviewed', jobId: selectedJob || undefined }],
+    queryKey: ['/api/board/applications', { status: filterParam, jobId: selectedJob || undefined }],
+    queryFn: getApplications,
     enabled: !!user && user.role === 'board' && showResults && !!selectedJob,
   });
-
   // Filter applications by passmark
   const filteredApplications = useMemo(() => {
     if (!showResults) return [];
@@ -59,6 +60,8 @@ export default function BoardHiring() {
     };
   }, [filteredApplications]);
 
+  console.log(selectedJob);
+  
   const handleGetList = () => {
     if (!selectedJob) {
       toast({
@@ -96,10 +99,8 @@ export default function BoardHiring() {
       }
       return await apiRequest('POST', '/api/board/applications/bulk-update', {
         applicationIds: selectedApplications,
-        updates: {
-          status: 'hired',
-          hiredAt: new Date()
-        }
+        status: 'hired',
+        hiredAt: new Date()
       });
     },
     onSuccess: () => {
@@ -136,9 +137,7 @@ export default function BoardHiring() {
       }
       return await apiRequest('POST', '/api/board/applications/bulk-update', {
         applicationIds: selectedApplications,
-        updates: {
-          status: 'rejected'
-        }
+        status: 'rejected'
       });
     },
     onSuccess: () => {
@@ -265,7 +264,7 @@ export default function BoardHiring() {
       <Navigation />
       <div className="flex">
         <Sidebar userRole={user?.role || 'applicant'} />
-        <main className="flex-1 p-4 md:p-6 lg:p-8 md:ml-64">
+        <main className="flex-1 p-6">
           <div className="max-w-7xl mx-auto">
             <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900" data-testid="text-hiring-title">
@@ -302,7 +301,7 @@ export default function BoardHiring() {
                         <SelectContent>
                           {(jobs as any[]).map((job: any) => (
                             <SelectItem key={job.id} value={job.id.toString()}>
-                              {job.refNumber} = {job.title}
+                              {job.advertNumb} = {job.title}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -310,7 +309,23 @@ export default function BoardHiring() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="filter-param" className="text-sm font-medium">Filter Parameter (optional)</Label>
+                      <Select
+                        value={filterParam}
+                        onValueChange={(value) => setFilterParam(value)}
+                      >
+                        <SelectTrigger id="filter-param" className="mt-1.5 w-full">
+                          <SelectValue placeholder="Select a filter" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="interviewed">Interviewed</SelectItem>
+                          <SelectItem value="hired">Hired</SelectItem>
+                          <SelectItem value="rejected">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div>
                       <Label htmlFor="passmark" className="text-sm font-medium">Passmark</Label>
                       <Input
@@ -346,7 +361,7 @@ export default function BoardHiring() {
                 {/* Job Title and Stats */}
                 <div className="mb-6">
                   <h2 className="text-lg sm:text-xl font-semibold text-teal-700 mb-4 text-center break-words px-2" data-testid="text-selected-job">
-                    {(jobs as any[]).find(j => j.id.toString() === selectedJob)?.refNumber} {(jobs as any[]).find(j => j.id.toString() === selectedJob)?.title}
+                    {(jobs as any[]).find(j => j.id.toString() === selectedJob)?.advertNumb} {(jobs as any[]).find(j => j.id.toString() === selectedJob)?.title}
                   </h2>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto">
                     <div className="flex flex-col items-center gap-2 bg-blue-50 p-3 rounded-lg border border-blue-200">
@@ -431,9 +446,9 @@ export default function BoardHiring() {
                                   <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{application.nationalId}</td>
                                   <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{application.gender}</td>
                                   <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{calculateAge(application.dateOfBirth)}</td>
-                                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{application.ethnicityName || 'N/A'}</td>
-                                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{application.countyName || 'N/A'}</td>
-                                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{application.wardName || 'N/A'}</td>
+                                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{application.ethnicity || 'N/A'}</td>
+                                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{application.county || 'N/A'}</td>
+                                  <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{application.ward || 'N/A'}</td>
                                   <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{application.phoneNumber}</td>
                                   <td className="py-3 px-2 sm:px-4 font-semibold text-xs sm:text-sm">{application.interviewScore || 0}</td>
                                   <td className="py-3 px-2 sm:px-4">

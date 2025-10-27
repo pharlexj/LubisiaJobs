@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { isUnauthorizedError } from '@/lib/authUtils';
+import { getApplications } from "@/lib/queryFns";
 import { 
   Star,
   Trophy,
@@ -74,6 +75,7 @@ export default function BoardScoring() {
 
   const { data: applications = [], isLoading } = useQuery({
     queryKey: ['/api/board/applications', { status: 'shortlisted' }],
+    queryFn: getApplications,
     enabled: !!user && user.role === 'board',
   });
 
@@ -124,8 +126,7 @@ export default function BoardScoring() {
         setTimeout(() => {
           window.location.href = '/';
         }, 500);
-        return;
-      }
+        return;     }
       toast({
         title: 'Error',
         description: error.message || 'Failed to save scoring',

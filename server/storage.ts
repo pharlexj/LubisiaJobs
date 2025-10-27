@@ -327,7 +327,6 @@ async getApplicant(userId: string): Promise<any> {
   };
 
   const applicantId = applicant.applicants.id;
-
   // Fetch related records (arrays)
   const [
     educationRecordsArr,
@@ -623,24 +622,30 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
       id: applications.id,
       status: applications.status,
       submittedOn: applications.submittedOn,
-      remarks: applications.remarks,
+      // remarks: applications.remarks,
       interviewDate: applications.interviewDate,
       interviewScore: applications.interviewScore,
+      interviewTime: applications.interviewTime,
+      interviewVenue: applications.interviewVenue,
+      interviewDuration: applications.interviewDuration,
+      
       createdAt: applications.createdAt,
       updatedAt: applications.updatedAt,
       applicantId: applicants.id,
       applicantUserId: applicants.userId,
       firstName: applicants.firstName,
       surname: applicants.surname,
+      lastName: applicants.otherName,
       nationalId: applicants.nationalId,
       dateOfBirth: applicants.dateOfBirth,
       gender: applicants.gender,
       ward: wards.name,
       constituency: constituencies.name,
-
+      county:counties.name,
       email: users.email,
       phoneNumber: users.phoneNumber,
-
+      ethnicity: applicants.ethnicity,
+      age: sql<number>`date_part('year', age(current_date, ${applicants.dateOfBirth}))`,
       jobId: jobs.id,
       jobTitle: jobs.title,
       jobDescription: jobs.description,
@@ -649,6 +654,16 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
 
       departmentId: departments.id,
       departmentName: departments.name,
+
+      scoreId:panelScores.scoreId,
+      panelId: panelScores.panelId,
+      academicScore: panelScores.academicScore,
+      experienceScore: panelScores.experienceScore,
+      skillsScore:panelScores.skillsScore,
+      leadershipScore: panelScores.leadershipScore,
+      generalScore: panelScores.generalScore,
+      negativeScore:panelScores.negativeScore,
+      remarks: panelScores.remarks,
     })
     .from(applications)
     .leftJoin(jobs, eq(applications.jobId, jobs.id))
@@ -657,50 +672,154 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
     .leftJoin(users, eq(users.id, applicants.userId))
     .leftJoin(JG, eq(JG.id, jobs.jg))
     .leftJoin(wards, eq(wards.id, applicants.wardId))
+    .leftJoin(counties, eq(counties.id, applicants.countyId))
     .leftJoin(constituencies, eq(constituencies.id, applicants.constituencyId))
+    .leftJoin(panelScores,eq(applications.id, panelScores.applicationId))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(applications.createdAt));
 
-  // Step 2: Fetch full applicant details for each application
+  // Step 2: Group rows by application id to avoid duplicate application entries
+  // when there are multiple panel score rows (one per panel member).
+  const appMap = new Map<number, any>();
+
+  for (const row of rawApplications) {
+    const appId = row.id as number;
+    if (!appMap.has(appId)) {
+      // clone base row fields (these are the repeated fields across panel rows)
+      appMap.set(appId, {
+        id: row.id,
+        status: row.status,
+        submittedOn: row.submittedOn,
+        remarks: row.remarks,
+        interviewDate: row.interviewDate,
+        interviewScore: row.interviewScore,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        jobId: row.jobId,
+        jobTitle: row.jobTitle,
+        jobDescription: row.jobDescription,
+        jgId: row.jgId,
+        jobGroupName: row.jobGroupName,
+        departmentId: row.departmentId,
+        departmentName: row.departmentName,
+        applicantId: row.applicantId,
+        applicantUserId: row.applicantUserId,
+        firstName: row.firstName,
+        surname: row.surname,
+        lastName: row.lastName,
+        nationalId: row.nationalId,
+        dateOfBirth: row.dateOfBirth,
+        gender: row.gender,
+        ward: row.ward,
+        constituency: row.constituency,
+        county: row.county,
+        email: row.email,
+        phoneNumber: row.phoneNumber,
+        ethnicity: row.ethnicity,
+        age: row.age,
+        interviewTime: row.interviewTime,
+        interviewVenue: row.interviewVenue,
+        interviewDuration: row.interviewDuration,
+        // container for panel scores per application
+        panelScores: [],
+      });
+    }
+
+    // push panel score row if present
+    if (row.scoreId) {
+      const entry = appMap.get(appId);
+      entry.panelScores.push({
+        scoreId: row.scoreId,
+        panelId: row.panelId,
+        academicScore: row.academicScore,
+        experienceScore: row.experienceScore,
+        skillsScore: row.skillsScore,
+        leadershipScore: row.leadershipScore,
+        generalScore: row.generalScore,
+        negativeScore: row.negativeScore,
+        remarks: row.remarks,
+      });
+    }
+  }
+
+  // Build final unique application list and fetch applicant-related arrays
+  const uniqueApps = Array.from(appMap.values());
+
   const applicationsWithFullApplicant = await Promise.all(
-    rawApplications.map(async (app) => {
-      const applicantId = app.applicantId;
+    uniqueApps.map(async (app) => {
+      const applicantId = app.applicantId as number | null;
       const userId = app.applicantUserId;
 
       // Get employee or payroll
-      const [employeeRecord] = await db.select()
-        .from(employees)
-        .where(eq((employees.applicantId), applicantId));
+      let employeeRecord: any = null;
+      if (applicantId != null) {
+        const [rec] = await db
+          .select()
+          .from(employees)
+          .where(eq(employees.applicantId, applicantId));
+        employeeRecord = rec;
+      }
 
       // Get all arrays related to the applicant
-      const [
-        educationRecordsArr,
-        shortCourseRecords,
-        qualificationRecords,
-        employmentRecords,
-        refereeRecords,
-        documentRecords,
-      ] = await Promise.all([
-        db.select().from(educationRecords).where(eq((educationRecords.applicantId), applicantId)),
-        db.select().from(shortCourse).where(eq((shortCourse.applicantId), applicantId)),
-        db.select().from(professionalQualifications).where(eq((professionalQualifications.applicantId), applicantId)),
-        db.select().from(employmentHistory).where(eq((employmentHistory.applicantId), applicantId)),
-        db.select().from(referees).where(eq((referees.applicantId), applicantId)),
-        db.select().from(documents).where(eq((documents.applicantId), applicantId)),
-      ]);
+      let educationRecordsArr: any[] = [];
+      let shortCourseRecords: any[] = [];
+      let qualificationRecords: any[] = [];
+      let employmentRecords: any[] = [];
+      let refereeRecords: any[] = [];
+      let documentRecords: any[] = [];
+
+      if (applicantId != null) {
+        [
+          educationRecordsArr,
+          shortCourseRecords,
+          qualificationRecords,
+          employmentRecords,
+          refereeRecords,
+          documentRecords,
+        ] = await Promise.all([
+          db.select().from(educationRecords).where(eq(educationRecords.applicantId, applicantId)),
+          db.select().from(shortCourse).where(eq(shortCourse.applicantId, applicantId)),
+          db
+            .select()
+            .from(professionalQualifications)
+            .where(eq(professionalQualifications.applicantId, applicantId)),
+          db.select().from(employmentHistory).where(eq(employmentHistory.applicantId, applicantId)),
+          db.select().from(referees).where(eq(referees.applicantId, applicantId)),
+          db.select().from(documents).where(eq(documents.applicantId, applicantId)),
+        ]);
+      }
+
+      // compute average scores across panel members for this application
+      const scores = app.panelScores || [];
+      const totalPanelMembers = scores.length;
+
+      const avg = (arrKey: string) => {
+        if (totalPanelMembers === 0) return 0;
+        const sum = scores.reduce((s: number, r: any) => s + (Number(r[arrKey]) || 0), 0);
+        return Math.round((sum / totalPanelMembers) * 100) / 100; // two-decimal
+      };
+
+      const avgAcademicScore = avg('academicScore');
+      const avgExperienceScore = avg('experienceScore');
+      const avgSkillsScore = avg('skillsScore');
+      const avgLeadershipScore = avg('leadershipScore');
+      const avgGeneralScore = avg('generalScore');
 
       const fullApplicant = {
         id: applicantId,
         userId: userId,
         firstName: app.firstName,
         surname: app.surname,
-        fullName: `${app.firstName} ${app.surname}`,
+        fullName: ` ${app.surname}, ${app.firstName} ${app.lastName}`,
         nationalId: app.nationalId,
         gender: app.gender,
         dateOfBirth: app.dateOfBirth,
         email: app.email,
+        ethnicity: app.ethnicity,
         phoneNumber: app.phoneNumber,
+        age: app.age,
         ward: app.ward,
+        county: app.county,
         constituency: app.constituency,
         employee: employeeRecord || null,
         education: educationRecordsArr,
@@ -709,10 +828,19 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
         employmentHistory: employmentRecords,
         referees: refereeRecords,
         documents: documentRecords,
+        interviewTime: app.interviewTime,
+        interviewVenue: app.interviewVenue,
+        interviewDuration: app.interviewDuration,
+        // aggregated scores
+        avgAcademicScore,
+        avgExperienceScore,
+        avgSkillsScore,
+        avgLeadershipScore,
+        avgGeneralScore,
+        totalPanelMembers,
       };
 
       return {
-        // id: app.id,
         status: app.status,
         submittedOn: app.submittedOn,
         remarks: app.remarks,
@@ -747,11 +875,30 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
   }
   // Update Applications
   async updateApplication(id: number, application: Partial<Application>): Promise<Application> {
+    // Normalize date/time fields coming from the client. The client often
+    // sends ISO strings (e.g. new Date().toISOString()). Drizzle's PG
+    // timestamp mapper expects a JS Date object and will call
+    // value.toISOString(). Coerce known timestamp fields here to Date
+    // objects to avoid TypeError: value.toISOString is not a function.
+    const data: any = { ...application };
+
+    if (data.shortlistedAt && typeof data.shortlistedAt === 'string') {
+      data.shortlistedAt = new Date(data.shortlistedAt);
+    }
+    if (data.hiredAt && typeof data.hiredAt === 'string') {
+      data.hiredAt = new Date(data.hiredAt);
+    }
+
+    // Prevent client from overriding server-managed timestamps
+    if ('createdAt' in data) delete data.createdAt;
+    if ('updatedAt' in data) delete data.updatedAt;
+
     const [updatedApplication] = await db
       .update(applications)
-      .set({ ...application, updatedAt: new Date() })
+      .set({ ...data, updatedAt: new Date() })
       .where(eq(applications.id, id))
       .returning();
+
     return updatedApplication;
   }
   // Location operations
@@ -2024,6 +2171,20 @@ async seedStudy(studyA: Omit<StudyArea, 'id'>): Promise<StudyArea> {
     const { sendSms } = await import('./lib/africastalking-sms');
     
     // Get applicant phone numbers
+    // Ensure IDs are numbers and build a safe IN-list
+    const ids = (applicantIds || []).map((v: any) => parseInt(String(v))).filter((n: number) => !isNaN(n));
+    if (ids.length === 0) {
+      return {
+        totalRecipients: 0,
+        successCount: 0,
+        failureCount: 0,
+        results: [],
+        jobId,
+        applicantType,
+        message
+      };
+    }
+
     const applicantsData = await db
       .select({
         id: applicants.id,
@@ -2032,7 +2193,7 @@ async seedStudy(studyA: Omit<StudyArea, 'id'>): Promise<StudyArea> {
         surname: applicants.surname
       })
       .from(applicants)
-      .where(sql`${applicants.id} = ANY(${applicantIds})`);
+      .where(sql`${applicants.id} IN (${ids.join(',')})`);
 
     const results = [];
     let successCount = 0;
@@ -2445,6 +2606,11 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
     return voteAccount;
   }
 
+  async deleteVoteAccount(id: number): Promise<VoteAccount | null> {
+    const [deleted] = await db.delete(voteAccounts).where(eq(voteAccounts.id, id)).returning();
+    return deleted || null;
+  }
+
   async getAllBudgets(): Promise<Budget[]> {
     return await db.select().from(budgets).orderBy(desc(budgets.createdAt));
   }
@@ -2563,10 +2729,11 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
     let query = db.select().from(rmsDocuments).where(isNull(rmsDocuments.deletedAt));
     
     if (status) {
-      query = query.where(eq(rmsDocuments.status, status as any)) as any;
+      // add status condition without narrowing the inferred query type
+      query = (query as any).where(eq(rmsDocuments.status, status as any)) as any;
     }
     if (priority) {
-      query = query.where(eq(rmsDocuments.priority, priority)) as any;
+      query = (query as any).where(eq(rmsDocuments.priority, priority)) as any;
     }
     
     return await query.orderBy(desc(rmsDocuments.receivedDate));
@@ -2586,12 +2753,27 @@ async getStudyAreaByName(name: string): Promise<StudyArea | undefined> {
   }
 
   async updateRmsDocument(id: number, updates: Partial<RmsDocument>): Promise<RmsDocument> {
+    // Validate status values to avoid Postgres enum errors when code and DB enums drift.
+    if (updates && (updates as any).status) {
+      const s = (updates as any).status as string;
+      const allowed = new Set(["received","forwarded_to_secretary","sent_to_chair","commented_by_chair","returned_to_secretary_from_chair","sent_to_hr","sent_to_committee","returned_to_hr_from_committee","returned_to_secretary_from_hr","agenda_set","board_meeting","decision_made","sent_to_records","dispatched","filed"]);
+      if (!allowed.has(s)) {
+        // Map a known code-side value to a safe DB enum if possible
+        if (s === 'returned_to_secretary_from_chair') {
+          (updates as any).status = 'forwarded_to_secretary';
+        } else {
+          // For unknown values, throw a clear error rather than letting Postgres return a 500 with an obscure enum error
+          throw new Error(`Invalid document status: ${s}`);
+        }
+      }
+    }
+
     const [updated] = await db
       .update(rmsDocuments)
       .set(updates)
       .where(eq(rmsDocuments.id, id))
       .returning();
-    
+
     return updated;
   }
 

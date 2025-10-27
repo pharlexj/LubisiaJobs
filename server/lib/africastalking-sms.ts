@@ -51,6 +51,7 @@ export const normalizePhone = (raw: string, defaultCountry = "+254"): string => 
 export class AfricasTalkingSMS {
   private cfg: Required<AfricasTalkingConfig>;
   private sms: any;
+  private at: any;
 
   constructor(cfg: AfricasTalkingConfig) {
     const merged: Required<AfricasTalkingConfig> = {
@@ -64,7 +65,43 @@ export class AfricasTalkingSMS {
     this.cfg = merged;
 
     const at = africastalking({ apiKey: this.cfg.apiKey, username: this.cfg.username });
+    this.at = at;
     this.sms = at.SMS;
+  }
+
+  /** Fetch account balance (best-effort). Returns null if unavailable. */
+  async getBalance(): Promise<number | null> {
+    try {
+      // Some SDKs expose a User or Account service — try common shapes safely
+      if (!this.at) return null;
+      const userService = this.at.User || this.at.Account || this.at.UserService;
+      if (userService && typeof userService.fetch === 'function') {
+        const res = await userService.fetch();
+        // Common SDK shapes: { UserData: { balance: 'KES 123.45' } } or { balance: '123.45' }
+        if (res && res.UserData && typeof res.UserData.balance === 'string') {
+          const match = res.UserData.balance.match(/[0-9,.]+/);
+          if (match) return Number(match[0].replace(/,/g, ''));
+        }
+        if (res && typeof res.balance === 'string') {
+          const match = res.balance.match(/[0-9,.]+/);
+          if (match) return Number(match[0].replace(/,/g, ''));
+        }
+      }
+
+      // If SDK call not available, try SMS service response (some SDKs include quota on SMS)
+      if (this.sms && typeof this.sms.fetchBalance === 'function') {
+        const r = await this.sms.fetchBalance();
+        if (r && r.balance) return Number(r.balance);
+      }
+
+      // Fall back to environment-provided estimate
+      const envBal = process.env.AFRICASTALKING_BALANCE;
+      if (envBal) return Number(envBal);
+    } catch (err) {
+      // swallow and return null — balance is best-effort
+      console.warn('Failed to fetch SMS balance:', err);
+    }
+    return null;
   }
 
   /** Send SMS */

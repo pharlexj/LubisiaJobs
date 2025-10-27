@@ -37,7 +37,7 @@ const { data: scoringStats, isLoading: loadingScoring } = useQuery({
   }); 
   // Calculate statistics
   const pendingReview = (applications as any).filter((app:any) => app.status === 'submitted').length;
-  const shortlisted = (applications as any).filter((app: any) => app.status === 'shortlisted').length;
+  const shortlisted = (applications as any).filter((app: any) => app.status === 'shortlisted' || app.status === 'interview_scheduled').length;
   const interviewed = (applications as any).filter((app: any) => app.status === 'interviewed').length;
   const appointed = (applications as any).filter((app: any) => app.status === 'hired').length;
 
@@ -47,13 +47,14 @@ const { data: scoringStats, isLoading: loadingScoring } = useQuery({
     .slice(0, 5);
 
   const upcomingInterviews = (applications as any)
-    .filter((app:any) => app.status === 'shortlisted' && app.interviewDate)
+    .filter((app:any) => app.status === 'shortlisted' || app.status === 'interview_scheduled' && app.interviewDate)
     .slice(0, 3);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'submitted':
         return 'bg-blue-100 text-blue-800';
+      case 'interview_scheduled':
       case 'shortlisted':
         return 'bg-green-100 text-green-800';
       case 'interviewed':

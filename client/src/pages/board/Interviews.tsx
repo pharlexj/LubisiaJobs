@@ -81,7 +81,7 @@ export default function BoardInterviews() {
   });
 
   const [jobFilter, setJobFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('shortlisted');
+  const [statusFilter, setStatusFilter] = useState('interview_scheduled');
 
   const { data: applications = [], isLoading } = useQuery({
     queryKey: [
@@ -108,6 +108,7 @@ export default function BoardInterviews() {
     enabled: !!selectedCandidate,
   });
 
+
   // Load existing score when candidate is selected
   useEffect(() => {
     if (myScore?.score) {
@@ -125,6 +126,30 @@ export default function BoardInterviews() {
     }
   }, [myScore]);
 
+  const calAvgScore =() => {
+    return (Number(averageScores.avgAcademicScore) +
+      Number(averageScores.avgExperienceScore) +
+      Number(averageScores.avgSkillsScore) +
+      Number(averageScores.avgLeadershipScore) +
+      Number(averageScores.avgGeneralScore)).toFixed(2)
+  }
+
+  const computeAppAvg = (application: any) => {
+    // If backend returned aggregated avg fields use them
+    if (application?.avgAcademicScore !== undefined) {
+      const total = Number(application.avgAcademicScore || 0) +
+        Number(application.avgExperienceScore || 0) +
+        Number(application.avgSkillsScore || 0) +
+        Number(application.avgLeadershipScore || 0) +
+        Number(application.avgGeneralScore || 0);
+      return Math.round((total) * 100) / 100; // keep two-decimal precision when needed
+    }
+    // Fallback to interviewScore if present
+    if (application?.interviewScore !== undefined && application.interviewScore !== null) {
+      return application.interviewScore;
+    }
+    return null;
+  }
 
   // Update interview mutation
   const updateInterviewMutation = useMutation({
@@ -754,17 +779,27 @@ export default function BoardInterviews() {
                               )}
                             </td>
                             <td className="py-3 px-4">
-                              <span className="text-gray-400">-</span>
+                              <span className="text-gray-400">{ calculateTotalScore()}</span>
                             </td>
                             <td className="py-3 px-4">
-                              {application.interviewScore ? (
-                                <div className="flex items-center">
-                                  <Award className="w-4 h-4 mr-1 text-yellow-600" />
-                                  <span className="font-medium">{application.interviewScore}/100</span>
-                                </div>
-                              ) : (
-                                <span className="text-gray-400">Not scored</span>
-                              )}
+                              {(() => {
+                                const avg = computeAppAvg(application);
+                                const panels = application.totalPanelMembers || application.totalPanelMembers === 0 ? application.totalPanelMembers : application.panelCount || null;
+                                if (avg !== null) {
+                                  return (
+                                    <div className="flex items-center space-x-2">
+                                      <div className="flex items-center">
+                                        <Award className="w-4 h-4 mr-1 text-yellow-600" />
+                                        <span className="font-medium">{avg}/100</span>
+                                      </div>
+                                      {panels !== null && panels !== undefined && (
+                                        <span className="text-sm text-gray-500">({panels} panel{panels > 1 ? 's' : ''})</span>
+                                      )}
+                                    </div>
+                                  );
+                                }
+                                return <span className="text-gray-400">Not scored</span>;
+                              })()}
                             </td>
                             <td className="py-3 px-4">
                               <Badge 
@@ -908,7 +943,8 @@ export default function BoardInterviews() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-blue-900">Panel Average Score</span>
                     <span className="text-lg font-bold text-blue-900">
-                      {averageScores.totalAverage?.toFixed(1) || 0}/100
+                      {/* {averageScores.totalAverage?.toFixed(1) || 0}/100 */}
+                      {calAvgScore() }
                     </span>
                   </div>
                 </div>

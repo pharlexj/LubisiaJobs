@@ -9,7 +9,7 @@ import multer from "multer";
 import path from "path";
 import bcrypt from "bcrypt";
 import passport from "passport";
-import { sendOtp, verifyOtp, normalizePhone } from "./lib/africastalking-sms";
+import { sendOtp, verifyOtp, normalizePhone, smsClient } from "./lib/africastalking-sms";
 import { ApplicantService } from "./applicantService";
 import { z } from "zod";
 import { createInsertSchema } from 'drizzle-zod';
@@ -59,6 +59,8 @@ const documentStorage = multer.diskStorage({
     cb(null, uniqueName);
   },
 });
+
+  // (moved) SMS balance endpoint will be registered later inside registerRoutes
 
 // File upload configuration
 const upload = multer({
@@ -130,6 +132,19 @@ function convertToCSV(data: any[], reportType: string): string {
 export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
   app.use('/uploads', express.static('uploads'));
+  // Backwards compatibility: serve uploads under /rms/uploads as well
+  app.use('/rms/uploads', express.static('uploads'));
+
+  // SMS balance endpoint (best-effort)
+  app.get('/api/sms/balance', isAuthenticated, async (req: any, res: any) => {
+    try {
+      const bal = await smsClient.getBalance();
+      res.json({ balance: bal });
+    } catch (err) {
+      console.error('Error fetching SMS balance:', err);
+      res.json({ balance: null });
+    }
+  });
 
   // Profile photo upload endpoint
   app.post('/api/upload/profile-photo', profilePhotoUpload.single('profilePhoto'), async (req, res) => {
@@ -1697,6 +1712,8 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
         return res.status(400).json({ message: 'Invalid gallery item ID' });
       }
 
+      // Use the storage's deleteGalleryItem (or equivalent) to remove or soft-delete the item
+      // If your storage implements soft-delete, deleteGalleryItem should mark isDeleted; otherwise it will remove the record.
       const galleryItem = await storage.deleteGalleryItem(galleryId);
       res.json(galleryItem);
     } catch (error) {
@@ -2533,8 +2550,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       }
 
       const jobId = req.query.jobId ? parseInt(req.query.jobId as string) : undefined;
-      const status = req.query.status as string | undefined;
-          
+      const status = req.query.status as string | undefined;          
       const applications = await storage.getApplications({ jobId, status });
       res.json(applications);
     } catch (error) {
@@ -2663,6 +2679,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       let panelScore;
       if (existingScore) {
         // Update existing score
+        await storage.updateApplication(applicationId,{status:"interviewed"})
         panelScore = await storage.updatePanelScore(existingScore.scoreId, {
           applicationId,
           panelId,
@@ -2687,6 +2704,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
           negativeScore: negativeScore || 0,
           remarks
         });
+        await storage.updateApplication(applicationId,{status:"interviewed"})
       }
 
       // Get updated average scores
@@ -3089,11 +3107,12 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
         return res.status(400).json({ message: 'No Excel file uploaded' });
       }
 
-      // Read and parse Excel file
-      const workbook = XLSX.readFile(req.file.path);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const data = XLSX.utils.sheet_to_json(worksheet);
+  // Read and parse Excel file. Use cellDates so date cells are returned as JS Date objects
+  const buffer = fs.readFileSync(req.file.path);
+    const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(worksheet);
 
       // Validate and process data
       const errors: any[] = [];
@@ -3103,7 +3122,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
         const row: any = data[i];
         
         // Validate required fields
-        if (!row.ApplicationId || !row.InterviewDate || !row.InterviewTime) {
+        if (!row.ApplicationId || (row.InterviewDate === undefined || row.InterviewDate === null) || !row.InterviewTime) {
           errors.push({
             row: i + 2, // +2 because Excel is 1-indexed and has header
             message: 'Missing required fields (ApplicationId, InterviewDate, or InterviewTime)'
@@ -3111,10 +3130,36 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
           continue;
         }
 
+        // Normalize InterviewDate to YYYY-MM-DD string. XLSX with cellDates:true will give Date objects for date cells.
+        let interviewDate: string | null = null;
+        const rawDate = row.InterviewDate;
+        try {
+          if (rawDate instanceof Date && !isNaN(rawDate.getTime())) {
+            interviewDate = rawDate.toISOString().split('T')[0];
+          } else if (typeof rawDate === 'number') {
+            // Excel sometimes gives serial date numbers; try to parse with SSF
+            const parsed = XLSX.SSF.parse_date_code(rawDate);
+            if (parsed) {
+              const d = new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d));
+              interviewDate = d.toISOString().split('T')[0];
+            }
+          } else if (typeof rawDate === 'string' && rawDate.trim()) {
+            const d = new Date(rawDate);
+            if (!isNaN(d.getTime())) interviewDate = d.toISOString().split('T')[0];
+          }
+        } catch (e) {
+          // fall through to error handling below
+        }
+
+        if (!interviewDate) {
+          errors.push({ row: i + 2, message: `Invalid InterviewDate value: ${String(rawDate)}` });
+          continue;
+        }
+
         updates.push({
           applicationId: parseInt(row.ApplicationId),
-          interviewDate: row.InterviewDate,
-          interviewTime: row.InterviewTime,
+          interviewDate,
+          interviewTime: String(row.InterviewTime),
           interviewVenue: row.InterviewVenue || 'TBD',
           interviewDuration: 30
         });
@@ -3139,10 +3184,11 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
             interviewDuration: update.interviewDuration,
             status: 'interview_scheduled'
           });
-        } catch (err) {
+        } catch (err: any) {
+          console.error(`Failed to update application ${update.applicationId}:`, err?.message || err);
           errors.push({
             applicationId: update.applicationId,
-            message: 'Failed to update application'
+            message: `Failed to update application: ${err?.message || 'Unknown error'}`
           });
         }
       }
@@ -3178,11 +3224,12 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
         return res.status(400).json({ message: 'No Excel file uploaded' });
       }
 
-      // Read and parse Excel file
-      const workbook = XLSX.readFile(req.file.path);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const data = XLSX.utils.sheet_to_json(worksheet);
+  // Read and parse Excel file
+  const buffer = fs.readFileSync(req.file.path);
+  const workbook = XLSX.read(buffer, { type: 'buffer' });
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const data = XLSX.utils.sheet_to_json(worksheet);
 
       // Validate and process data
       const errors: any[] = [];
@@ -3250,6 +3297,53 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     }
   });
 
+  // Send interview SMS to selected applicants (board)
+  app.post('/api/board/send-interview-sms', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'board') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const { applicationIds, message, interviewDate, interviewTime, interviewVenue } = req.body;
+
+      if (!applicationIds || !Array.isArray(applicationIds) || applicationIds.length === 0) {
+        return res.status(400).json({ message: 'applicationIds must be a non-empty array' });
+      }
+
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ message: 'message is required' });
+      }
+
+      // Update each application with interview details and mark as scheduled
+      const updated: number[] = [];
+      const errors: any[] = [];
+      for (const appId of applicationIds) {
+        try {
+          await storage.updateApplication(appId, {
+            interviewDate: interviewDate || undefined,
+            interviewTime: interviewTime || undefined,
+            interviewVenue: interviewVenue || undefined,
+            status: 'interview_scheduled',
+            shortlistSmsSent: true,
+          });
+          updated.push(appId);
+        } catch (err: any) {
+          console.error(`Failed to update application ${appId}:`, err?.message || err);
+          errors.push({ applicationId: appId, error: err?.message || String(err) });
+        }
+      }
+
+      // Send SMS to applicants (storage handles phone lookup and sending)
+      const smsResult = await storage.sendSMSToApplicants(applicationIds, message, null as any, 'applicants');
+
+      res.json({ success: true, updated: updated.length, errors: errors.length ? errors : undefined, smsResult });
+    } catch (error) {
+      console.error('Error sending interview SMS:', error);
+      res.status(500).json({ message: 'Failed to send interview SMS' });
+    }
+  });
+
   // Download Excel Template for Interview Scheduling
   app.get('/api/board/download-interview-template', isAuthenticated, async (req: any, res) => {
     try {
@@ -3270,7 +3364,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       }
       
       // Filter by status if specified (default to shortlisted)
-      const filterStatus = status || 'shortlisted';
+      const filterStatus = status || 'shortlisted' || 'interviewed';
       applications = applications.filter(app => app.status === filterStatus);
 
       // Create workbook with sample data
@@ -3280,11 +3374,12 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
         Name: app.fullName || '',
         IdNumber: app.nationalId || '',
         Gender: app.gender || '',
-        Ward: app.wardName || '',
+        Ward: app.ward || '',
         InterviewDate: '', // Empty for user to fill
         InterviewTime: '', // Empty for user to fill
         InterviewVenue: '' // Empty for user to fill
       }));
+      console.log(filterStatus,templateData);
 
       const worksheet = XLSX.utils.json_to_sheet(templateData);
       const workbook = XLSX.utils.book_new();
@@ -3346,7 +3441,8 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
         Name: app.fullName || '',
         IdNumber: app.nationalId || '',
         Gender: app.gender || '',
-        Ward: app.wardName || '',
+        Ethnicity: app.ethnicity || '',
+        Ward: app.ward || '',
         InterviewScore: app.interviewScore || '', // Show existing score if any
         Remarks: app.remarks || '' // Show existing remarks if any
       }));
@@ -3465,6 +3561,107 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
     } catch (error) {
       console.error('Error creating vote account:', error);
       res.status(500).json({ message: 'Failed to create vote account' });
+    }
+  });
+
+  // Bulk import vote accounts via Excel/CSV upload
+  app.post('/api/accounting/vote-accounts/bulk', isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'accountant') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      // Read and parse Excel file
+  const buffer = fs.readFileSync(req.file.path);
+  const workbook = XLSX.read(buffer, { type: 'buffer' });
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const data: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+      const errors: any[] = [];
+      const created: any[] = [];
+
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        // Expected columns: Code, Description, Allocated, FiscalYear
+        const code = row.Code || row.code || row.VoteCode || row.Vote || row.voteCode;
+        const description = row.Description || row.description || row.Desc || row.desc;
+        const allocated = row.Allocated || row.allocated || row.Amount || row.amount || 0;
+        const fiscalYear = row.FiscalYear || row.fiscalYear || (new Date().getFullYear() + '/' + (new Date().getFullYear() + 1));
+
+        if (!code || !description) {
+          errors.push({ row: i + 2, message: 'Missing required Code or Description' });
+          continue;
+        }
+
+        try {
+          const createdAccount = await storage.createVoteAccount({ code, description, allocated: Number(allocated) || 0, fiscalYear });
+          created.push(createdAccount);
+        } catch (err) {
+          errors.push({ row: i + 2, message: 'Failed to create vote account' });
+        }
+      }
+
+      // Clean up uploaded file
+      try { fs.unlinkSync(req.file.path); } catch (e) { /* ignore */ }
+
+      res.json({ message: 'Bulk import completed', total: data.length, created: created.length, errors: errors.length ? errors : undefined });
+    } catch (error) {
+      console.error('Error importing vote accounts bulk:', error);
+      if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      res.status(500).json({ message: 'Failed to import vote accounts' });
+    }
+  });
+
+  // Download Excel template for vote accounts
+  app.get('/api/accounting/vote-accounts/template', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !['accountant', 'admin'].includes(user.role!)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const templateData = [
+        { Code: '210501', Description: 'Travel and Transport', Allocated: 500000, FiscalYear: '2024/2025' },
+        { Code: '210502', Description: 'Office Supplies', Allocated: 100000, FiscalYear: '2024/2025' }
+      ];
+
+      const worksheet = XLSX.utils.json_to_sheet(templateData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Vote Accounts');
+      worksheet['!cols'] = [ { wch: 15 }, { wch: 40 }, { wch: 15 }, { wch: 15 } ];
+
+      const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename=vote-accounts-template-${Date.now()}.xlsx`);
+      res.send(buffer);
+    } catch (error) {
+      console.error('Error generating vote accounts template:', error);
+      res.status(500).json({ message: 'Failed to generate template' });
+    }
+  });
+
+  // Delete vote account
+  app.delete('/api/accounting/vote-accounts/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== 'accountant') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteVoteAccount(id);
+      if (!deleted) return res.status(404).json({ message: 'Vote account not found' });
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting vote account:', error);
+      res.status(500).json({ message: 'Failed to delete vote account' });
     }
   });
 
@@ -4082,7 +4279,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
   app.get('/api/rms/documents', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
-      if (!user || !hasRmsAccess(user.role)) {
+      if (!user || !hasRmsAccess((user as any).role)) {
         return res.status(403).json({ message: 'Access denied' });
       }
 
@@ -4099,10 +4296,9 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
   app.get('/api/rms/documents/:id', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
-      if (!user || !hasRmsAccess(user.role)) {
+      if (!user || !hasRmsAccess((user as any).role)) {
         return res.status(403).json({ message: 'Access denied' });
       }
-
       const documentId = parseInt(req.params.id);
       const document = await storage.getRmsDocument(documentId);
       const comments = await storage.getRmsComments(documentId);
@@ -4119,7 +4315,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
   app.post('/api/rms/documents/:id/forward', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
-      if (!user || !hasRmsAccess(user.role)) {
+      if (!user || !hasRmsAccess((user as any).role)) {
         return res.status(403).json({ message: 'Access denied' });
       }
 
@@ -4158,7 +4354,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
   app.get('/api/rms/comments/:documentId', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
-      if (!user || !hasRmsAccess(user.role)) {
+      if (!user || !hasRmsAccess((user as any).role)) {
         return res.status(403).json({ message: 'Access denied' });
       }
 
@@ -4175,7 +4371,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
   app.post('/api/rms/documents/:id/comments', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
-      if (!user || !hasRmsAccess(user.role)) {
+      if (!user || !hasRmsAccess((user as any).role)) {
         return res.status(403).json({ message: 'Access denied' });
       }
 
@@ -4219,7 +4415,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
   app.patch('/api/rms/documents/:id', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
-      if (!user || !hasRmsAccess(user.role)) {
+      if (!user || !hasRmsAccess((user as any).role)) {
         return res.status(403).json({ message: 'Access denied' });
       }
 
@@ -4276,7 +4472,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
   app.get('/api/rms/stats', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
-      if (!user || !hasRmsAccess(user.role)) {
+      if (!user || !hasRmsAccess((user as any).role)) {
         return res.status(403).json({ message: 'Access denied' });
       }
 

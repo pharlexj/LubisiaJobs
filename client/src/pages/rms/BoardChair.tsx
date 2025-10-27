@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/useAuth';
@@ -27,6 +27,7 @@ import {
   FileCheck,
   FileScan
 } from 'lucide-react';
+import { CornerUpLeft } from 'lucide-react';
 
 export default function BoardChair() {
   const { user } = useAuth();
@@ -37,6 +38,7 @@ export default function BoardChair() {
   const [documentToView, setDocumentToView] = useState<any>(null);
   const [remarks, setRemarks] = useState('');
   const [decision, setDecision] = useState<'approve' | 'reject' | 'defer' | ''>('');
+  const remarksRef = useRef<HTMLTextAreaElement | null>(null);
 
   const { data: stats } = useQuery({
     queryKey: ['/api/rms/stats'],
@@ -51,7 +53,7 @@ export default function BoardChair() {
     enabled: !!selectedDocument?.id,
   });
 
-  const pendingDocuments = documents?.filter((d: any) => 
+  const pendingDocuments = (documents as any)?.filter((d: any) => 
     d.status === 'sent_to_chair' || d.currentHandler === 'boardChair'
   ) || [];
 
@@ -155,7 +157,10 @@ export default function BoardChair() {
           id: selectedDocument.id,
           data: {
             toHandler: 'boardSecretary',
-            toStatus: 'returned_to_secretary_from_chair',
+            // Use an enum value that exists in the database. The codebase's schema includes
+            // 'returned_to_secretary_from_chair' but the DB may not have been migrated —
+            // use 'forwarded_to_secretary' which is the canonical in-DB value.
+            toStatus: 'forwarded_to_secretary',
             notes: `Reviewed by Board Chairperson - ${decision ? decision.toUpperCase() : 'REMARKS ADDED'}`
           }
         });
@@ -227,7 +232,7 @@ export default function BoardChair() {
       <Navigation />
       <div className="flex">
         <Sidebar userRole={user?.role || 'boardChair'} />
-        <main className="flex-1 p-4 md:p-6 lg:p-8 md:ml-64">
+        <main className="flex-1 p-6">
           <div className="max-w-7xl mx-auto">
             <div className="mb-6">
               <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent" data-testid="text-page-title">
@@ -257,7 +262,7 @@ export default function BoardChair() {
                     <div>
                       <p className="text-sm text-gray-600">Total Documents</p>
                       <p className="text-2xl font-bold text-gray-900" data-testid="stat-total">
-                        {stats?.total || 0}
+                        {(stats as any)?.total || 0}
                       </p>
                     </div>
                     <FileText className="w-10 h-10 text-teal-600" />
@@ -270,7 +275,7 @@ export default function BoardChair() {
                     <div>
                       <p className="text-sm text-gray-600">Reviewed</p>
                       <p className="text-2xl font-bold text-green-600" data-testid="stat-reviewed">
-                        {stats?.inProgress || 0}
+                        {(stats as any)?.inProgress || 0}
                       </p>
                     </div>
                     <CheckCircle className="w-10 h-10 text-green-600" />
@@ -418,12 +423,12 @@ export default function BoardChair() {
                 <Separator />
 
                 {/* Previous Comments */}
-                {allComments && allComments.length > 0 && (
+                {Array.isArray(allComments) && (allComments as any).length > 0 && (
                   <>
                     <div className="space-y-3">
                       <Label className="text-base font-semibold">Previous Comments & Recommendations</Label>
                       <div className="space-y-3">
-                        {allComments.map((comment: any) => (
+                        {(allComments as any).map((comment: any) => (
                           <div key={comment.id} className="bg-gray-50 p-3 rounded-lg border-l-4 border-l-teal-500">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
@@ -436,9 +441,25 @@ export default function BoardChair() {
                                   </Badge>
                                 )}
                               </div>
-                              <span className="text-xs text-gray-500">
-                                {new Date(comment.createdAt).toLocaleString()}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500">
+                                  {new Date(comment.createdAt).toLocaleString()}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    // Prefill remarks with a short reply context and focus textarea
+                                    const prefix = `Reply to ${comment.userRole}: `;
+                                    setRemarks(prefix);
+                                    // small timeout to ensure textarea is mounted/focused
+                                    setTimeout(() => remarksRef.current?.focus(), 0);
+                                  }}
+                                  aria-label="Reply to comment"
+                                >
+                                  <CornerUpLeft className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </div>
                             <p className="text-sm text-gray-700">{comment.comment}</p>
                           </div>
@@ -462,6 +483,7 @@ export default function BoardChair() {
                     <Textarea
                       value={remarks}
                       onChange={(e) => setRemarks(e.target.value)}
+                      ref={remarksRef}
                       placeholder="Enter your remarks, observations, and final decision..."
                       rows={6}
                       className="resize-none"

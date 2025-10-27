@@ -50,7 +50,8 @@ export default function ProfileForm({
       }
     : stepDefaults[step],
   });
-    // ✅ Field Arrays for dynamic sections
+  // ✅ Field Arrays for dynamic sections 
+  
   const {
     fields: educationRecords,
     append: addEducation,
@@ -90,6 +91,7 @@ export default function ProfileForm({
     useState(false);
   const [isVerifiedEmployee, setIsVerifiedEmployee] = useState(false);
   const [verifiedEmployeeData, setVerifiedEmployeeData] = useState<any>(null);
+  const [age, setAge] = useState<number | null>(null);
 
   // ✅ Dynamic file upload system
   const { state: uploadState } = useFileUpload((uploadConfigs as any).documents);  
@@ -118,10 +120,33 @@ export default function ProfileForm({
       setEmployeeLocked(true);
     }
   }, [profile]);
+  useEffect(() => {
+    const dob = profile?.dateOfBirth;
+    if (!dob) {
+      setAge(null);
+      return;
+    }
+
+    // Accept either a Date object or an ISO/date string
+    const d = dob instanceof Date ? dob : new Date(dob);
+    if (isNaN(d.getTime())) {
+      setAge(null);
+      return;
+    }
+
+    const today = new Date();
+    let years = today.getFullYear() - d.getFullYear();
+    const m = today.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < d.getDate())) {
+      years--;
+    }
+    setAge(years >= 0 ? years : null);
+  }, [profile?.dateOfBirth]);
+  
   // ✅ Submit handler
   // helper: is this field locked?
 const isFieldLocked = (field: keyof typeof profile.employee | string) => {
-  return Boolean(profile?.employee?.[field]);
+  return Boolean(profile?.employee?.[field] || profile?.[field]);
 };
 
   const [showNext, setShowNext] = useState(false);
@@ -403,8 +428,8 @@ const isFieldLocked = (field: keyof typeof profile.employee | string) => {
           </Select>
         </div>
         <div>
-          <Label>Date of Birth *</Label>
-          <Input type="date" {...form.register("dateOfBirth")} />
+          <Label>Date of Birth * {age && `(${age})`}</Label>
+          <Input type="date" {...form.register("dateOfBirth")} disabled={isFieldLocked("dateOfBirth")}/>
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

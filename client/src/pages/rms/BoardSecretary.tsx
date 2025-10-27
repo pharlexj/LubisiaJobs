@@ -52,29 +52,29 @@ export default function BoardSecretary() {
     queryKey: ['/api/rms/documents'],
   });
 
-  const { data: allComments } = useQuery({
+  const { data: allComments } = useQuery<any[]>({
     queryKey: ['/api/rms/comments', selectedDocument?.id],
     enabled: !!selectedDocument?.id,
   });
 
   // Filter documents by workflow stage
-  const newDocuments = documents?.filter((d: any) => 
+  const newDocuments = (documents as any)?.filter((d: any) => 
     d.status === 'forwarded_to_secretary' && d.currentHandler === 'boardSecretary'
   ) || [];
 
-  const fromChairDocuments = documents?.filter((d: any) => 
+  const fromChairDocuments = (documents as any)?.filter((d: any) => 
     d.status === 'returned_to_secretary_from_chair'
   ) || [];
 
-  const fromHRDocuments = documents?.filter((d: any) => 
+  const fromHRDocuments = (documents as any)?.filter((d: any) => 
     d.status === 'returned_to_secretary_from_hr'
   ) || [];
 
-  const agendaDocuments = documents?.filter((d: any) => 
+  const agendaDocuments = (documents as any)?.filter((d: any) => 
     d.status === 'agenda_set' || d.status === 'board_meeting'
   ) || [];
 
-  const afterMeetingDocuments = documents?.filter((d: any) => 
+  const afterMeetingDocuments = (documents as any)?.filter((d: any) => 
     d.status === 'decision_made'
   ) || [];
 
@@ -342,7 +342,7 @@ export default function BoardSecretary() {
       <Navigation />
       <div className="flex">
         <Sidebar userRole={user?.role || 'boardSecretary'} />
-        <main className="flex-1 p-4 md:p-6 lg:p-8 md:ml-64">
+        <main className="flex-1 p-6">
           <div className="max-w-7xl mx-auto">
             <div className="mb-6">
               <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-teal-600 to-teal-800 bg-clip-text text-transparent" data-testid="text-page-title">
@@ -565,12 +565,12 @@ export default function BoardSecretary() {
                 <Separator />
 
                 {/* Previous Comments */}
-                {allComments && allComments.length > 0 && (
+                {allComments && (allComments as any).length > 0 && (
                   <>
                     <div className="space-y-3">
                       <Label className="text-base font-semibold">Previous Comments</Label>
                       <div className="space-y-3">
-                        {allComments.map((c: any) => (
+                        {(allComments as any).map((c: any) => (
                           <div key={c.id} className="bg-gray-50 p-3 rounded-lg border-l-4 border-l-teal-500">
                             <div className="flex items-center justify-between mb-2">
                               <Badge variant="outline" className="text-xs">{c.userRole}</Badge>

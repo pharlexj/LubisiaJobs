@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import Navigation from '@/components/layout/Navigation';
@@ -44,6 +44,31 @@ export default function BoardShortlisting() {
   const [selectedApplicants, setSelectedApplicants] = useState<Set<number>>(new Set());
   const [showApplicantDetails, setShowApplicantDetails] = useState(false);
   const [selectedApplicant, setSelectedApplicant] = useState<any>(null);
+  const [age, setAge] = useState<number | null>(null);
+
+  // Compute age when selected applicant's dateOfBirth changes
+  useEffect(() => {
+    const dob = selectedApplicant?.dateOfBirth;
+    if (!dob) {
+      setAge(null);
+      return;
+    }
+
+    // Accept either a Date object or an ISO/date string
+    const d = dob instanceof Date ? dob : new Date(dob);
+    if (isNaN(d.getTime())) {
+      setAge(null);
+      return;
+    }
+
+    const today = new Date();
+    let years = today.getFullYear() - d.getFullYear();
+    const m = today.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < d.getDate())) {
+      years--;
+    }
+    setAge(years >= 0 ? years : null);
+  }, [selectedApplicant?.dateOfBirth]);
 
   const { data: jobs = [], isLoading: jobsLoading } = useQuery({
     queryKey: ['/api/public/jobs'],
@@ -164,20 +189,22 @@ export default function BoardShortlisting() {
       app.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.surname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase());
+      app.nationalId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.job.title?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesJob = !selectedJob || selectedJob === 'all' || app.jobId?.toString() === selectedJob;
+    const matchesJob = !selectedJob || selectedJob === 'all' || app.job.id?.toString() === selectedJob;
     const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
-    const matchesSubCounty = !subCounty || subCounty === 'all' || app.constituencyName?.toLowerCase().includes(subCounty.toLowerCase());
+    const matchesSubCounty = !subCounty || subCounty === 'all' || app.constituency?.toLowerCase().includes(subCounty.toLowerCase());
 
     return matchesSearch && matchesJob && matchesStatus && matchesSubCounty;
   });
 
-  const shortlistedCount = filteredApplications.filter((app: any) => app.status === 'shortlisted').length;
+  const shortlistedCount = filteredApplications.filter((app: any) => app.status === 'shortlisted' || app.status === 'interview_scheduled').length;
   const notShortlistedCount = filteredApplications.filter((app: any) => app.status === 'rejected').length;
   const pendingCount = filteredApplications.filter((app: any) => app.status === 'submitted').length;
 
   const isLoading = jobsLoading || appsLoading;
+
 
   if (isLoading) {
     return (
@@ -235,6 +262,33 @@ export default function BoardShortlisting() {
               <CardContent className="p-4 md:p-6 space-y-4 md:space-y-6 bg-gradient-to-b from-teal-50 to-white">
                 {/* Search and Job Selection */}
                 <div className="flex flex-col lg:flex-row gap-4">
+                  <div className="flex">
+                    <Select value={selectedJob} onValueChange={setSelectedJob}>
+                      <SelectTrigger className="w-full sm:w-64 border-teal-300 focus:border-teal-500" data-testid="select-job">
+                        <SelectValue placeholder="Select a job" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Jobs</SelectItem>
+                        {(jobs as any[]).map((job: any) => (
+                          <SelectItem key={job.id} value={job.id.toString()}>
+                            {job.advertNumb} - {job.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="w-full sm:w-40" data-testid="select-status">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="submitted">Submitted</SelectItem>
+                        <SelectItem value="shortlisted">Shortlisted</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select> */}
+                  </div>
                   <div className="flex-1">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -248,112 +302,7 @@ export default function BoardShortlisting() {
                     </div>
                   </div>
                   
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <Select value={selectedJob} onValueChange={setSelectedJob}>
-                      <SelectTrigger className="w-full sm:w-64 border-teal-300 focus:border-teal-500" data-testid="select-job">
-                        <SelectValue placeholder="Select a job" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Jobs</SelectItem>
-                        {(jobs as any[]).map((job: any) => (
-                          <SelectItem key={job.id} value={job.id.toString()}>
-                            {job.advertNumb} - {job.title} [{job.jgName}]
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-full sm:w-40" data-testid="select-status">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="submitted">Submitted</SelectItem>
-                        <SelectItem value="shortlisted">Shortlisted</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Years of Experience */}
-                <div>
-                  <Label className="text-sm md:text-base font-semibold mb-3 block">Choose the Required Years of Experience</Label>
-                  <RadioGroup value={yearsOfExperience} onValueChange={setYearsOfExperience}>
-                    <div className="flex flex-wrap gap-4 md:gap-6">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="0-3" id="exp-0-3" data-testid="radio-exp-0-3" />
-                        <Label htmlFor="exp-0-3" className="font-normal cursor-pointer text-sm md:text-base">0-3 Yrs</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="4-6" id="exp-4-6" data-testid="radio-exp-4-6" />
-                        <Label htmlFor="exp-4-6" className="font-normal cursor-pointer text-sm md:text-base">4-6 Yrs</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="7-10" id="exp-7-10" data-testid="radio-exp-7-10" />
-                        <Label htmlFor="exp-7-10" className="font-normal cursor-pointer text-sm md:text-base">7-10 Yrs</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="10+" id="exp-10plus" data-testid="radio-exp-10plus" />
-                        <Label htmlFor="exp-10plus" className="font-normal cursor-pointer text-sm md:text-base">Over 10 Yrs</Label>
-                      </div>
-                    </div>
-                  </RadioGroup>
-                </div>
-
-                {/* Filters Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Sub-County */}
-                  <div>
-                    <Label className="text-sm md:text-base font-semibold mb-2 block">Sub-County</Label>
-                    <Select value={subCounty} onValueChange={setSubCounty}>
-                      <SelectTrigger data-testid="select-subcounty">
-                        <SelectValue placeholder="Select sub-county" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Sub-Counties</SelectItem>
-                        {(constituencies as any[]).map((constituency: any) => (
-                          <SelectItem key={constituency.id} value={constituency.name}>
-                            {constituency.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* KCSE Mean Grade */}
-                  <div>
-                    <Label className="text-sm md:text-base font-semibold mb-2 block">KCSE Mean Grade</Label>
-                    <Select value={kcseMeanGrade} onValueChange={setKcseMeanGrade}>
-                      <SelectTrigger data-testid="select-kcse-grade">
-                        <SelectValue placeholder="--Select Required Mean Grade--" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Grades</SelectItem>
-                        <SelectItem value="A">A</SelectItem>
-                        <SelectItem value="A-">A-</SelectItem>
-                        <SelectItem value="B+">B+</SelectItem>
-                        <SelectItem value="B">B</SelectItem>
-                        <SelectItem value="B-">B-</SelectItem>
-                        <SelectItem value="C+">C+</SelectItem>
-                        <SelectItem value="C">C</SelectItem>
-                        <SelectItem value="C-">C-</SelectItem>
-                        <SelectItem value="D+">D+</SelectItem>
-                        <SelectItem value="D">D</SelectItem>
-                        <SelectItem value="D-">D-</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 items-center">
-                  <Button variant="outline" data-testid="button-more-filters">
-                    <Filter className="w-4 h-4 mr-2" />
-                    More Filters
-                  </Button>
-                </div>
+                </div> 
               </CardContent>
             </Card>
 
@@ -363,17 +312,31 @@ export default function BoardShortlisting() {
                 <h2 className="text-base md:text-lg font-semibold text-teal-700 mb-3" data-testid="text-job-title">
                   {(jobs as any[]).find((j: any) => j.id.toString() === selectedJob)?.advertNumb} {(jobs as any[]).find((j: any) => j.id.toString() === selectedJob)?.title}
                 </h2>
-                <div className="flex flex-wrap gap-3">
-                  <span className="text-xs md:text-sm">Total: {filteredApplications.length}</span>
-                  <Badge className="bg-teal-600 hover:bg-teal-700 text-xs md:text-sm" data-testid="badge-shortlisted">
-                    {shortlistedCount} Shortlisted
-                  </Badge>
-                  <Badge className="bg-red-600 hover:bg-red-700 text-xs md:text-sm" data-testid="badge-not-shortlisted">
-                    {notShortlistedCount} Not Shortlisted
-                  </Badge>
-                  <Badge className="bg-orange-600 hover:bg-orange-700 text-xs md:text-sm" data-testid="badge-pending">
-                    {pendingCount} Pending
-                  </Badge>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto">
+                  <div className="flex flex-col items-center gap-2 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <span className="font-medium text-sm text-gray-700">Total</span>
+                    <Badge variant="outline" className="bg-white text-blue-700 border-blue-300 text-lg font-bold" data-testid="badge-total">
+                      {filteredApplications.length}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-col items-center gap-2 bg-green-50 p-3 rounded-lg border border-green-200">
+                    <span className="font-medium text-sm text-gray-700">Shortlisted</span>
+                    <Badge variant="outline" className="bg-white text-green-700 border-green-300 text-lg font-bold" data-testid="badge-awarded">
+                      {shortlistedCount}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-col items-center gap-2 bg-red-50 p-3 rounded-lg border border-red-200">
+                    <span className="font-medium text-sm text-gray-700">Not Shortlisted</span>
+                    <Badge variant="outline" className="bg-white text-red-700 border-red-300 text-lg font-bold" data-testid="badge-not-awarded">
+                      {notShortlistedCount}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-col items-center gap-2 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                    <span className="font-medium text-sm text-gray-700">Pending</span>
+                    <Badge variant="outline" className="bg-white text-yellow-700 border-yellow-300 text-lg font-bold" data-testid="badge-pending">
+                      {pendingCount}
+                    </Badge>
+                  </div>
                 </div>
               </div>
             )}
@@ -408,8 +371,8 @@ export default function BoardShortlisting() {
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">#</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Full Name</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">ID Number</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Contacts</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Location</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Ethnicity</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">County</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Ward</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">SubCounty</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">ShortListed?</th>
@@ -434,24 +397,23 @@ export default function BoardShortlisting() {
                                 {app.nationalId || app.idNumber}
                               </td>
                               <td className="py-3 px-4 text-sm" data-testid={`text-contacts-${app.id}`}>
-                                {app.email || 'N/A'}
-                                {app.phoneNumber && <div className="text-xs text-gray-500">{app.phoneNumber}</div>}
+                                {app.ethnicity || 'N/A'}
                               </td>
                               <td className="py-3 px-4 text-sm" data-testid={`text-location-${app.id}`}>
-                                {app.countyName || 'N/A'}
+                                {app.county || 'N/A'}
                               </td>
                               <td className="py-3 px-4 text-sm" data-testid={`text-ward-${app.id}`}>
-                                {app.wardName || 'N/A'}
+                                {app.ward || 'N/A'}
                               </td>
                               <td className="py-3 px-4 text-sm" data-testid={`text-subcounty-${app.id}`}>
-                                {app.subCountyName || app.constituencyName || 'N/A'}
+                                {app.constituency || 'N/A'}
                               </td>
                               <td className="py-3 px-4">
                                 <Badge 
-                                  className={app.status === 'shortlisted' ? 'bg-green-600' : 'bg-gray-400'}
+                                  className={app.status === 'shortlisted' || app.status === 'interview_scheduled' ? 'bg-green-600' : 'bg-gray-400'}
                                   data-testid={`badge-status-${app.id}`}
                                 >
-                                  {app.status === 'shortlisted' ? 'Yes' : 'No'}
+                                  {app.status === 'shortlisted' || app.status === 'interview_scheduled' ? 'Yes' : 'No'}
                                 </Badge>
                               </td>
                               <td className="py-3 px-4">
@@ -559,9 +521,11 @@ export default function BoardShortlisting() {
                       <div>
                         <Label className="text-sm font-semibold text-gray-600 flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
-                          Date of Birth
+                          Date of Birth (Age)
                         </Label>
-                        <p className="mt-1">{selectedApplicant.dateOfBirth || 'Not provided'}</p>
+                        <p className="mt-1">
+                          {selectedApplicant.dateOfBirth || 'Not provided'} {age !== null ? `(${age} yrs)` : ''}
+                        </p>
                       </div>
                       <div>
                         <Label className="text-sm font-semibold text-gray-600">National ID</Label>
@@ -577,14 +541,14 @@ export default function BoardShortlisting() {
                           Location
                         </Label>
                         <p className="mt-1">
-                          {selectedApplicant.countyName && `${selectedApplicant.countyName}, `}
-                          {selectedApplicant.constituencyName && `${selectedApplicant.constituencyName}, `}
-                          {selectedApplicant.wardName}
+                          {selectedApplicant.county && `${selectedApplicant.county}, `}
+                          {selectedApplicant.constituency && `${selectedApplicant.constituency}, `}
+                          {selectedApplicant.ward}
                         </p>
                       </div>
                       <div>
                         <Label className="text-sm font-semibold text-gray-600">Application Status</Label>
-                        <Badge className={`mt-1 ${selectedApplicant.status === 'shortlisted' ? 'bg-green-600' : selectedApplicant.status === 'rejected' ? 'bg-red-600' : 'bg-blue-600'}`}>
+                        <Badge className={`mt-1 ${selectedApplicant.status === 'shortlisted' || selectedApplicant.status === 'interview_scheduled' ? 'bg-green-600' : selectedApplicant.status === 'rejected' ? 'bg-red-600' : 'bg-blue-600'}`}>
                           {selectedApplicant.status?.toUpperCase()}
                         </Badge>
                       </div>

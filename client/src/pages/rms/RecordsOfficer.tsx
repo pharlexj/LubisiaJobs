@@ -66,7 +66,7 @@ export default function RecordsOfficer() {
     queryKey: ['/api/public/config'],
   });
   
-  const departments = config?.departments || [];
+  const departments = (config as any)?.departments || [];
 
   // Register document mutation
   const registerDocumentMutation = useMutation({
@@ -197,7 +197,7 @@ export default function RecordsOfficer() {
         filePath: doc.filePath,
         mimeType: 'application/pdf',
         createdAt: doc.createdAt
-      });
+      });      
       setShowDocumentViewer(true);
     } else {
       toast({
@@ -240,7 +240,7 @@ export default function RecordsOfficer() {
       <Navigation />
       <div className="flex">
         <Sidebar userRole={user?.role || 'recordsOfficer'} />
-        <main className="flex-1 p-4 md:p-6 lg:p-8 md:ml-64">
+        <main className="flex-1 p-1">
           <div className="max-w-7xl mx-auto">
             {/* Header */}
             <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -436,7 +436,7 @@ export default function RecordsOfficer() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-600">Total Documents</p>
-                      <p className="text-2xl font-bold text-gray-900" data-testid="stat-total">{stats?.total || 0}</p>
+                      <p className="text-2xl font-bold text-gray-900" data-testid="stat-total">{(stats as any)?.total || 0}</p>
                     </div>
                     <FileText className="w-10 h-10 text-teal-600" />
                   </div>
@@ -447,7 +447,7 @@ export default function RecordsOfficer() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-600">Received</p>
-                      <p className="text-2xl font-bold text-blue-600" data-testid="stat-received">{stats?.received || 0}</p>
+                      <p className="text-2xl font-bold text-blue-600" data-testid="stat-received">{(stats as any)?.received || 0}</p>
                     </div>
                     <Clock className="w-10 h-10 text-blue-600" />
                   </div>
@@ -458,7 +458,7 @@ export default function RecordsOfficer() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-600">In Progress</p>
-                      <p className="text-2xl font-bold text-yellow-600" data-testid="stat-in-progress">{stats?.inProgress || 0}</p>
+                      <p className="text-2xl font-bold text-yellow-600" data-testid="stat-in-progress">{(stats as any)?.inProgress || 0}</p>
                     </div>
                     <Activity className="w-10 h-10 text-yellow-600" />
                   </div>
@@ -469,7 +469,7 @@ export default function RecordsOfficer() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-600">Dispatched</p>
-                      <p className="text-2xl font-bold text-green-600" data-testid="stat-dispatched">{stats?.dispatched || 0}</p>
+                      <p className="text-2xl font-bold text-green-600" data-testid="stat-dispatched">{(stats as any)?.dispatched || 0}</p>
                     </div>
                     <CheckCircle className="w-10 h-10 text-green-600" />
                   </div>
@@ -485,7 +485,7 @@ export default function RecordsOfficer() {
               <CardContent>
                 {isLoading ? (
                   <p className="text-center py-8 text-gray-600">Loading documents...</p>
-                ) : !documents || documents.length === 0 ? (
+                ) : !documents || (documents as any[]).length === 0 ? (
                   <p className="text-center py-8 text-gray-600">No documents registered yet.</p>
                 ) : (
                   <div className="overflow-x-auto">
@@ -502,7 +502,7 @@ export default function RecordsOfficer() {
                         </tr>
                       </thead>
                       <tbody>
-                        {documents.map((doc: any) => (
+                        {(documents as any[]).map((doc: any) => (
                           <tr key={doc.id} className="border-b hover:bg-gray-50" data-testid={`document-row-${doc.id}`}>
                             <td className="p-3 font-mono text-sm">{doc.referenceNumber}</td>
                             <td className="p-3 max-w-xs truncate">{doc.subject}</td>

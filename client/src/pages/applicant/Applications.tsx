@@ -47,6 +47,7 @@ export default function ApplicantApplications() {
         return 'bg-gray-100 text-gray-800';
       case 'submitted':
         return 'bg-blue-100 text-blue-800';
+      case 'interview_scheduled':
       case 'shortlisted':
         return 'bg-green-100 text-green-800';
       case 'interviewed':
@@ -64,6 +65,7 @@ export default function ApplicantApplications() {
     switch (status) {
       case 'submitted':
         return <FileText className="w-4 h-4" />;
+      case 'interview_scheduled':
       case 'shortlisted':
         return <CheckCircle className="w-4 h-4" />;
       case 'interviewed':
@@ -142,7 +144,7 @@ export default function ApplicantApplications() {
               <Card>
                 <CardContent className="p-6 text-center">
                   <div className="text-3xl font-bold text-green-600 mb-2">
-                    {statusCounts.shortlisted || 0}
+                    {statusCounts.shortlisted || statusCounts.interview_scheduled || 0}
                   </div>
                   <div className="text-gray-600">Shortlisted</div>
                 </CardContent>
@@ -274,23 +276,43 @@ export default function ApplicantApplications() {
                                 : 'Draft'}
                             </div>
                           </div>
-
-                          {application.interviewDate && (
+                          
+                          {application.status==="shortlisted" && (
                             <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                               <div className="flex items-center gap-2 text-yellow-800">
                                 <Calendar className="w-4 h-4" />
                                 <span className="font-medium">
-                                  Interview scheduled for {new Date(application.interviewDate).toLocaleDateString()}
+                                  Interview scheduled for {new Date(application.interviewDate).toLocaleDateString()} - {application.interviewTime} at {application.interviewVenue}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          {application.status==="hired" && (
+                            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                              <div className="flex items-center gap-2 text-green-800">
+                                <Award className="w-4 h-4" />
+                                <span className="font-medium">
+                                  Congratulations — you were selected for this position!
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          {application.status==="rejected" && (
+                            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                              <div className="flex items-center gap-2 text-red-800">
+                                <XCircle className="w-4 h-4" />
+                                <span className="font-medium">
+                                  <span>
+                                    Although you were not selected for this opportunity, we encourage you to apply for future openings that match your skills and experience.
+                                  </span>
                                 </span>
                               </div>
                             </div>
                           )}
 
-                          {application.remarks && (
-                            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                              <p className="text-blue-800 text-sm">
-                                <span className="font-medium">Remarks:</span> {application.remarks}
-                              </p>
+                          {application.status==="shortlisted" && (
+                            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">                              
+                                {application.remarks && <p className="text-blue-800 text-sm"> <span className="font-medium">Remarks:</span> {application.remarks}</p>}                              
                             </div>
                           )}
                         </div>
@@ -340,10 +362,16 @@ export default function ApplicantApplications() {
                                   }}
                                 />                                  
                                 </div>
-                                {selectedApplication?.remarks && (
+                                {selectedApplication?.status==="hired" && (
                                   <div>
                                     <span className="font-medium">Feedback:</span>
-                                    <p className="mt-1 text-gray-600">{selectedApplication.remarks}</p>
+                                    <p className="mt-1 text-gray-600">You were selected for this position!</p>
+                                  </div>
+                                )}
+                                {selectedApplication?.status==="shortlisted" && (
+                                  <div>
+                                    <span className="font-medium">Feedback:</span>
+                                    <p className="mt-1 text-gray-600">Interview scheduled for {new Date(selectedApplication.interviewDate).toLocaleDateString()} - {selectedApplication.interviewTime} at {selectedApplication.interviewVenue}</p>
                                   </div>
                                 )}
                               </div>
