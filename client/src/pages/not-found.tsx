@@ -14,14 +14,18 @@ const NotFound = () => {
 
   const getRedirectPath = () => {
     switch (role) {
-      case "admin":
-        return "/admin";
-      case "board":
-        return "/board";
-      case "applicant":
-        return "/dashboard";
-      default:
-        return "/";
+      case 'applicant': return '/dashboard';
+      case 'admin': return '/admin';
+      case 'board': return '/board';
+      case 'accountant': return '/accountant';
+      // RMS roles -> route under /rms/*
+      case 'recordsOfficer': return '/rms/records-officer';
+      case 'boardSecretary': return '/rms/board-secretary';
+      case 'boardChair': return '/rms/board-chair';
+      case 'chiefOfficer': return '/rms/chief-officer';
+      case 'boardCommittee': return '/rms/board-committee';
+      case 'HR': return '/rms/hr';
+      default: return '/';
     }
   };
   const handleRedirect = () => {

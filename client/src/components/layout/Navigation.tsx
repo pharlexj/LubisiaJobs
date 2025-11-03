@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Menu, Building, LogOut, User, Settings } from 'lucide-react';
+import { Menu, Building, LogOut, User, Settings, DockIcon } from 'lucide-react';
 import AuthDrawer from './AuthDrawer';
 
 export default function Navigation() {
@@ -104,7 +104,7 @@ export default function Navigation() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={user?.profileImageUrl} alt={user?.firstName} />
+                        <AvatarImage src={user?.profileImageUrl} alt={user?.firstName.toUpperCase()} />
                         <AvatarFallback>{getUserInitials()}</AvatarFallback>
                       </Avatar>
                     </Button>
@@ -130,6 +130,14 @@ export default function Navigation() {
                         <Link href="/profile">
                           <Settings className="mr-2 h-4 w-4" />
                           Profile
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    {user?.role === 'applicant' && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/applications">
+                          <DockIcon className="mr-2 h-4 w-4" />
+                          Track Application
                         </Link>
                       </DropdownMenuItem>
                     )}

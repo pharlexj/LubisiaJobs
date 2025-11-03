@@ -25,7 +25,8 @@ import {
   Building2,
   User,
   FileCheck,
-  FileScan
+  FileScan,
+  FlagIcon
 } from 'lucide-react';
 import { CornerUpLeft } from 'lucide-react';
 
@@ -45,7 +46,15 @@ export default function BoardChair() {
   });
 
   const { data: documents, isLoading } = useQuery({
-    queryKey: ['/api/rms/documents'],
+    queryKey: ['/api/rms/documents', { includeDetails: true }],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/rms/documents?includeDetails=true');
+      return response.map((d: any) => ({
+        ...d.document,
+        comments: d.comments,
+        workflowLog: d.workflowLog,
+      }));
+    },
   });
 
   const { data: allComments } = useQuery({
@@ -70,6 +79,7 @@ export default function BoardChair() {
       queryClient.invalidateQueries({ queryKey: ['/api/rms/documents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/rms/stats'] });
       queryClient.invalidateQueries({ queryKey: ['/api/rms/comments'] });
+      queryClient.removeQueries({ queryKey: ['/api/rms/documents', selectedDocument?.id] });
       setRemarks('');
       setDecision('');
       setShowReviewDialog(false);
@@ -242,7 +252,7 @@ export default function BoardChair() {
             </div>
 
             {/* Statistics */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
               <Card className="border-l-4 border-l-purple-500">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -273,12 +283,25 @@ export default function BoardChair() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Reviewed</p>
-                      <p className="text-2xl font-bold text-green-600" data-testid="stat-reviewed">
-                        {(stats as any)?.inProgress || 0}
+                      <p className="text-sm text-gray-600">Urgent</p>
+                      <p className="text-2xl font-bold text-green-600" data-testid="stat-urgent">
+                        {(stats as any)?.urgent || 0}
                       </p>
                     </div>
-                    <CheckCircle className="w-10 h-10 text-green-600" />
+                    <FlagIcon className="w-10 h-10 text-green-700" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-l-green-300">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Reviewed</p>
+                      <p className="text-2xl font-bold text-green-300" data-testid="stat-reviewed">
+                        {(stats as any)?.chairCommented || 0}
+                      </p>
+                    </div>
+                    <CheckCircle className="w-10 h-10 text-green-300" />
                   </div>
                 </CardContent>
               </Card>
@@ -383,7 +406,7 @@ export default function BoardChair() {
 
       {/* Review Dialog */}
       <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" data-testid="dialog-review-document">
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col" data-testid="dialog-review-document">
           <DialogHeader>
             <DialogTitle className="text-xl">Board Chairperson Review</DialogTitle>
           </DialogHeader>

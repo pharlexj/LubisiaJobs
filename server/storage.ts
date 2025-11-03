@@ -569,17 +569,67 @@ async upsertEmploymentHistory(applicantId: number, jobs: any[]) {
     conditions.push(eq(jobs.departmentId, filters.departmentId));
   }
 
-  return await db
-    .select()
+  const job = await db
+    .select({
+      id: jobs.id,
+      advertNumb: jobs.advertNumb,
+      title: jobs.title,
+      description: jobs.description,
+      departmentId: jobs.departmentId,
+      designationId: jobs.designationId,
+      requirements: jobs.requirements,
+      isActive: jobs.isActive,
+      category: jobs.category,
+      experience: jobs.experience,
+      posts: jobs.posts,
+      venue: jobs.venue,
+      requiredSpecializationIds: jobs.requiredSpecializationIds,
+      certificateLevel: jobs.certificateLevel,
+      requiredStudyAreaId: jobs.requiredStudyAreaId,
+      progressionAllowed: jobs.progressionAllowed,
+      isReleased: jobs.isReleased,
+      advertType: jobs.advertType,
+      status: jobs.status,
+      startDate: jobs.startDate,
+      endDate: jobs.endDate,
+      archivedAt: jobs.archivedAt,
+      jg:jobs.jg,
+      jgName: JG.name, // Include only the name from JG
+    })
     .from(jobs)
-    // .leftJoin(departments,eq(jobs.departmentId,departments.id))
+    .leftJoin(JG, eq(jobs.jg,JG.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(jobs.createdAt));
+      .orderBy(desc(jobs.createdAt));
+    return job;
 }
 // Fetch Jobs
   async getJob(id: number): Promise<any | undefined> {
     const [job] = await db
-      .select()
+      .select({
+      id: jobs.id,
+      advertNumb: jobs.advertNumb,
+      title: jobs.title,
+      description: jobs.description,
+      departmentId: jobs.departmentId,
+      designationId: jobs.designationId,
+      requirements: jobs.requirements,
+      isActive: jobs.isActive,
+      category: jobs.category,
+      experience: jobs.experience,
+      posts: jobs.posts,
+      venue: jobs.venue,
+      requiredSpecializationIds: jobs.requiredSpecializationIds,
+      certificateLevel: jobs.certificateLevel,
+      requiredStudyAreaId: jobs.requiredStudyAreaId,
+      progressionAllowed: jobs.progressionAllowed,
+      isReleased: jobs.isReleased,
+      advertType: jobs.advertType,
+      status: jobs.status,
+      startDate: jobs.startDate,
+      endDate: jobs.endDate,
+      archivedAt: jobs.archivedAt,
+      jgName: JG.name, // Include only the name from JG
+    })
       .from(jobs)
       .leftJoin(JG, eq(jobs.jg,JG.id))
       .where(eq(jobs.id, id));

@@ -12,6 +12,7 @@ import { Loader2, CheckCircle2, Circle } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/context/AuthContext";
+import { useFileUpload, uploadConfigs } from "@/hooks/useFileUpload";
 
 export default function ProfileSettingsDrawer({ open, onClose, user }: any) {
   const { toast } = useToast();
@@ -19,9 +20,12 @@ export default function ProfileSettingsDrawer({ open, onClose, user }: any) {
 
   const [email, setEmail] = useState(user?.email || "");
   const [password, setPassword] = useState("");
-  const [photo, setPhoto] = useState<File | null>(null);
+  const [profilePhoto, setPhoto] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  const { uploadFile, state } = useFileUpload((uploadConfigs as any))
 
+  
   // ✅ Password strength logic
   const passwordChecks = useMemo(() => {
     return {
@@ -43,7 +47,7 @@ export default function ProfileSettingsDrawer({ open, onClose, user }: any) {
     const formData = new FormData();
     formData.append("email", email);
     if (password) formData.append("password", password);
-    if (photo) formData.append("profilePhoto", photo);
+    if (profilePhoto) formData.append("profilePhoto", profilePhoto);
 
     try {
       const res = await fetch("/api/users/update-profile", {
@@ -84,9 +88,9 @@ export default function ProfileSettingsDrawer({ open, onClose, user }: any) {
           <div className="space-y-2">
             <Label>Profile Photo</Label>
 
-            {photo ? (
+            {profilePhoto ? (
               <img
-                src={URL.createObjectURL(photo)}
+                src={URL.createObjectURL(profilePhoto)}
                 alt="Preview"
                 className="w-24 h-24 rounded-full object-cover border border-gray-200"
               />
@@ -138,9 +142,9 @@ export default function ProfileSettingsDrawer({ open, onClose, user }: any) {
                 <ul className="space-y-1 text-gray-600">
                   {[
                     { key: "length", label: "At least 8 characters" },
-                    { key: "upper", label: "An uppercase letter (A–Z)" },
-                    { key: "lower", label: "A lowercase letter (a–z)" },
-                    { key: "number", label: "A number (0–9)" },
+                    { key: "upper", label: "An uppercase letter (A-Z)" },
+                    { key: "lower", label: "A lowercase letter (a-z)" },
+                    { key: "number", label: "A number (0-9)" },
                     { key: "special", label: "A special symbol (!@#$%)" },
                   ].map(({ key, label }) => (
                     <li key={key} className="flex items-center gap-2">

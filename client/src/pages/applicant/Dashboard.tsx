@@ -77,8 +77,6 @@ const buttonLabel = isComplete ? "View Your Profile" : "Continue Profile Setup";
         return "bg-gray-100 text-gray-800";
     }
   };
-console.log(applications);
-
   return (
     <div className="min-h-screen bg-neutral-50">
       <Navigation />

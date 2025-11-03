@@ -23,8 +23,16 @@ export default function HR() {
     queryKey: ['/api/rms/stats'],
   });
 
-  const { data: documents, isLoading } = useQuery({
-    queryKey: ['/api/rms/documents'],
+const { data: documents, isLoading } = useQuery({
+    queryKey: ['/api/rms/documents', { includeDetails: true }],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/rms/documents?includeDetails=true');
+      return response.map((d: any) => ({
+        ...d.document,
+        comments: d.comments,
+        workflowLog: d.workflowLog,
+      }));
+    },
   });
 
   const fromSecretaryDocuments = documents?.filter((d: any) => 
@@ -171,7 +179,7 @@ export default function HR() {
       <Navigation />
       <div className="flex">
         <Sidebar userRole={user?.role || 'HR'} />
-        <main className="flex-1 p-4 md:p-6 lg:p-8 md:ml-64">
+        <main className="flex-1 p-6">
           <div className="max-w-7xl mx-auto">
             <div className="mb-6">
               <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-600 to-indigo-800 bg-clip-text text-transparent" data-testid="text-page-title">

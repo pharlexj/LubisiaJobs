@@ -29,6 +29,8 @@ import { toast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { formatDeadline, formatJobText } from "@/lib/date-utils";
 import { useInheritance } from '@/hooks/useInheritance';
+import {checkEligibility, getJobRequirements } from "@/lib/jobUtils";
+
 
 interface JobCardProps {
   job: any;
@@ -52,7 +54,8 @@ export default function JobCard({
 
   const [showDetails, setShowDetails] = useState(false);
   const specialized = showDetails? job.requiredSpecializationIds: job.requiredSpecializationIds.slice(0, 2);
-
+  
+      
   const applyMutation = useMutation({
   mutationFn: () => applyToJob(job.id),
   onSuccess: () => {
@@ -141,8 +144,6 @@ export default function JobCard({
             edu.doca ? new Date(edu.doca) : new Date(),
             rules
           );
-          console.log(currentLevel,targetLevel);
-
           if (!result.allowed) {
             return { eligible: false, reason: result.reason || 'Progression not allowed.' };
           } else {
@@ -166,7 +167,10 @@ export default function JobCard({
     return { eligible: false, reason };
   }
   }    
-  const eligibility = getEligibility();
+  // const eligibility = getEligibility();
+  const eligibility = checkEligibility(job, applicantProfile, isAuthenticated);
+
+  // console.log(eligibility);
   // ----------------- Required Qualifications Renderer -----------------
   const getRequiredQualifications = () => {
     const studyArea = studyAreas.find((sa: any) => sa.id === job.requiredStudyAreaId);

@@ -82,19 +82,20 @@ export default function BoardShortlisting() {
   const { data: constituencies = [] } = useQuery({
     queryKey: ['/api/constituencies'],
   });
+  const selected = (jobs as any[]).find((j: any) => j.id.toString() === selectedJob);
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ applicationIds, status }: { applicationIds: number[]; status: string }) => {
-      console.log('Updating applications:', { applicationIds, status });
       const result = await apiRequest('POST', '/api/board/applications/bulk-update', {
         applicationIds,
         status,
         shortlistedAt: status === 'shortlisted' ? new Date().toISOString() : undefined
       });
-      console.log('Update result:', result);
       return result;
     },
     onSuccess: (data) => {
+      console.log(data?.status);
+      
       const statusText = data?.status === 'shortlisted' ? 'shortlisted' : 'rejected';
       toast({
         title: 'Success!',
@@ -192,7 +193,7 @@ export default function BoardShortlisting() {
       app.nationalId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.job.title?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesJob = !selectedJob || selectedJob === 'all' || app.job.id?.toString() === selectedJob;
+    const matchesJob = !selectedJob || selectedJob === 'all' || app?.job?.id?.toString() === selectedJob;
     const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
     const matchesSubCounty = !subCounty || subCounty === 'all' || app.constituency?.toLowerCase().includes(subCounty.toLowerCase());
 
@@ -262,7 +263,8 @@ export default function BoardShortlisting() {
               <CardContent className="p-4 md:p-6 space-y-4 md:space-y-6 bg-gradient-to-b from-teal-50 to-white">
                 {/* Search and Job Selection */}
                 <div className="flex flex-col lg:flex-row gap-4">
-                  <div className="flex">
+                  {/* First Column: Job + Status Select */}
+                  <div className="flex flex-[0.5] gap-3">
                     <Select value={selectedJob} onValueChange={setSelectedJob}>
                       <SelectTrigger className="w-full sm:w-64 border-teal-300 focus:border-teal-500" data-testid="select-job">
                         <SelectValue placeholder="Select a job" />
@@ -270,14 +272,14 @@ export default function BoardShortlisting() {
                       <SelectContent>
                         <SelectItem value="all">All Jobs</SelectItem>
                         {(jobs as any[]).map((job: any) => (
-                          <SelectItem key={job.id} value={job.id.toString()}>
-                            {job.advertNumb} - {job.title}
+                          <SelectItem key={job?.id} value={job?.id?.toString()}>
+                            {job?.advertNumb} - {job?.title} {job?.jgName ? `[JG: ${job.jgName}]` : ''}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
 
-                    {/* <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
                       <SelectTrigger className="w-full sm:w-40" data-testid="select-status">
                         <SelectValue placeholder="Status" />
                       </SelectTrigger>
@@ -287,10 +289,12 @@ export default function BoardShortlisting() {
                         <SelectItem value="shortlisted">Shortlisted</SelectItem>
                         <SelectItem value="rejected">Rejected</SelectItem>
                       </SelectContent>
-                    </Select> */}
+                    </Select>
                   </div>
-                  <div className="flex-1">
-                    <div className="relative">
+
+                  {/* Second Column: Search */}
+                  <div className="flex flex-[0.5]">
+                    <div className="relative w-full">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                       <Input
                         placeholder="Search by applicant name or job title..."
@@ -301,18 +305,29 @@ export default function BoardShortlisting() {
                       />
                     </div>
                   </div>
-                  
-                </div> 
+                </div>
               </CardContent>
+
             </Card>
 
             {/* Status Overview */}
             {selectedJob && (
               <div className="bg-white border rounded-lg p-4">
                 <h2 className="text-base md:text-lg font-semibold text-teal-700 mb-3" data-testid="text-job-title">
-                  {(jobs as any[]).find((j: any) => j.id.toString() === selectedJob)?.advertNumb} {(jobs as any[]).find((j: any) => j.id.toString() === selectedJob)?.title}
-                </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto">
+                    {selected?.advertNumb} {selected?.title}{' '}
+                    {selected?.jgName && (
+                      <span className="text-sm text-gray-500">
+                        [JG: {selected.jgName}]
+                      </span>
+                    )}
+                  </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 max-w-4xl mx-auto">
+                  <div className="flex flex-col items-center gap-2 bg-black-50 p-3 rounded-lg border border-black-200">
+                    <span className="font-medium text-sm text-gray-700">Required</span>
+                    <Badge variant="outline" className="bg-white text-black-700 border-black-300 text-lg font-bold" data-testid="badge-total">
+                      {selected?.posts || 0}
+                    </Badge>
+                  </div>
                   <div className="flex flex-col items-center gap-2 bg-blue-50 p-3 rounded-lg border border-blue-200">
                     <span className="font-medium text-sm text-gray-700">Total</span>
                     <Badge variant="outline" className="bg-white text-blue-700 border-blue-300 text-lg font-bold" data-testid="badge-total">

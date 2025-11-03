@@ -39,7 +39,7 @@ export function checkEligibility(job: any, applicantProfile: any, isAuthenticate
         }
       }
     }
-    return { eligible: true };
+    return { eligible: true, reason: 'You meet all education requirements.' };
   }
   return { eligible: false, reason: lastReason };
 }
@@ -56,3 +56,4 @@ export function getJobRequirements(job: any, studyAreas: any[], certificateLevel
     progressionAllowed: job.progressionAllowed || false,
   };
 }
+

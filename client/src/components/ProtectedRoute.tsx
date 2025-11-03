@@ -16,10 +16,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   allowedRoles,
 }) => {
   const { user } = useAuth();
-
-  if (!user || !allowedRoles.includes(user.role)) {
-    return <Route path={path} component={NotFound} />;
-  }
-
-  return <Route path={path} component={() => <Component />} />;
+  if (user && allowedRoles.includes(user?.role))
+    return <Route path={path} component={() => <Component />} />;
+ return <Route path={path} component={NotFound} />;  
 };

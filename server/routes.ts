@@ -210,7 +210,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: err.message || "Signup failed" });
     }
   });
-
+  // Update Profile
+  app.patch("/api/users/update-profile", profilePhotoUpload.single("profilePhoto"), async (req:any, res) => {
+    try {
+      const { email, password, phoneNumber } = req.body;      
+      const profilePhoto = req.file ? req.file.filename : "avatar.jpg";
+      const fileUrl = `/uploads/profile-photos/${profilePhoto}`    
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const newUser = await storage.upsertUser({
+        password: hashedPassword,
+        passwordHash: hashedPassword,
+        phoneNumber: phoneNumber ?? req?.user?.phoneNumber,
+        profileImageUrl: fileUrl,
+        email:email ?? req?.user?.email,
+      });
+        res.status(201).json({ user: newUser });    
+    } catch (err: any) {
+      console.error("Profile Setup error:", err);
+      res.status(500).json({ message: err.message || "Profile Setting failed" });
+    }
+  });
   // --- Login ---
   app.post("/api/auth/login", passport.authenticate("local"), (req, res) => {    
       res.json({ user: req.user });
@@ -2604,7 +2623,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
         updates.push(updated);
       }
 
-      res.json({ success: true, updated: updates.length });
+      res.json({ success: true, updated: updates.length, status });
     } catch (error) {
       console.error('Error bulk updating applications:', error);
       res.status(500).json({ message: 'Failed to bulk update applications' });
@@ -2785,7 +2804,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
         return res.status(403).json({ message: 'Access denied' });
       }
 
-      const applications = await storage.getApplications({ status: 'shortlisted' });
+      const applications = await storage.getApplications({ status: '' });
       
       // Get all scored applications count
       let totalScoredApplications = 0;
@@ -4235,7 +4254,7 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
 
   // Helper function to check RMS access
   const hasRmsAccess = (role: string) => {
-    return ['recordsOfficer', 'boardSecretary', 'chiefOfficer', 'boardChair', 'boardCommittee', 'HR', 'admin'].includes(role);
+    return ['recordsOfficer', 'boardSecretary', 'chiefOfficer', 'boardChair', 'boardCommittee', 'HR', 'admin','board'].includes(role);
   };
 
   // Create/Upload new document (Records Officer)
@@ -4274,6 +4293,38 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       res.status(500).json({ message: 'Failed to create document' });
     }
   });
+// Get all RMS documents with optional filters and enrichment
+app.get('/api/rms/documents', isAuthenticated, async (req: any, res) => {
+  try {
+    const user = await storage.getUser(req.user.id);
+    if (!user || !hasRmsAccess((user as any).role)) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const { status, priority, includeDetails } = req.query;
+    const documents = await storage.getRmsDocuments(status, priority);
+
+    // If includeDetails flag is true, enrich each document
+    if (includeDetails === 'true') {
+      const enrichedDocuments = await Promise.all(
+        documents.map(async (doc: any) => {
+          const [comments, workflowLog] = await Promise.all([
+            storage.getRmsComments(doc.id),
+            storage.getRmsWorkflowLog(doc.id)
+          ]);
+          return { document: doc, comments, workflowLog };
+        })
+      );
+      return res.json(enrichedDocuments);
+    }
+
+    // Otherwise, return plain document list
+    return res.json(documents);
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    res.status(500).json({ message: 'Failed to fetch documents' });
+  }
+});
 
   // Get all documents (role-based filtering)
   app.get('/api/rms/documents', isAuthenticated, async (req: any, res) => {
@@ -4284,7 +4335,8 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
       }
 
       const { status, priority } = req.query;
-      const documents = await storage.getRmsDocuments(status, priority);
+      
+      const documents = await storage.getRmsDocuments(status, priority);      
       res.json(documents);
     } catch (error) {
       console.error('Error fetching documents:', error);
@@ -4490,7 +4542,8 @@ app.get("/api/applicant/:id/progress", async (req, res) => {
         dispatched: documents.filter(d => d.status === 'dispatched').length,
         filed: documents.filter(d => d.status === 'filed').length,
         urgent: documents.filter(d => d.priority === 'urgent').length,
-        high: documents.filter(d => d.priority === 'high').length
+        high: documents.filter(d => d.priority === 'high').length,
+        chairCommented: documents.filter(d => d.priority === 'commented_by_chair').length
       };
 
       res.json(stats);

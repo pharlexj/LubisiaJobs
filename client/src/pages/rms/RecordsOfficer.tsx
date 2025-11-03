@@ -58,7 +58,15 @@ export default function RecordsOfficer() {
 
   // Fetch documents
   const { data: documents, isLoading } = useQuery({
-    queryKey: ['/api/rms/documents'],
+    queryKey: ['/api/rms/documents', { includeDetails: true }],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/rms/documents?includeDetails=true');
+      return response.map((d: any) => ({
+        ...d.document,
+        comments: d.comments,
+        workflowLog: d.workflowLog,
+      }));
+    },
   });
 
   // Fetch departments from existing API
@@ -209,21 +217,34 @@ export default function RecordsOfficer() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; className: string }> = {
-      received: { label: 'Received', className: 'bg-blue-500' },
-      forwarded_to_secretary: { label: 'With Secretary', className: 'bg-yellow-500' },
-      sent_to_chair: { label: 'With Chairperson', className: 'bg-purple-500' },
-      sent_to_hr: { label: 'With HR', className: 'bg-indigo-500' },
-      board_meeting: { label: 'Board Meeting', className: 'bg-orange-500' },
-      decision_made: { label: 'Decision Made', className: 'bg-green-500' },
-      sent_to_records: { label: 'Ready to Dispatch', className: 'bg-teal-500' },
-      dispatched: { label: 'Dispatched', className: 'bg-gray-500' },
-      filed: { label: 'Filed', className: 'bg-slate-500' },
-    };
-    const config = statusConfig[status] || { label: status, className: 'bg-gray-500' };
-    return <Badge className={`${config.className} text-white`} data-testid={`status-${status}`}>{config.label}</Badge>;
+  const statusConfig: Record<
+    string,
+    { label: string; className: string }
+  > = {
+    received: { label: 'Received at Registry', className: 'bg-blue-500' },
+    forwarded_to_secretary: { label: 'With Secretary', className: 'bg-yellow-500' },
+    sent_to_chair: { label: 'With Chairperson', className: 'bg-purple-600' },
+    commented_by_chair: { label: 'Chairperson Commented', className: 'bg-fuchsia-600' },
+    returned_to_secretary_from_chair: { label: 'Returned to Secretary', className: 'bg-amber-500' },
+    sent_to_hr: { label: 'At HR Office', className: 'bg-indigo-500' },
+    sent_to_committee: { label: 'At the Committee', className: 'bg-pink-500' },
+    returned_to_hr_from_committee: { label: 'Returned from Committee', className: 'bg-pink-600' },
+    returned_to_secretary_from_hr: { label: 'Returned to Secretary (from HR)', className: 'bg-indigo-400' },
+    agenda_set: { label: 'Agendarised', className: 'bg-teal-600' },
+    board_meeting: { label: 'In Board Meeting', className: 'bg-orange-500' },
+    decision_made: { label: 'Decision Made', className: 'bg-green-600' },
+    sent_to_records: { label: 'Ready for Dispatch', className: 'bg-teal-500' },
+    dispatched: { label: 'Dispatched', className: 'bg-gray-600' },
+    filed: { label: 'Filed in Registry', className: 'bg-slate-600' },
   };
 
+  const config = statusConfig[status] || { label: status, className: 'bg-gray-400' };
+  return (
+    <Badge className={`${config.className} text-white px-3 py-1 rounded-full text-xs font-medium shadow-sm`}>
+      {config.label}
+    </Badge>
+  );
+};
   const getPriorityBadge = (priority: string) => {
     const priorityConfig: Record<string, { className: string }> = {
       urgent: { className: 'bg-red-600 text-white' },

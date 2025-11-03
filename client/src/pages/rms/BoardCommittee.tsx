@@ -42,8 +42,16 @@ export default function BoardCommittee() {
     queryKey: ['/api/rms/stats'],
   });
 
-  const { data: documents, isLoading } = useQuery({
-    queryKey: ['/api/rms/documents'],
+const { data: documents, isLoading } = useQuery({
+    queryKey: ['/api/rms/documents', { includeDetails: true }],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/rms/documents?includeDetails=true');
+      return response.map((d: any) => ({
+        ...d.document,
+        comments: d.comments,
+        workflowLog: d.workflowLog,
+      }));
+    },
   });
 
   const { data: allComments } = useQuery({
@@ -179,7 +187,7 @@ export default function BoardCommittee() {
       <Navigation />
       <div className="flex">
         <Sidebar userRole={user?.role || 'boardCommittee'} />
-        <main className="flex-1 p-4 md:p-6 lg:p-8 md:ml-64">
+        <main className="flex-1 p-6">
           <div className="max-w-7xl mx-auto">
             <div className="mb-6">
               <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent" data-testid="text-page-title">
@@ -209,7 +217,7 @@ export default function BoardCommittee() {
                     <div>
                       <p className="text-sm text-gray-600">Total Documents</p>
                       <p className="text-2xl font-bold text-gray-900" data-testid="stat-total">
-                        {stats?.total || 0}
+                        {(stats as any)?.total || 0}
                       </p>
                     </div>
                     <FileText className="w-10 h-10 text-teal-600" />
@@ -315,154 +323,168 @@ export default function BoardCommittee() {
       </div>
 
       {/* Review Dialog */}
-      <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" data-testid="dialog-review-document">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Committee Review</DialogTitle>
-          </DialogHeader>
-          {selectedDocument && (
-            <ScrollArea className="flex-1 pr-4">
-              <div className="space-y-6">
-                {/* Document Details */}
-                <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 p-4 rounded-lg space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <Label className="text-gray-600">Reference Number</Label>
-                      <p className="font-mono font-semibold">{selectedDocument.referenceNumber}</p>
-                    </div>
-                    <div>
-                      <Label className="text-gray-600">Document Date</Label>
-                      <p className="font-medium">{new Date(selectedDocument.documentDate).toLocaleDateString()}</p>
-                    </div>
-                    <div>
-                      <Label className="text-gray-600">Department</Label>
-                      <p className="font-medium">{selectedDocument.initiatorDepartment}</p>
-                    </div>
-                    <div>
-                      <Label className="text-gray-600">Document Type</Label>
-                      <p className="font-medium capitalize">{selectedDocument.documentType}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-gray-600">Subject</Label>
-                    <p className="font-medium text-gray-900">{selectedDocument.subject}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    {getPriorityBadge(selectedDocument.priority)}
-                    {getStatusBadge(selectedDocument.status)}
-                  </div>
-                </div>
+{/* Review Dialog */}
+<Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
+  <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+    <DialogHeader>
+      <DialogTitle className="text-xl font-semibold">
+        Committee Review
+      </DialogTitle>
+    </DialogHeader>
 
-                <Separator />
-
-                {/* Previous Comments */}
-                {allComments && allComments.length > 0 && (
-                  <>
-                    <div className="space-y-3">
-                      <Label className="text-base font-semibold">Previous Review Comments</Label>
-                      <div className="space-y-3">
-                        {allComments.map((c: any) => (
-                          <div key={c.id} className="bg-gray-50 p-3 rounded-lg border-l-4 border-l-teal-500">
-                            <div className="flex items-center justify-between mb-2">
-                              <Badge variant="outline" className="text-xs">{c.userRole}</Badge>
-                              <span className="text-xs text-gray-500">{new Date(c.createdAt).toLocaleString()}</span>
-                            </div>
-                            <p className="text-sm text-gray-700">{c.comment}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-                {/* Committee Comments Form */}
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-base font-semibold mb-2 flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-purple-600" />
-                      Committee Input & Recommendations
-                    </Label>
-                    <p className="text-sm text-gray-600 mb-3">
-                      Provide the committee's collective feedback and position on this document.
-                    </p>
-                    <Textarea
-                      value={comment}
-                      onChange={(e) => setComment(e.target.value)}
-                      placeholder="Enter committee comments, analysis, and recommendations..."
-                      rows={6}
-                      className="resize-none"
-                      data-testid="input-comment"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-base font-semibold mb-2">Committee Position</Label>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant={recommendation === 'support' ? 'default' : 'outline'}
-                        className={recommendation === 'support' ? 'bg-green-600 hover:bg-green-700' : ''}
-                        onClick={() => setRecommendation('support')}
-                        data-testid="button-position-support"
-                      >
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        Support
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={recommendation === 'oppose' ? 'default' : 'outline'}
-                        className={recommendation === 'oppose' ? 'bg-red-600 hover:bg-red-700' : ''}
-                        onClick={() => setRecommendation('oppose')}
-                        data-testid="button-position-oppose"
-                      >
-                        Oppose
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={recommendation === 'amend' ? 'default' : 'outline'}
-                        className={recommendation === 'amend' ? 'bg-yellow-600 hover:bg-yellow-700' : ''}
-                        onClick={() => setRecommendation('amend')}
-                        data-testid="button-position-amend"
-                      >
-                        Amend
-                      </Button>
-                    </div>
-                    {recommendation && (
-                      <p className="text-sm text-gray-600 mt-2">
-                        Position: {getRecommendationBadge(recommendation)}
-                      </p>
-                    )}
-                  </div>
-                </div>
+    {selectedDocument && (
+      <>
+        {/* SCROLLABLE MAIN CONTENT */}
+        <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+          {/* Document Details */}
+          <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 p-4 rounded-lg space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div>
+                <Label className="text-gray-600">Reference Number</Label>
+                <p className="font-mono font-semibold">
+                  {selectedDocument.referenceNumber}
+                </p>
               </div>
-            </ScrollArea>
-          )}
-          <DialogFooter className="flex-shrink-0">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowReviewDialog(false);
-                setSelectedDocument(null);
-                setComment('');
-                setRecommendation('');
-              }}
-              data-testid="button-cancel-review"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleReturnToHR}
-              disabled={forwardDocumentMutation.isPending || addCommentMutation.isPending || !comment.trim()}
-              className="bg-gradient-to-r from-purple-600 to-purple-700 text-white"
-              data-testid="button-return-to-hr"
-            >
-              <Send className="w-4 h-4 mr-2" />
-              {forwardDocumentMutation.isPending ? 'Returning...' : 'Return to HR Office'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <div>
+                <Label className="text-gray-600">Document Date</Label>
+                <p>{new Date(selectedDocument.documentDate).toLocaleDateString()}</p>
+              </div>
+              <div>
+                <Label className="text-gray-600">Department</Label>
+                <p>{selectedDocument.initiatorDepartment}</p>
+              </div>
+              <div>
+                <Label className="text-gray-600">Document Type</Label>
+                <p className="capitalize">{selectedDocument.documentType}</p>
+              </div>
+            </div>
+            <div>
+              <Label className="text-gray-600">Subject</Label>
+              <p className="font-medium text-gray-900">{selectedDocument.subject}</p>
+            </div>
+            <div className="flex gap-2">
+              {getPriorityBadge(selectedDocument.priority)}
+              {getStatusBadge(selectedDocument.status)}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Previous Comments */}
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Previous Review Comments</Label>
+            <div className="max-h-[180px] overflow-y-auto space-y-3 rounded-md border border-gray-100 p-2">
+              {selectedDocument.comments?.length ? (
+                selectedDocument.comments.map((c: any) => (
+                  <div
+                    key={c.id}
+                    className="bg-gray-50 p-3 rounded-lg border-l-4 border-l-teal-500"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <Badge variant="outline" className="text-xs">
+                        {c.userRole}
+                      </Badge>
+                      <span className="text-[11px] text-gray-500">
+                        {new Date(c.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-700">{c.comment}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500 italic">
+                  No previous comments found.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Committee Comment Form */}
+          <div className="space-y-4">
+            <div>
+              <Label className="text-base font-semibold mb-2 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-purple-600" />
+                Committee Input & Recommendations
+              </Label>
+              <p className="text-sm text-gray-600 mb-3">
+                Provide the committee’s feedback and collective stance.
+              </p>
+              <Textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={4}
+                placeholder="Enter committee comments, analysis, or recommendations..."
+                className="resize-none w-full border rounded-md p-2 text-sm focus:ring-2 focus:ring-purple-400"
+              />
+            </div>
+
+            <div>
+              <Label className="text-base font-semibold mb-2">Committee Position</Label>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  type="button"
+                  variant={recommendation === 'support' ? 'default' : 'outline'}
+                  className={recommendation === 'support' ? 'bg-green-600 hover:bg-green-700' : ''}
+                  onClick={() => setRecommendation('support')}
+                >
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Support
+                </Button>
+                <Button
+                  type="button"
+                  variant={recommendation === 'oppose' ? 'default' : 'outline'}
+                  className={recommendation === 'oppose' ? 'bg-red-600 hover:bg-red-700' : ''}
+                  onClick={() => setRecommendation('oppose')}
+                >
+                  Oppose
+                </Button>
+                <Button
+                  type="button"
+                  variant={recommendation === 'amend' ? 'default' : 'outline'}
+                  className={recommendation === 'amend' ? 'bg-yellow-600 hover:bg-yellow-700' : ''}
+                  onClick={() => setRecommendation('amend')}
+                >
+                  Amend
+                </Button>
+              </div>
+              {recommendation && (
+                <p className="text-sm text-gray-600 mt-2">
+                  Position: {getRecommendationBadge(recommendation)}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* STICKY FOOTER */}
+        <div className="flex justify-end items-center gap-3 mt-4 border-t pt-3">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowReviewDialog(false);
+              setSelectedDocument(null);
+              setComment('');
+              setRecommendation('');
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleReturnToHR}
+            disabled={forwardDocumentMutation.isPending || addCommentMutation.isPending || !comment.trim()}
+            className="bg-gradient-to-r from-purple-600 to-purple-700 text-white"
+          >
+            <Send className="w-4 h-4 mr-2" />
+            {forwardDocumentMutation.isPending ? 'Returning...' : 'Return to HR Office'}
+          </Button>
+        </div>
+      </>
+    )}
+  </DialogContent>
+</Dialog>
+
 
       {/* Document Viewer */}
       {documentToView && (

@@ -24,7 +24,8 @@ import {
   CheckCircle, 
   Clock, 
   XCircle,
-  Award
+  Award,
+  CheckCircleIcon
 } from 'lucide-react';
 
 export default function ApplicantApplications() {
@@ -277,12 +278,22 @@ export default function ApplicantApplications() {
                             </div>
                           </div>
                           
-                          {application.status==="shortlisted" && (
+                          {application.status==="shortlisted" || application.status==="interview_scheduled" && (
                             <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                               <div className="flex items-center gap-2 text-yellow-800">
                                 <Calendar className="w-4 h-4" />
                                 <span className="font-medium">
                                   Interview scheduled for {new Date(application.interviewDate).toLocaleDateString()} - {application.interviewTime} at {application.interviewVenue}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          {application.status==="interviewed" && (
+                            <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                              <div className="flex items-center gap-2 text-yellow-800">
+                                <CheckCircleIcon className="w-4 h-4" />
+                                <span className="font-medium">
+                                  Please wait for further updates, selection process is ongoing.
                                 </span>
                               </div>
                             </div>
@@ -303,7 +314,7 @@ export default function ApplicantApplications() {
                                 <XCircle className="w-4 h-4" />
                                 <span className="font-medium">
                                   <span>
-                                    Although you were not selected for this opportunity, we encourage you to apply for future openings that match your skills and experience.
+                                    Although you were not shortlisted/selected for this opportunity, we encourage you to apply for future openings that match your skills and experience.
                                   </span>
                                 </span>
                               </div>

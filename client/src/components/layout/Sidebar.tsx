@@ -28,12 +28,15 @@ import {
   TrendingUp,
   Calculator,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Building,
+  Edit
 } from 'lucide-react';
 import ProfileCompletion from '@/components/applicant/ProfileCompletion';
 import { useState } from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import ProfileSettingsDrawer from '@/components/common/ProfileSettingsDrawer';
+import { Description } from '@radix-ui/react-toast';
 
 interface SidebarProps {
   userRole: 'applicant' | 'admin' | 'board' | 'accountant' | 'a.i.e Holder' | 'recordsOfficer' | 'boardSecretary' | 'chiefOfficer' | 'boardChair' | 'boardCommittee' | 'HR';
@@ -81,12 +84,29 @@ export default function Sidebar({ userRole }: SidebarProps) {
 
   const boardNavItems = [
     { href: '/board', icon: LayoutDashboard, label: 'Dashboard', description: 'Committee overview' },
-    { href: '/board/shortlisting', icon: CheckCircle, label: 'Shortlisting', description: 'Review & shortlist' },
-    { href: '/board/schedule', icon: Calendar, label: 'Schedule', description: 'Schedule for Interviews' },
-    { href: '/board/interviews', icon: Calendar, label: 'Interviews', description: 'Schedule & conduct' },
-    { href: '/board/scoring', icon: Award, label: 'Scoring', description: 'Interview assessment' },
-    { href: '/board/hiring', icon: Users, label: 'Hiring', description: 'Award jobs to candidates' },
-    { href: '/board/reports', icon: BarChart3, label: 'Reports', description: 'Selection reports' },
+    {
+      id: "board",
+      label:'Recruitment',
+      icon: Building,
+      description: "Recruitment Processes",
+      children: [
+        { href: '/board/shortlisting', icon: CheckCircle, label: 'Shortlisting', description: 'Review & shortlist' },
+        { href: '/board/schedule', icon: Calendar, label: 'Schedule', description: 'Schedule for Interviews' },
+        { href: '/board/interviews', icon: Calendar, label: 'Interviews', description: 'Schedule & conduct' },
+        { href: '/board/scoring', icon: Award, label: 'Scoring', description: 'Interview assessment' },
+        { href: '/board/hiring', icon: Users, label: 'Hiring', description: 'Award jobs to candidates' },
+        { href: '/board/reports', icon: BarChart3, label: 'Reports', description: 'Selection reports' },        
+      ]
+    },
+    {
+      id: 'board_committee',
+      label: 'Committee',
+      icon: Edit,
+      description: 'Committe Documents',
+      children: [
+        { href: '/rms/board-committee', icon: LayoutDashboard, label: 'Dashboard', description: 'Committee review & documents' },
+      ]
+    }
   ];
 
   const accountNavItems = [
@@ -153,15 +173,15 @@ export default function Sidebar({ userRole }: SidebarProps) {
   ];
 
   const recordsOfficerNavItems = [
-    { href: '/rms/records-officer', icon: LayoutDashboard, label: 'Dashboard', description: 'Document registry & overview' },
+    { href: '/rms/records-officer', icon: LayoutDashboard, label: 'Dashboard', description: 'Doc. registry & overview' },
   ];
 
   const boardSecretaryNavItems = [
-    { href: '/rms/board-secretary', icon: LayoutDashboard, label: 'Dashboard', description: 'Document review & overview' },
+    { href: '/rms/board-secretary', icon: LayoutDashboard, label: 'Dashboard', description: 'Doc. review & overview' },
   ];
 
   const boardChairNavItems = [
-    { href: '/rms/board-chair', icon: LayoutDashboard, label: 'Dashboard', description: 'Document review & remarks' },
+    { href: '/rms/board-chair', icon: LayoutDashboard, label: 'Dashboard', description: 'Doc. review & remarks' },
   ];
 
   const chiefOfficerNavItems = [
@@ -169,7 +189,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
   ];
 
   const boardCommitteeNavItems = [
-    { href: '/rms/board-committee', icon: LayoutDashboard, label: 'Dashboard', description: 'Committee review & documents' },
+    { href: '/rms/board-committee', icon: LayoutDashboard, label: 'Dashboard', description: 'Committee review' },
   ];
 
   const hrNavItems = [
@@ -204,10 +224,16 @@ export default function Sidebar({ userRole }: SidebarProps) {
   const getRoleColor = () => {
     switch (userRole) {
       case 'applicant': return 'bg-blue-100 text-blue-800';
-      case 'admin': return 'bg-red-100 text-red-800';
-      case 'board': return 'bg-green-100 text-green-800';
-      case 'accountant': return 'bg-yellow-100 text-yellow-800';
+      case 'admin': return 'bg-red-700 text-yellow-300';
+      case 'board': return 'bg-green-900 text-green-100';
+      case 'accountant': return 'bg-yellow-800 text-yellow-100';
       case 'a.i.e Holder': return 'bg-purple-100 text-purple-800';
+      case 'boardChair': return 'bg-black-100 text-black-800';
+      case 'boardSecretary': return 'bg-yellow-100 text-yellow-800';
+      case 'recordsOfficer': return 'Records Officer';
+      case 'chiefOfficer': return 'bg-green-100 text-green-800';
+      case 'boardCommittee': return 'bg-red-100 text-red-800';
+      case 'HR': return 'HR Officer';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -219,6 +245,12 @@ export default function Sidebar({ userRole }: SidebarProps) {
       case 'board': return 'Board Member';
       case 'accountant': return 'Accountant';
       case 'a.i.e Holder': return 'A.I.E Holder';
+      case 'boardChair': return 'Board Chair';
+      case 'boardSecretary': return 'Board Secretary';
+      case 'recordsOfficer': return 'Records Officer';
+      case 'chiefOfficer': return 'Chief Officer';
+      case 'boardCommittee': return 'Board Committee';
+      case 'HR': return 'HR Officer';
       default: return 'User';
     }
   };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/useAuth';
@@ -49,34 +49,55 @@ export default function BoardSecretary() {
   });
 
   const { data: documents, isLoading } = useQuery({
-    queryKey: ['/api/rms/documents'],
+    queryKey: ['/api/rms/documents', { includeDetails: true }],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/rms/documents?includeDetails=true');
+      return response.map((d: any) => ({
+        ...d.document,
+        comments: d.comments,
+        workflowLog: d.workflowLog,
+      }));
+    },
   });
+
 
   const { data: allComments } = useQuery<any[]>({
     queryKey: ['/api/rms/comments', selectedDocument?.id],
     enabled: !!selectedDocument?.id,
   });
+  
+  const getLatestWorkflowStage = (doc: any) => {
+    if (!doc.workflowLog || doc.workflowLog.length === 0) return doc.status;
+    const last = doc.workflowLog[doc.workflowLog.length - 1];
+    return last.toStatus;
+  };
 
-  // Filter documents by workflow stage
-  const newDocuments = (documents as any)?.filter((d: any) => 
-    d.status === 'forwarded_to_secretary' && d.currentHandler === 'boardSecretary'
+  const newDocuments = documents?.filter(
+    (d: any) =>
+      getLatestWorkflowStage(d) === 'forwarded_to_secretary' &&
+      d.currentHandler === 'boardSecretary'
   ) || [];
 
-  const fromChairDocuments = (documents as any)?.filter((d: any) => 
-    d.status === 'returned_to_secretary_from_chair'
-  ) || [];
+const fromChairDocuments = documents?.filter(
+  (d: any) =>
+    getLatestWorkflowStage(d) === 'returned_to_secretary_from_chair'
+) || [];
 
-  const fromHRDocuments = (documents as any)?.filter((d: any) => 
-    d.status === 'returned_to_secretary_from_hr'
-  ) || [];
+const fromHRDocuments = documents?.filter(
+  (d: any) =>
+    getLatestWorkflowStage(d) === 'returned_to_secretary_from_hr'
+) || [];
 
-  const agendaDocuments = (documents as any)?.filter((d: any) => 
-    d.status === 'agenda_set' || d.status === 'board_meeting'
-  ) || [];
+const agendaDocuments = documents?.filter(
+  (d: any) =>
+    ['agenda_set', 'board_meeting'].includes(getLatestWorkflowStage(d))
+) || [];
 
-  const afterMeetingDocuments = (documents as any)?.filter((d: any) => 
-    d.status === 'decision_made'
-  ) || [];
+const afterMeetingDocuments = documents?.filter(
+  (d: any) =>
+    getLatestWorkflowStage(d) === 'decision_made'
+) || [];
+
 
   // Add comment mutation
   const addCommentMutation = useMutation({
@@ -86,7 +107,8 @@ export default function BoardSecretary() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/rms/documents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/rms/stats'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/rms/comments'] });
+      queryClient.removeQueries({ queryKey: ['/api/rms/documents', selectedDocument?.id] });
+
     },
   });
 
@@ -175,7 +197,7 @@ export default function BoardSecretary() {
           data: {
             toHandler: 'boardChair',
             toStatus: 'sent_to_chair',
-            notes: `Reviewed by Board Secretary - ${recommendation ? recommendation.toUpperCase() : 'FORWARDED'}`
+            notes: `Reviewed by Board Secretary - ${recommendation ? recommendation?.toUpperCase() : 'FORWARDED'}`
           }
         });
       }
@@ -528,171 +550,199 @@ export default function BoardSecretary() {
         </main>
       </div>
 
-      {/* Review/Action Dialog */}
-      <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedDocument?.status === 'forwarded_to_secretary' && 'Review & Forward to Board Chair'}
-              {selectedDocument?.status === 'returned_to_secretary_from_hr' && 'Set Agenda for Board Meeting'}
-            </DialogTitle>
-          </DialogHeader>
-          {selectedDocument && (
-            <ScrollArea className="flex-1 pr-4">
-              <div className="space-y-6">
-                {/* Document Details */}
-                <div className="bg-gradient-to-r from-teal-50 to-teal-100/50 p-4 rounded-lg space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <Label className="text-gray-600">Reference Number</Label>
-                      <p className="font-mono font-semibold">{selectedDocument.referenceNumber}</p>
-                    </div>
-                    <div>
-                      <Label className="text-gray-600">Document Date</Label>
-                      <p className="font-medium">{new Date(selectedDocument.documentDate).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-gray-600">Subject</Label>
-                    <p className="font-medium text-gray-900">{selectedDocument.subject}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    {getPriorityBadge(selectedDocument.priority)}
-                    {getStatusBadge(selectedDocument.status)}
-                  </div>
-                </div>
+      {/* Review/Action Dialog */}     
+{/* --- Review & Agenda Dialog --- */}
+<Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
+  <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+    {/* --- Header (Fixed) --- */}
+    <DialogHeader className="flex-shrink-0">
+      <DialogTitle className="text-xl font-semibold text-gray-900">
+        {selectedDocument?.status === "forwarded_to_secretary" && "Review & Forward to Board Chair"}
+        {selectedDocument?.status === "returned_to_secretary_from_hr" && "Set Agenda for Board Meeting"}
+      </DialogTitle>
+      <p className="text-xs text-gray-400 italic mt-1">
+        Current Status: {selectedDocument?.status}
+      </p>
+    </DialogHeader>
 
-                <Separator />
+    {/* --- Body (Scrollable) --- */}
+    {selectedDocument ? (
+      <ScrollArea className="flex-1 pr-4">
+        <div className="space-y-6 pb-6">
 
-                {/* Previous Comments */}
-                {allComments && (allComments as any).length > 0 && (
-                  <>
-                    <div className="space-y-3">
-                      <Label className="text-base font-semibold">Previous Comments</Label>
-                      <div className="space-y-3">
-                        {(allComments as any).map((c: any) => (
-                          <div key={c.id} className="bg-gray-50 p-3 rounded-lg border-l-4 border-l-teal-500">
-                            <div className="flex items-center justify-between mb-2">
-                              <Badge variant="outline" className="text-xs">{c.userRole}</Badge>
-                              <span className="text-xs text-gray-500">{new Date(c.createdAt).toLocaleString()}</span>
-                            </div>
-                            <p className="text-sm text-gray-700">{c.comment}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-                {/* Action Forms */}
-                {selectedDocument.status === 'forwarded_to_secretary' && (
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-base font-semibold mb-2">Review Comments</Label>
-                      <Textarea
-                        value={comment}
-                        onChange={(e) => setComment(e.target.value)}
-                        placeholder="Enter your review comments before forwarding to Board Chair..."
-                        rows={4}
-                        className="resize-none"
-                        data-testid="input-comment"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-base font-semibold mb-2">Recommendation</Label>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant={recommendation === 'approve' ? 'default' : 'outline'}
-                          className={recommendation === 'approve' ? 'bg-green-600 hover:bg-green-700' : ''}
-                          onClick={() => setRecommendation('approve')}
-                        >
-                          Approve
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={recommendation === 'reject' ? 'default' : 'outline'}
-                          className={recommendation === 'reject' ? 'bg-red-600 hover:bg-red-700' : ''}
-                          onClick={() => setRecommendation('reject')}
-                        >
-                          Reject
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={recommendation === 'revise' ? 'default' : 'outline'}
-                          className={recommendation === 'revise' ? 'bg-yellow-600 hover:bg-yellow-700' : ''}
-                          onClick={() => setRecommendation('revise')}
-                        >
-                          Needs Revision
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {selectedDocument.status === 'returned_to_secretary_from_hr' && (
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-base font-semibold mb-2">Agenda Item Number</Label>
-                      <Input
-                        value={agendaItemNumber}
-                        onChange={(e) => setAgendaItemNumber(e.target.value)}
-                        placeholder="e.g., Item 5.2"
-                        data-testid="input-agenda-number"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-base font-semibold mb-2">Board Meeting Date</Label>
-                      <Input
-                        type="date"
-                        value={boardMeetingDate}
-                        onChange={(e) => setBoardMeetingDate(e.target.value)}
-                        data-testid="input-meeting-date"
-                      />
-                    </div>
-                  </div>
-                )}
+          {/* === Document Details === */}
+          <div className="bg-gradient-to-r from-teal-50 to-teal-100/50 p-4 rounded-lg space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div>
+                <Label className="text-gray-600">Reference Number</Label>
+                <p className="font-mono font-semibold">{selectedDocument.referenceNumber}</p>
               </div>
-            </ScrollArea>
+              <div>
+                <Label className="text-gray-600">Document Date</Label>
+                <p className="font-medium">
+                  {new Date(selectedDocument.documentDate).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-gray-600">Subject</Label>
+              <p className="font-medium text-gray-900">{selectedDocument.subject}</p>
+            </div>
+
+            <div className="flex gap-2 mt-2">
+              {getPriorityBadge(selectedDocument.priority)}
+              {getStatusBadge(selectedDocument.status)}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* === Previous Comments Section === */}
+          {selectedDocument.comments && selectedDocument.comments.length > 0 && (
+            <>
+              <div>
+                <Label className="text-base font-semibold mb-2">Previous Comments</Label>
+                <div className="max-h-[250px] overflow-y-auto pr-2 space-y-3 rounded-md border border-gray-100 bg-gray-50 p-2">
+                  {selectedDocument.comments.map((c: any) => (
+                    <div key={c.id} className="bg-white p-3 rounded-lg border-l-4 border-l-teal-500 shadow-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <Badge variant="outline" className="text-xs capitalize">{c.userRole}</Badge>
+                        <span className="text-xs text-gray-500">{new Date(c.createdAt).toLocaleString()}</span>
+                      </div>
+                      <p className="text-sm text-gray-700">{c.comment}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <Separator />
+            </>
           )}
-          <DialogFooter className="flex-shrink-0">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowReviewDialog(false);
-                setSelectedDocument(null);
-                setComment('');
-                setRecommendation('');
-                setAgendaItemNumber('');
-                setBoardMeetingDate('');
-              }}
-            >
-              Cancel
-            </Button>
-            {selectedDocument?.status === 'forwarded_to_secretary' && (
-              <Button
-                onClick={handleForwardToChair}
-                disabled={forwardDocumentMutation.isPending || !comment.trim()}
-                className="bg-gradient-to-r from-teal-600 to-teal-700 text-white"
-              >
-                <Send className="w-4 h-4 mr-2" />
-                {forwardDocumentMutation.isPending ? 'Forwarding...' : 'Forward to Board Chair'}
-              </Button>
-            )}
-            {selectedDocument?.status === 'returned_to_secretary_from_hr' && (
-              <Button
-                onClick={handleSetAgenda}
-                disabled={setAgendaMutation.isPending || !agendaItemNumber.trim() || !boardMeetingDate}
-                className="bg-gradient-to-r from-teal-600 to-teal-700 text-white"
-              >
-                <CalendarCheck className="w-4 h-4 mr-2" />
-                {setAgendaMutation.isPending ? 'Setting...' : 'Set Agenda'}
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+          {/* === Secretary Review Form === */}
+          {["forwarded_to_secretary", "under_secretary_review", "new"].includes(selectedDocument.status) && (
+            <div className="space-y-5">
+              <div>
+                <Label className="text-base font-semibold mb-2">Review Comments</Label>
+                <Textarea
+                  value={comment}
+                  onChange={(e) => {
+                    setComment(e.target.value);
+                    e.target.style.height = "auto";
+                    e.target.style.height = e.target.scrollHeight + "px";
+                  }}
+                  style={{
+                    minHeight: "80px",
+                    overflow: "hidden",
+                    transition: "height 0.2s ease",
+                  }}
+                  placeholder="Enter your review comments before forwarding to Board Chair..."
+                  className="resize-none"
+                />
+              </div>
+
+              <div>
+                <Label className="text-base font-semibold mb-2">Recommendation</Label>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant={recommendation === "approve" ? "default" : "outline"}
+                    className={recommendation === "approve" ? "bg-green-600 hover:bg-green-700" : ""}
+                    onClick={() => setRecommendation("approve")}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={recommendation === "reject" ? "default" : "outline"}
+                    className={recommendation === "reject" ? "bg-red-600 hover:bg-red-700" : ""}
+                    onClick={() => setRecommendation("reject")}
+                  >
+                    Reject
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={recommendation === "revise" ? "default" : "outline"}
+                    className={recommendation === "revise" ? "bg-yellow-600 hover:bg-yellow-700" : ""}
+                    onClick={() => setRecommendation("revise")}
+                  >
+                    Needs Revision
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* === Agenda Setting Form === */}
+          {selectedDocument.status === "returned_to_secretary_from_hr" && (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-base font-semibold mb-2">Agenda Item Number</Label>
+                <Input
+                  value={agendaItemNumber}
+                  onChange={(e) => setAgendaItemNumber(e.target.value)}
+                  placeholder="e.g., Item 5.2"
+                />
+              </div>
+              <div>
+                <Label className="text-base font-semibold mb-2">Board Meeting Date</Label>
+                <Input
+                  type="date"
+                  value={boardMeetingDate}
+                  onChange={(e) => setBoardMeetingDate(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    ) : (
+      <div className="flex-1 flex items-center justify-center text-gray-500 py-12">
+        Loading document details...
+      </div>
+    )}
+
+    {/* --- Footer (Fixed) --- */}
+    <DialogFooter className="flex-shrink-0 bg-white mt-2 pt-3 border-t">
+      <Button
+        variant="outline"
+        onClick={() => {
+          setShowReviewDialog(false);
+          setSelectedDocument(null);
+          setComment("");
+          setRecommendation("");
+          setAgendaItemNumber("");
+          setBoardMeetingDate("");
+        }}
+      >
+        Cancel
+      </Button>
+
+      {["forwarded_to_secretary", "under_secretary_review", "new"].includes(selectedDocument?.status) && (
+        <Button
+          onClick={handleForwardToChair}
+          disabled={forwardDocumentMutation.isPending || !comment.trim()}
+          className="bg-gradient-to-r from-teal-600 to-teal-700 text-white"
+        >
+          <Send className="w-4 h-4 mr-2" />
+          {forwardDocumentMutation.isPending ? "Forwarding..." : "Forward to Board Chair"}
+        </Button>
+      )}
+
+      {selectedDocument?.status === "returned_to_secretary_from_hr" && (
+        <Button
+          onClick={handleSetAgenda}
+          disabled={setAgendaMutation.isPending || !agendaItemNumber.trim() || !boardMeetingDate}
+          className="bg-gradient-to-r from-teal-600 to-teal-700 text-white"
+        >
+          <CalendarCheck className="w-4 h-4 mr-2" />
+          {setAgendaMutation.isPending ? "Setting..." : "Set Agenda"}
+        </Button>
+      )}
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
 
       {/* Document Viewer */}
       {documentToView && (

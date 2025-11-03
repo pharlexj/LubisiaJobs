@@ -40,7 +40,9 @@ import {
   Upload,
   Link,
   X,
-  Image as ImageIcon
+  Image as ImageIcon,
+  UploadCloud,
+  FileUp
 } from 'lucide-react';
 
 // Form schemas
@@ -436,12 +438,6 @@ useEffect(() => {
       description: 'Manage system notices and announcements'
     },
     { 
-      id: 'dept', 
-      label: 'Departments', 
-      icon: Building,
-      description: 'Manage Departments'
-    },
-    { 
       id: 'geography', 
       label: 'Location', 
       icon: MapPin,
@@ -449,7 +445,7 @@ useEffect(() => {
     },
     { 
       id: 'education', 
-      label: 'Education', 
+      label: 'Studies', 
       icon: GraduationCap,
       description: 'Manage study areas and specializations'
     },
@@ -491,9 +487,21 @@ useEffect(() => {
     },
     {
       id: 'board-leadership',
-      label: 'Board Leadership',
+      label: 'Members',
       icon: Users,
       description: 'Manage board members and leadership'
+    },
+    {
+      id: 'employee-data',
+      label: 'Employees',
+      icon: UploadCloud,
+      description: 'Upload Employees Data'
+    },
+    { 
+      id: 'dept', 
+      label: 'Department', 
+      icon: Building,
+      description: 'Manage Departments'
     },
     {
       id: 'gallery',
@@ -512,6 +520,12 @@ useEffect(() => {
       label: 'Carousel',
       icon: ImageIcon,
       description: 'Manage homepage carousel slides and pictures'
+    },
+    {
+      id: 'document',
+      label: 'Documents',
+      icon: FileUp,
+      description: 'Upload Documents in PDF'
     },
   ];
 
@@ -1039,9 +1053,9 @@ useEffect(() => {
 
             {/* Configuration Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10 mb-8">
+              <TabsList className="grid w-full grid-cols-5 lg:grid-cols-8 mb-8 bg-yellow-300">
                 {tabs.map((tab) => (
-                  <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-2">
+                  <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-1">
                     <tab.icon className="w-4 h-4" />
                     {tab.label}
                   </TabsTrigger>
@@ -2434,7 +2448,230 @@ useEffect(() => {
                   </CardContent>
                 </Card>
               </TabsContent>
+              {/* Employee Uploading */}
+              <TabsContent value='employee-data'>
+                <Card>
+                  <CardHeader>
+                    <div>
+                      <CardTitle>System Settings</CardTitle>
+                      <p className="text-sm text-gray-600 mt-1">Manage system-wide settings including favicon</p>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      {/* Favicon Management */}
+                      <div className="p-4 border rounded-lg">
+                        <h3 className="text-lg font-semibold mb-4">Employee Management</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Upload a favicon for your website. Recommended size: 16x16 or 32x32 pixels. Accepted formats: .ico, .png
+                        </p>
+                        <div className="space-y-4">
+                          <div className="flex items-center space-x-4">
+                            <div className="flex-1">
+                              <Label htmlFor="favicon-upload">Upload Favicon</Label>
+                              <Input 
+                                id="favicon-upload"
+                                type="file"
+                                accept=".ico,.png"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    // Validate file type
+                                    const validTypes = ['image/x-icon', 'image/vnd.microsoft.icon', 'image/png'];
+                                    if (!validTypes.includes(file.type) && !file.name.endsWith('.ico')) {
+                                      toast({
+                                        title: 'Error',
+                                        description: 'Invalid file type. Please upload a .ico or .png file.',
+                                        variant: 'destructive',
+                                      });
+                                      return;
+                                    }
 
+                                    // Create FormData and upload
+                                    const formData = new FormData();
+                                    formData.append('file', file);
+                                    
+                                    // Upload using dedicated favicon endpoint
+                                    fetch('/api/admin/upload-favicon', {
+                                      method: 'POST',
+                                      body: formData
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                      if (data.success) {
+                                        toast({
+                                          title: 'Success',
+                                          description: 'Favicon uploaded successfully! Please refresh the page to see changes.',
+                                        });
+                                        // Reset the file input
+                                        (e.target as HTMLInputElement).value = '';
+                                      } else {
+                                        toast({
+                                          title: 'Error',
+                                          description: data.message || 'Failed to upload favicon',
+                                          variant: 'destructive',
+                                        });
+                                      }
+                                    })
+                                    .catch(error => {
+                                      toast({
+                                        title: 'Error',
+                                        description: 'Failed to upload favicon. Please try again.',
+                                        variant: 'destructive',
+                                      });
+                                    });
+                                  }
+                                }}
+                                data-testid="input-favicon-upload"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                            <div className="w-8 h-8 bg-white border rounded flex items-center justify-center">
+                              <img 
+                                src="/uploads/favicon.ico" 
+                                alt="Current favicon"
+                                className="w-4 h-4"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLElement).style.display = 'none';
+                                  ((e.currentTarget.nextElementSibling) as HTMLElement).style.display = 'block';
+                                }}
+                              />
+                              <div style={{display: 'none'}} className="text-xs text-gray-400">🏛️</div>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">Current Favicon</p>
+                              <p className="text-xs text-gray-500">Will fallback to default if not found</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Future system settings can be added here */}
+                      <div className="p-4 border rounded-lg border-dashed border-gray-300">
+                        <h3 className="text-lg font-semibold mb-2 text-gray-400">Future System Settings</h3>
+                        <p className="text-sm text-gray-500">
+                          Additional system settings like site title, default language, 
+                          email configurations, etc. will be added here.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              {/* Documents Uploading */}
+              <TabsContent value='document'>
+                <Card>
+                  <CardHeader>
+                    <div>
+                      <CardTitle>System Settings</CardTitle>
+                      <p className="text-sm text-gray-600 mt-1">Manage system-wide settings including favicon</p>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      {/* Favicon Management */}
+                      <div className="p-4 border rounded-lg">
+                        <h3 className="text-lg font-semibold mb-4">Employee Management</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Upload a favicon for your website. Recommended size: 16x16 or 32x32 pixels. Accepted formats: .ico, .png
+                        </p>
+                        <div className="space-y-4">
+                          <div className="flex items-center space-x-4">
+                            <div className="flex-1">
+                              <Label htmlFor="favicon-upload">Upload Favicon</Label>
+                              <Input 
+                                id="favicon-upload"
+                                type="file"
+                                accept=".ico,.png"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    // Validate file type
+                                    const validTypes = ['image/x-icon', 'image/vnd.microsoft.icon', 'image/png'];
+                                    if (!validTypes.includes(file.type) && !file.name.endsWith('.ico')) {
+                                      toast({
+                                        title: 'Error',
+                                        description: 'Invalid file type. Please upload a .ico or .png file.',
+                                        variant: 'destructive',
+                                      });
+                                      return;
+                                    }
+
+                                    // Create FormData and upload
+                                    const formData = new FormData();
+                                    formData.append('file', file);
+                                    
+                                    // Upload using dedicated favicon endpoint
+                                    fetch('/api/admin/upload-favicon', {
+                                      method: 'POST',
+                                      body: formData
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                      if (data.success) {
+                                        toast({
+                                          title: 'Success',
+                                          description: 'Favicon uploaded successfully! Please refresh the page to see changes.',
+                                        });
+                                        // Reset the file input
+                                        (e.target as HTMLInputElement).value = '';
+                                      } else {
+                                        toast({
+                                          title: 'Error',
+                                          description: data.message || 'Failed to upload favicon',
+                                          variant: 'destructive',
+                                        });
+                                      }
+                                    })
+                                    .catch(error => {
+                                      toast({
+                                        title: 'Error',
+                                        description: 'Failed to upload favicon. Please try again.',
+                                        variant: 'destructive',
+                                      });
+                                    });
+                                  }
+                                }}
+                                data-testid="input-favicon-upload"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                            <div className="w-8 h-8 bg-white border rounded flex items-center justify-center">
+                              <img 
+                                src="/uploads/favicon.ico" 
+                                alt="Current favicon"
+                                className="w-4 h-4"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLElement).style.display = 'none';
+                                  ((e.currentTarget.nextElementSibling) as HTMLElement).style.display = 'block';
+                                }}
+                              />
+                              <div style={{display: 'none'}} className="text-xs text-gray-400">🏛️</div>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">Current Favicon</p>
+                              <p className="text-xs text-gray-500">Will fallback to default if not found</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Future system settings can be added here */}
+                      <div className="p-4 border rounded-lg border-dashed border-gray-300">
+                        <h3 className="text-lg font-semibold mb-2 text-gray-400">Future System Settings</h3>
+                        <p className="text-sm text-gray-500">
+                          Additional system settings like site title, default language, 
+                          email configurations, etc. will be added here.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
               {/* About Page Management Tab */}
               <TabsContent value="about">
                 <div className="space-y-6">
