@@ -5,7 +5,6 @@ export type InheritanceRule = {
 	extraRequirement?: string;
 };
 
-// Calculate precise years between two dates
 export function yearsBetween(start: Date, end: Date = new Date()): number {
 	const diff = end.getTime() - start.getTime();
 	return diff / (1000 * 60 * 60 * 24 * 365.25);
@@ -38,7 +37,6 @@ export function canProgress(
 	return result;
 }
 
-// Comprehensive eligibility checker
 export function checkEligibility(
 	job: any,
 	applicantProfile: any,
@@ -52,6 +50,8 @@ export function checkEligibility(
 
 	const education = applicantProfile.education || [];
 	const employee = applicantProfile.employee;
+	const isEmployee = applicantProfile.isEmployee;
+	const employmentHistory = applicantProfile.employmentHistory || [];
 	if (!education.length)
 		return { eligible: false, reason: "No education records found." };
 
@@ -63,19 +63,17 @@ export function checkEligibility(
 		return { eligible: true, reason: "No specific requirements for this job." };
 	}
 
-	// --- Build certificate level map from API or fallback to education data ---
 	const levelMap = new Map<number, string>();
 	if (certificateLevels?.length) {
 		for (const lvl of certificateLevels) {
 			if (lvl?.id && lvl?.name) levelMap.set(Number(lvl.id), String(lvl.name));
 		}
 	} else {
-		// fallback: extract unique certificateLevelId from education data
 		const uniqueIds = [
 			...new Set(education.map((e: any) => e.certificateLevelId)),
 		];
 		for (const id of uniqueIds) {
-			levelMap.set(Number(id), `Level-${id}`); // placeholder name to avoid Unknown mapping
+			levelMap.set(Number(id), `Level-${id}`);
 		}
 	}
 
@@ -85,6 +83,7 @@ export function checkEligibility(
 		const currentLevel =
 			levelMap.get(Number(edu.certificateLevelId)) || "Unknown";
 		const targetLevel = levelMap.get(Number(job.certificateLevel)) || "Unknown";
+
 		if (
 			job.requiredStudyAreaId &&
 			edu.studyAreaId !== job.requiredStudyAreaId
@@ -114,12 +113,29 @@ export function checkEligibility(
 					});
 				}
 
-				const doca = employee?.doca ? new Date(employee.doca) : new Date();
+				let doca: Date;
+				if (isEmployee && employee?.doca) {
+					doca = new Date(employee.doca);
+				} else if (employmentHistory.length > 0) {
+					const earliestStart = new Date(
+						Math.min(
+							...employmentHistory.map((job: any) =>
+								new Date(job.startDate).getTime()
+							)
+						)
+					);
+					doca = earliestStart;
+				} else {
+					const completionYear = edu.yearCompleted
+						? new Date(`${edu.yearCompleted}-12-31`)
+						: new Date();
+					doca = completionYear;
+				}
+
 				const result = canProgress(currentLevel, targetLevel, doca, rules);
 				if (!result.allowed) return { eligible: false, reason: result.reason };
 			} else if (edu.certificateLevelId !== job.certificateLevel) {
 				lastReason = `Required: ${targetLevel}. Yours: ${currentLevel}.`;
-				console.warn("Certificate mismatch:", lastReason);
 				continue;
 			}
 		}
@@ -130,7 +146,6 @@ export function checkEligibility(
 	return { eligible: false, reason: lastReason };
 }
 
-// Optional helper for displaying job requirements
 export function getJobRequirements(
 	job: any,
 	studyAreas: any[],
