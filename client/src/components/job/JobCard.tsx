@@ -45,7 +45,6 @@ export default function JobCard({
 }: JobCardProps) {
   const { isAuthenticated } = useAuth();
   const { data: config } = usePublicConfig();
-
   const departments = config?.departments || [];
   const jobGroups = config?.jobGroups || [];
   const studyAreas = config?.studyAreas || [];
@@ -55,7 +54,8 @@ export default function JobCard({
   const [showDetails, setShowDetails] = useState(false);
   const specialized = showDetails? job.requiredSpecializationIds: job.requiredSpecializationIds.slice(0, 2);
   
-      
+  
+ 
   const applyMutation = useMutation({
   mutationFn: () => applyToJob(job.id),
   onSuccess: () => {
@@ -90,115 +90,39 @@ export default function JobCard({
     });
   },
   });
-
- // --- Intelligent Eligibility Check with Reason ---
-  function getEligibility() {
-    if (!isAuthenticated) {
-      return { eligible: false, reason: 'Please log in to check eligibility.' };
-    }
-    if (!applicantProfile?.education || applicantProfile.education.length === 0) {
-      return { eligible: false, reason: 'No education records found in your profile.' };
-    }
-    const requiredStudyArea = studyAreas.find((sa: any) => sa.id === job.requiredStudyAreaId);
-    const requiredCertLevel = certificateLevels.find((c: any) => c.id === job.certificateLevel);
-    if (!requiredStudyArea && !requiredCertLevel && !job.requiredSpecializationIds?.length) {
-      return { eligible: true, reason: 'No specific education requirements for this job.' };
-    }
-    // Scan all education records for a match
-    for (const edu of applicantProfile.education) {
-      if (requiredStudyArea && edu.studyAreaId !== requiredStudyArea.id) {
-        continue;
-      }
-      if (job.requiredSpecializationIds?.length > 0 && !job.requiredSpecializationIds.includes(edu.specializationId)) {
-        continue;
-      }
-      if (requiredCertLevel) {
-        // Use inheritance logic if progression allowed     
-        
-        if (job.progressionAllowed) {
-          // Map certificateLevelId to QualificationLevel string
-          const certMap: Record<number, import('@/lib/inheritanceUtils').QualificationLevel> = { 6: 'Certificate', 5: 'Ordinary Diploma', 4: 'Advanced Diploma', 2: 'Bachelor\'s Degree', 1: 'Master\'s Degree' };
-          const currentLevel: import('@/lib/inheritanceUtils').QualificationLevel = certMap[Number(edu.certificateLevelId)] || 'Certificate';
-          const targetLevel: import('@/lib/inheritanceUtils').QualificationLevel = certMap[Number(requiredCertLevel.id)] || 'Certificate';
-          // Comprehensive progression rules based on certificateLevel order
-        
-        
-          const certificateLevel = [ 
-            "Master's Degree",
-            "Bachelor's Degree",
-            "Advanced Diploma",
-            "Ordinary Diploma",
-            "Certificate",
-          ];
-          const rules: import('@/lib/inheritanceUtils').InheritanceRule[] = [];
-          for (let i = certificateLevel.length - 1; i > 0; i--) {
-            rules.push({
-              from: certificateLevel[i] as import('@/lib/inheritanceUtils').QualificationLevel,
-              to: certificateLevel[i - 1] as import('@/lib/inheritanceUtils').QualificationLevel,
-              minYears: Number(job?.experience) // You can customize minYears per transition
-            });
-          }
-          const result = useInheritance(
-            currentLevel,
-            targetLevel,
-            edu.doca ? new Date(edu.doca) : new Date(),
-            rules
-          );
-          if (!result.allowed) {
-            return { eligible: false, reason: result.reason || 'Progression not allowed.' };
-          } else {
-            if (edu.certificateLevelId !== requiredCertLevel.id) {
-              continue;
-            }
-          }
-        }
-        // If all checks pass
-        return { eligible: true, reason: 'You meet all education requirements.' };
-      }
-      // If no education record matches
-    let reason = 'You do not meet the required qualifications.';
-    if (requiredStudyArea && applicantProfile.education.every((edu: any) => edu.studyAreaId !== requiredStudyArea.id)) {
-      reason = `Required study area: ${requiredStudyArea.name}`;
-    }else if (requiredCertLevel && applicantProfile.education.every((edu: any) => edu.certificateLevelId !== (requiredCertLevel as any).id)) {
-      reason = `Required certificate level: ${(requiredCertLevel as any).name}`;
-    } else if (job.requiredSpecializationIds?.length > 0 && applicantProfile.education.every((edu: any) => !job.requiredSpecializationIds.includes(edu.specializationId))) {
-      reason = 'Required specialization not found in your education records.';
-    } 
-    return { eligible: false, reason };
-  }
-  }    
-  // const eligibility = getEligibility();
-  const eligibility = checkEligibility(job, applicantProfile, isAuthenticated);
-
-  // console.log(eligibility);
+ 
+  const eligibility = checkEligibility(job, applicantProfile, isAuthenticated,certificateLevels);
   // ----------------- Required Qualifications Renderer -----------------
   const getRequiredQualifications = () => {
-    const studyArea = studyAreas.find((sa: any) => sa.id === job.requiredStudyAreaId);
-    const certLevel = certificateLevels.find((c: any) => c.id === job.certificateLevel);
-
-    return (
-      <div className="space-y-2">
-        {/* Specializations */}
-        {job.requiredSpecializationIds && job.requiredSpecializationIds.length > 0 && (
-          <div>
-            <p className="font-medium text-sm text-gray-700">{`${certLevel?.name} either ` } in :</p>
-            <ul className="list-disc list-inside text-sm text-gray-600">
-              {specialized.map((id: number) => {
-                const spec = specializations.find((s: any) => s.id === id);
-                return spec ? <li key={id}>{spec.name}; </li> : null;
-              })}
-            </ul>
-          </div>
-        )}
-        {/* Progression Allowed */}
-        {job.progressionAllowed && (
-          <p className="text-sm text-green-700">
-            Higher education levels accepted (progression allowed)
-          </p>
-        )}
-      </div>
-    );
-  };
+		const { certificateLevel, progressionAllowed } = getJobRequirements(
+			job,
+			studyAreas,
+			certificateLevels,
+			specializations
+		);
+		return (
+			<div className="space-y-2">
+				{job.requiredSpecializationIds?.length > 0 && (
+					<div>
+						<p className="font-medium text-sm text-gray-700">{`${
+							certificateLevel || "Relevant Level"
+						} in:`}</p>
+						<ul className="list-disc list-inside text-sm text-gray-600">
+							{specialized.map((id: number) => {
+								const spec = specializations.find((s: any) => s.id === id);
+								return spec ? <li key={id}>{spec.name}</li> : null;
+							})}
+						</ul>
+					</div>
+				)}
+				{progressionAllowed && (
+					<p className="text-sm text-green-700">
+						Higher education levels accepted (progression allowed)
+					</p>
+				)}
+			</div>
+		);
+	};
   // ----------------- Handle Apply -----------------
   const handleApply = () => {
      if (!eligibility?.eligible) {
