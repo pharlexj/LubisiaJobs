@@ -42,7 +42,7 @@ export default function BoardSecretary() {
   const [comment, setComment] = useState('');
   const [agendaItemNumber, setAgendaItemNumber] = useState('');
   const [boardMeetingDate, setBoardMeetingDate] = useState('');
-  const [recommendation, setRecommendation] = useState<'approve' | 'reject' | 'revise' | ''>('');
+  const [recommendation, setRecommendation] = useState<'approve' | 'reject' | 'revise' |'file'| ''>('');
 
   const { data: stats } = useQuery({
     queryKey: ['/api/rms/stats'],
@@ -60,6 +60,7 @@ export default function BoardSecretary() {
     },
   });
 
+console.log("documents:", documents);
 
   const { data: allComments } = useQuery<any[]>({
     queryKey: ['/api/rms/comments', selectedDocument?.id],
@@ -120,6 +121,7 @@ const afterMeetingDocuments = documents?.filter(
     onSuccess: (_, variables) => {
       const actionMessage = variables.data.toStatus === 'sent_to_chair' ? 'forwarded to Board Chairperson' :
                           variables.data.toStatus === 'sent_to_hr' ? 'forwarded to HR Office' :
+                          variables.data.toStatus === 'sent_to_records_to_file' ? 'sent to Records Officer to file away' : 'updated'
                           variables.data.toStatus === 'sent_to_records' ? 'sent to Records Officer' : 'updated';
       toast({
         title: 'Success',
@@ -217,6 +219,19 @@ const afterMeetingDocuments = documents?.filter(
     });
   };
 
+  const handleFileAway = () => {
+    if (!selectedDocument) return;
+    forwardDocumentMutation.mutate({
+			id: selectedDocument.id,
+			data: {
+				toHandler: "recordsOfficer",
+				toStatus: "sent_to_records_to_file",
+				notes:
+					"Sent to Records Officer for filing away",
+			},
+		});
+  }
+
   const handleSetAgenda = () => {
     if (!selectedDocument || !agendaItemNumber.trim() || !boardMeetingDate) {
       toast({
@@ -281,6 +296,7 @@ const afterMeetingDocuments = documents?.filter(
       board_meeting: { label: 'In Meeting', className: 'bg-red-500' },
       decision_made: { label: 'Decision Made', className: 'bg-green-600' },
       sent_to_records: { label: 'With Records', className: 'bg-gray-500' },
+      sent_to_records_to_file: { label: 'Filed At Records', className: 'bg-gray-800' },
       dispatched: { label: 'Dispatched', className: 'bg-gray-600' },
       filed: { label: 'Filed', className: 'bg-slate-500' },
     };
@@ -668,6 +684,14 @@ const afterMeetingDocuments = documents?.filter(
                   >
                     Needs Revision
                   </Button>
+                  <Button
+                    type="button"
+                    variant={recommendation === "file" ? "default" : "outline"}
+                    className={recommendation === "file" ? "bg-purple-600 hover:bg-purple-700" : ""}
+                    onClick={() => setRecommendation("file")}
+                  >
+                    File Away
+                  </Button>
                 </div>
               </div>
             </div>
@@ -728,6 +752,13 @@ const afterMeetingDocuments = documents?.filter(
           {forwardDocumentMutation.isPending ? "Forwarding..." : "Forward to Board Chair"}
         </Button>
       )}
+      {["forwarded_to_secretary"].includes(selectedDocument?.status)&&(
+              <Button onClick={handleFileAway} className="bg-gradient-to-r from-teal-800 to-teal-700 text-white"
+              disabled={!!comment.trim()}>
+          <Send className="w-4 h-4 mr-2" />
+          {forwardDocumentMutation.isPending ? "Returning..." : "File Away"}
+        </Button>
+      )}
 
       {selectedDocument?.status === "returned_to_secretary_from_hr" && (
         <Button
@@ -737,6 +768,16 @@ const afterMeetingDocuments = documents?.filter(
         >
           <CalendarCheck className="w-4 h-4 mr-2" />
           {setAgendaMutation.isPending ? "Setting..." : "Set Agenda"}
+        </Button>
+      )}
+      {selectedDocument?.status === "sent_to_records_to_file" && (
+        <Button
+          onClick={handleFileAway}
+          disabled={forwardDocumentMutation.isPending}
+          className="bg-gradient-to-r from-teal-300 to-teal-700 text-white"
+        >
+          <CalendarCheck className="w-4 h-4 mr-2" />
+          {forwardDocumentMutation.isPending ? "Returning..." : "File Away"}
         </Button>
       )}
     </DialogFooter>

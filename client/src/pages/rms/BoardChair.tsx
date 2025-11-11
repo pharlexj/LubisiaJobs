@@ -164,16 +164,18 @@ export default function BoardChair() {
       onSuccess: () => {
         // After remark is added, forward back to Board Secretary
         forwardDocumentMutation.mutate({
-          id: selectedDocument.id,
-          data: {
-            toHandler: 'boardSecretary',
-            // Use an enum value that exists in the database. The codebase's schema includes
-            // 'returned_to_secretary_from_chair' but the DB may not have been migrated —
-            // use 'forwarded_to_secretary' which is the canonical in-DB value.
-            toStatus: 'forwarded_to_secretary',
-            notes: `Reviewed by Board Chairperson - ${decision ? decision.toUpperCase() : 'REMARKS ADDED'}`
-          }
-        });
+					id: selectedDocument.id,
+					data: {
+						toHandler: "boardSecretary",
+						// Use an enum value that exists in the database. The codebase's schema includes
+						// 'returned_to_secretary_from_chair' but the DB may not have been migrated —
+						// use 'forwarded_to_secretary' which is the canonical in-DB value.
+						toStatus: "returned_to_secretary_from_chair",
+						notes: `Reviewed by Board Chairperson - ${
+							decision ? decision.toUpperCase() : "REMARKS ADDED"
+						}`,
+					},
+				});
       }
     });
   };

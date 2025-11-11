@@ -35,7 +35,8 @@ import {
 	panelScores,
 	noticeSubscriptions,
 	notifications,
-	notificationRecipients,
+  notificationRecipients,
+  votes,
 	voteAccounts,
 	budgets,
 	transactions,
@@ -85,7 +86,8 @@ import {
 	type InsertNotification,
 	type Ethnicity,
 	type AdminDocument,
-	type InsertAdminDocument,
+  type InsertAdminDocument,
+  type Vote,
 	type VoteAccount,
 	type Budget,
 	type Transaction,
@@ -336,6 +338,7 @@ export interface IStorage {
 
 	// Accounting module operations
 	getAllVoteAccounts(): Promise<any[]>;
+	getAllVote(): Promise<any[]>;
 	createVoteAccount(data: any): Promise<any>;
 	getAllBudgets(): Promise<any[]>;
 	createBudget(data: any): Promise<any>;
@@ -1520,6 +1523,8 @@ export class DatabaseStorage implements IStorage {
 			personalNumber: string;
 			idNumber: string;
 			designation?: string;
+      dofa?: string;
+      doca?: string;
 		}>
 	): Promise<number> {
 		if (!rows || rows.length === 0) return 0;
@@ -1533,10 +1538,17 @@ export class DatabaseStorage implements IStorage {
 						personalNumber: r.personalNumber,
 						idNumber: r.idNumber,
 						designation: r.designation ?? "",
+						dofa: r.dofa,
+						doca: r.doca,
 					} as any)
 					.onConflictDoUpdate({
 						target: payroll.personalNumber,
-						set: { idNumber: r.idNumber, designation: r.designation },
+						set: {
+							idNumber: r.idNumber,
+							designation: r.designation,
+							dofa: r.dofa,
+							doca: r.doca,
+						},
 					})
 					.returning();
 				const [rec] = await insertQuery;
@@ -2961,10 +2973,20 @@ export class DatabaseStorage implements IStorage {
 	async getAllVoteAccounts(): Promise<VoteAccount[]> {
 		return await db.select().from(voteAccounts);
 	}
+	async getAllVote(): Promise<Vote[]> {
+		return await db.select().from(votes);
+	}
 
 	async createVoteAccount(data: any): Promise<VoteAccount> {
 		const [voteAccount] = await db
 			.insert(voteAccounts)
+			.values(data)
+			.returning();
+		return voteAccount;
+	}
+	async createVote(data: any): Promise<Vote> {
+		const [voteAccount] = await db
+			.insert(votes)
 			.values(data)
 			.returning();
 		return voteAccount;
@@ -3093,6 +3115,24 @@ export class DatabaseStorage implements IStorage {
 
 	async getAllEmployees(): Promise<any[]> {
 		// Return users with accountant or applicant role as "employees"
+    const employeeUsers = await db
+      .select({
+        id: users.id,
+        name: sql<string>`CONCAT(${users.firstName}, ' ', ${users.surname})`,
+        email: users.email,
+        phoneNumber: users.phoneNumber,
+        personalNumber: payroll.personalNumber,
+        jg: employees.jg,
+        role: users.role,
+      })
+      .from(employees)
+      .leftJoin(payroll, eq(payroll.personalNumber, employees.personalNumber))
+      .leftJoin(users, eq(users.nationalId, payroll.idNumber));
+		return employeeUsers;
+	}
+
+	async getAllUserEmployees(): Promise<any[]> {
+		// Return users with accountant or applicant role as "employees"
 		const employeeUsers = await db
 			.select({
 				id: users.id,
@@ -3172,6 +3212,7 @@ export class DatabaseStorage implements IStorage {
 				"board_meeting",
 				"decision_made",
 				"sent_to_records",
+				"sent_to_records_to_file",
 				"dispatched",
 				"filed",
 			]);

@@ -62,14 +62,39 @@ export default function DocumentUpload() {
 			<CardContent>
 				<form onSubmit={submit} className="space-y-4">
 					<div>
-						<Label htmlFor="documents">Select documents</Label>
-						<Input
-							id="documents"
-							type="file"
-							multiple
-							onChange={handleFiles}
-							accept={docsConfig.acceptedTypes.join(",")}
-						/>
+						<Label
+							htmlFor="documents"
+							className="block border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400"
+						>
+							<Input
+								id="documents"
+								type="file"
+								multiple
+								onChange={handleFiles}
+								accept={docsConfig.acceptedTypes.join(",")}
+								className="hidden"
+							/>
+							<div className="flex flex-col items-center gap-2">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									className="h-8 w-8 text-red-600"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth="2"
+										d="M12 4v12m0 0l-4-4m4 4l4-4M21 12v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6"
+									/>
+								</svg>
+								<div className="text-sm text-gray-500">
+									Upload supporting documents
+								</div>
+								<div className="text-xs text-gray-400">.pdf, .docx</div>
+							</div>
+						</Label>
 						{selectedFiles.length > 0 && (
 							<div className="mt-2 text-sm">
 								Selected: {selectedFiles.map((f) => f.name).join(", ")}

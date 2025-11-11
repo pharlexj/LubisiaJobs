@@ -1,396 +1,525 @@
-import { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { Trash2 } from 'lucide-react';
-import Navigation from '@/components/layout/Navigation';
-import Sidebar from '@/components/layout/Sidebar';
-import { apiRequest, queryClient } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
+import Navigation from "@/components/layout/Navigation";
+import Sidebar from "@/components/layout/Sidebar";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 
 interface Vote {
-  id: number;
-  voteId: string;
-  votedItems: string;
+	id: number;
+	voteId: string;
+	votedItems: string;
 }
 
 interface Department {
-  id: number;
-  name: string;
-  code: string;
+	id: number;
+	name: string;
+	code: string;
 }
 
 export default function MasterImprest() {
-  const { toast } = useToast();
-  const [balance] = useState(0);
+	const { toast } = useToast();
+	const [balance] = useState(0);
 
-  const [formData, setFormData] = useState({
-    voteId: '',
-    voteAccount: '',
-    aieHolderId: '',
-    description: '',
-    amount: '',
-    dateIssued: new Date().toISOString().split('T')[0],
-    departmentId: '',
-    checkNo: '',
-    voucherNo: '',
-    purpose: '',
-  });
+	const [formData, setFormData] = useState({
+		voteId: "",
+		voteAccount: "",
+		aieHolderId: "",
+		description: "",
+		amount: "",
+		dateIssued: new Date().toISOString().split("T")[0],
+		departmentId: "",
+		checkNo: "",
+		voucherNo: "",
+		purpose: "",
+	});
 
-  const { data: mirEntries = [], isLoading: mirLoading } = useQuery<any[]>({
-    queryKey: ['/api/accountant/mir'],
-  });
+	const { data: mirEntries = [], isLoading: mirLoading } = useQuery<any[]>({
+		queryKey: ["/api/accountant/mir"],
+	});
 
-  const { data: votes = [] } = useQuery<Vote[]>({
-    queryKey: ['/api/accounting/votes'],
-  });
+	const { data: votes = [] } = useQuery<Vote[]>({
+		queryKey: ["/api/accounting/votes"],
+	});
 
-  const { data: departments = [] } = useQuery<Department[]>({
-    queryKey: ['/api/departments'],
-  });
+	const { data: departments = [] } = useQuery<Department[]>({
+		queryKey: ["/api/departments"],
+	});
 
-  const createMirMutation = useMutation({
-    mutationFn: async (mirData: any) => {
-      return await apiRequest('POST', '/api/accounting/mir', mirData);
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'MIR entry created successfully!',
-      });
-      resetForm();
-      queryClient.invalidateQueries({ queryKey: ['/api/accountant/mir'] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to create MIR entry',
-        variant: 'destructive',
-      });
-    },
-  });
+	const createMirMutation = useMutation({
+		mutationFn: async (mirData: any) => {
+			return await apiRequest("POST", "/api/accounting/mir", mirData);
+		},
+		onSuccess: () => {
+			toast({
+				title: "Success",
+				description: "MIR entry created successfully!",
+			});
+			resetForm();
+			queryClient.invalidateQueries({ queryKey: ["/api/accountant/mir"] });
+		},
+		onError: (error: any) => {
+			toast({
+				title: "Error",
+				description: error.message || "Failed to create MIR entry",
+				variant: "destructive",
+			});
+		},
+	});
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return await apiRequest('DELETE', `/api/accounting/mir/${id}`);
-    },
-    onSuccess: () => {
-      toast({ title: 'Success', description: 'MIR entry deleted successfully' });
-      queryClient.invalidateQueries({ queryKey: ['/api/accountant/mir'] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to delete MIR entry',
-        variant: 'destructive',
-      });
-    },
-  });
+	const deleteMutation = useMutation({
+		mutationFn: async (id: number) => {
+			return await apiRequest("DELETE", `/api/accounting/mir/${id}`);
+		},
+		onSuccess: () => {
+			toast({
+				title: "Success",
+				description: "MIR entry deleted successfully",
+			});
+			queryClient.invalidateQueries({ queryKey: ["/api/accountant/mir"] });
+		},
+		onError: (error: any) => {
+			toast({
+				title: "Error",
+				description: error.message || "Failed to delete MIR entry",
+				variant: "destructive",
+			});
+		},
+	});
 
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      if (status === 'returned') {
-        return await apiRequest('PATCH', `/api/accounting/mir/${id}/retire`, {});
-      }
-      return await apiRequest('PATCH', `/api/accounting/mir/${id}`, { status });
-    },
-    onSuccess: () => {
-      toast({ title: 'Success', description: 'MIR entry updated' });
-      queryClient.invalidateQueries({ queryKey: ['/api/accountant/mir'] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to update MIR entry',
-        variant: 'destructive',
-      });
-    },
-  });
+	const updateStatusMutation = useMutation({
+		mutationFn: async ({ id, status }: { id: number; status: string }) => {
+			if (status === "returned") {
+				return await apiRequest(
+					"PATCH",
+					`/api/accounting/mir/${id}/retire`,
+					{}
+				);
+			}
+			return await apiRequest("PATCH", `/api/accounting/mir/${id}`, { status });
+		},
+		onSuccess: () => {
+			toast({ title: "Success", description: "MIR entry updated" });
+			queryClient.invalidateQueries({ queryKey: ["/api/accountant/mir"] });
+		},
+		onError: (error: any) => {
+			toast({
+				title: "Error",
+				description: error.message || "Failed to update MIR entry",
+				variant: "destructive",
+			});
+		},
+	});
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
 
-    const mirData = {
-      transactionId: 0, // Will be generated by backend
-      status: 'issued',
-      receiptPayment: parseFloat(formData.amount),
-      mode: formData.purpose,
-    };
+		const mirData = {
+			transactionId: 0, // Will be generated by backend
+			status: "issued",
+			receiptPayment: parseFloat(formData.amount),
+			mode: formData.purpose,
+		};
 
-    createMirMutation.mutate(mirData);
-  };
+		createMirMutation.mutate(mirData);
+	};
 
-  const resetForm = () => {
-    setFormData({
-      voteId: '',
-      voteAccount: '',
-      aieHolderId: '',
-      description: '',
-      amount: '',
-      dateIssued: new Date().toISOString().split('T')[0],
-      departmentId: '',
-      checkNo: '',
-      voucherNo: '',
-      purpose: '',
-    });
-  };
+	const resetForm = () => {
+		setFormData({
+			voteId: "",
+			voteAccount: "",
+			aieHolderId: "",
+			description: "",
+			amount: "",
+			dateIssued: new Date().toISOString().split("T")[0],
+			departmentId: "",
+			checkNo: "",
+			voucherNo: "",
+			purpose: "",
+		});
+	};
 
-  const handleStatusUpdate = async (id: number, status: string) => {
-    updateStatusMutation.mutate({ id, status });
-  };
+	const handleStatusUpdate = async (id: number, status: string) => {
+		updateStatusMutation.mutate({ id, status });
+	};
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this MIR entry?')) return;
-    deleteMutation.mutate(id);
-  };
+	const handleDelete = async (id: number) => {
+		if (!confirm("Are you sure you want to delete this MIR entry?")) return;
+		deleteMutation.mutate(id);
+	};
 
-  return (
-    <div className="min-h-screen bg-neutral-50">
-      <Navigation />
-      
-      <div className="flex">
-        <Sidebar userRole="accountant" />
-        
-        <main className="flex-1 p-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* LEFT: MIR Form */}
-        <div>
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-t-lg">
-            <h3 className="text-lg font-semibold">
-              Available Balance: Ksh. <span className="font-bold">{balance.toLocaleString()}</span>
-            </h3>
-          </div>
+	return (
+		<div className="min-h-screen bg-neutral-50">
+			<Navigation />
 
-          <form onSubmit={handleSubmit} className="bg-white shadow-lg rounded-b-lg p-6 space-y-4">
-            {/* Vote and Department Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Select Vote <span className="text-red-500">*</span></label>
-                <select
-                  required
-                  value={formData.voteId}
-                  onChange={(e) => setFormData({ ...formData, voteId: e.target.value })}
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  data-testid="select-vote"
-                >
-                  <option value="">Select Vote</option>
-                  {votes.map(vote => (
-                    <option key={vote.id} value={vote.id}>{vote.voteId} - {vote.votedItems}</option>
-                  ))}
-                </select>
-              </div>
+			<div className="flex">
+				<Sidebar userRole="accountant" />
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Vote Account</label>
-                <select
-                  value={formData.voteAccount}
-                  onChange={(e) => setFormData({ ...formData, voteAccount: e.target.value })}
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  data-testid="select-vote-account"
-                >
-                  <option value="">Select Account</option>
-                  <option value="221001">221001</option>
-                  <option value="221002">221002</option>
-                </select>
-              </div>
+				<main className="flex-1 p-4">
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+						{/* LEFT: MIR Form */}
+						<div>
+							<div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-t-lg">
+								<h3 className="text-lg font-semibold">
+									Available Balance: Ksh.{" "}
+									<span className="font-bold">{balance.toLocaleString()}</span>
+								</h3>
+							</div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Department</label>
-                <select
-                  value={formData.departmentId}
-                  onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  data-testid="select-department"
-                >
-                  <option value="">Select Department</option>
-                  {departments.map(dept => (
-                    <option key={dept.id} value={dept.id}>{dept.name} ({dept.code})</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+							<form
+								onSubmit={handleSubmit}
+								className="bg-white shadow-lg rounded-b-lg p-6 space-y-4"
+							>
+								{/* Vote and Department Selection */}
+								<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+									<div>
+										<label className="block text-xs font-semibold text-gray-700 mb-1">
+											Select Vote <span className="text-red-500">*</span>
+										</label>
+										<Select
+											value={formData.voteId}
+											onValueChange={(val: string) =>
+												setFormData({ ...formData, voteId: val })
+											}
+										>
+											<SelectTrigger
+												data-testid="select-vote"
+												className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+											>
+												<SelectValue placeholder="Select Vote" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="">Select Vote</SelectItem>
+												{votes.map((vote) => (
+													<SelectItem key={vote.id} value={vote.id.toString()}>
+														{vote.voteId} - {vote.votedItems}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
 
-            {/* Purpose and Description */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Purpose of Imprest <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  required
-                  value={formData.purpose}
-                  onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., Field Operations, Training, Meetings"
-                  data-testid="input-purpose"
-                />
-              </div>
+									<div>
+										<label className="block text-xs font-semibold text-gray-700 mb-1">
+											Vote Account
+										</label>
+										<Select
+											value={formData.voteAccount}
+											onValueChange={(val: string) =>
+												setFormData({ ...formData, voteAccount: val })
+											}
+										>
+											<SelectTrigger
+												data-testid="select-vote-account"
+												className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+											>
+												<SelectValue placeholder="Select Account" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="">Select Account</SelectItem>
+												<SelectItem value="221001">221001</SelectItem>
+												<SelectItem value="221002">221002</SelectItem>
+											</SelectContent>
+										</Select>
+									</div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Amount (Ksh) <span className="text-red-500">*</span></label>
-                <input
-                  type="number"
-                  required
-                  step="0.01"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  placeholder="0.00"
-                  data-testid="input-amount"
-                />
-              </div>
-            </div>
+									<div>
+										<label className="block text-xs font-semibold text-gray-700 mb-1">
+											Department
+										</label>
+										<Select
+											value={formData.departmentId}
+											onValueChange={(val: string) =>
+												setFormData({ ...formData, departmentId: val })
+											}
+										>
+											<SelectTrigger
+												data-testid="select-department"
+												className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+											>
+												<SelectValue placeholder="Select Department" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="">Select Department</SelectItem>
+												{departments.map((dept) => (
+													<SelectItem key={dept.id} value={dept.id.toString()}>
+														{dept.name} ({dept.code})
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+								</div>
 
-            {/* Description */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Detailed Description <span className="text-red-500">*</span></label>
-              <textarea
-                required
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                rows={3}
-                placeholder="Provide detailed description of how the imprest will be used..."
-                data-testid="textarea-description"
-              />
-            </div>
+								{/* Purpose and Description */}
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+									<div>
+										<label className="block text-xs font-semibold text-gray-700 mb-1">
+											Purpose of Imprest <span className="text-red-500">*</span>
+										</label>
+										<input
+											type="text"
+											required
+											value={formData.purpose}
+											onChange={(e) =>
+												setFormData({ ...formData, purpose: e.target.value })
+											}
+											className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+											placeholder="e.g., Field Operations, Training, Meetings"
+											data-testid="input-purpose"
+										/>
+									</div>
 
-            {/* Date, Check & Voucher */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Date Issued <span className="text-red-500">*</span></label>
-                <input
-                  type="date"
-                  required
-                  value={formData.dateIssued}
-                  onChange={(e) => setFormData({ ...formData, dateIssued: e.target.value })}
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  data-testid="input-date-issued"
-                />
-              </div>
+									<div>
+										<label className="block text-xs font-semibold text-gray-700 mb-1">
+											Amount (Ksh) <span className="text-red-500">*</span>
+										</label>
+										<input
+											type="number"
+											required
+											step="0.01"
+											value={formData.amount}
+											onChange={(e) =>
+												setFormData({ ...formData, amount: e.target.value })
+											}
+											className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+											placeholder="0.00"
+											data-testid="input-amount"
+										/>
+									</div>
+								</div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Check #</label>
-                <input
-                  type="text"
-                  value={formData.checkNo}
-                  onChange={(e) => setFormData({ ...formData, checkNo: e.target.value })}
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  placeholder="Cheque Number"
-                  data-testid="input-check-no"
-                />
-              </div>
+								{/* Description */}
+								<div>
+									<label className="block text-xs font-semibold text-gray-700 mb-1">
+										Detailed Description <span className="text-red-500">*</span>
+									</label>
+									<textarea
+										required
+										value={formData.description}
+										onChange={(e) =>
+											setFormData({ ...formData, description: e.target.value })
+										}
+										className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+										rows={3}
+										placeholder="Provide detailed description of how the imprest will be used..."
+										data-testid="textarea-description"
+									/>
+								</div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Voucher #</label>
-                <input
-                  type="text"
-                  value={formData.voucherNo}
-                  onChange={(e) => setFormData({ ...formData, voucherNo: e.target.value })}
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  placeholder="Voucher Number"
-                  data-testid="input-voucher-no"
-                />
-              </div>
-            </div>
+								{/* Date, Check & Voucher */}
+								<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+									<div>
+										<label className="block text-xs font-semibold text-gray-700 mb-1">
+											Date Issued <span className="text-red-500">*</span>
+										</label>
+										<input
+											type="date"
+											required
+											value={formData.dateIssued}
+											onChange={(e) =>
+												setFormData({ ...formData, dateIssued: e.target.value })
+											}
+											className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+											data-testid="input-date-issued"
+										/>
+									</div>
 
-            {/* Amount Display */}
-            <div className="bg-blue-50 border-l-4 border-blue-600 p-3 rounded">
-              <p className="text-sm font-semibold text-blue-900">
-                Imprest Amount: Ksh. {parseFloat(formData.amount || '0').toLocaleString()}
-              </p>
-            </div>
+									<div>
+										<label className="block text-xs font-semibold text-gray-700 mb-1">
+											Check #
+										</label>
+										<input
+											type="text"
+											value={formData.checkNo}
+											onChange={(e) =>
+												setFormData({ ...formData, checkNo: e.target.value })
+											}
+											className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+											placeholder="Cheque Number"
+											data-testid="input-check-no"
+										/>
+									</div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={createMirMutation.isPending}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition-colors"
-              data-testid="button-issue-imprest"
-            >
-              {createMirMutation.isPending ? 'Processing...' : 'Issue Imprest'}
-            </button>
-          </form>
-        </div>
+									<div>
+										<label className="block text-xs font-semibold text-gray-700 mb-1">
+											Voucher #
+										</label>
+										<input
+											type="text"
+											value={formData.voucherNo}
+											onChange={(e) =>
+												setFormData({ ...formData, voucherNo: e.target.value })
+											}
+											className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+											placeholder="Voucher Number"
+											data-testid="input-voucher-no"
+										/>
+									</div>
+								</div>
 
-        {/* RIGHT: MIR Entries List */}
-        <div>
-          <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-t-lg">
-            <h3 className="text-lg font-semibold">Master Imprest Register</h3>
-          </div>
+								{/* Amount Display */}
+								<div className="bg-blue-50 border-l-4 border-blue-600 p-3 rounded">
+									<p className="text-sm font-semibold text-blue-900">
+										Imprest Amount: Ksh.{" "}
+										{parseFloat(formData.amount || "0").toLocaleString()}
+									</p>
+								</div>
 
-          <div className="bg-white shadow-lg rounded-b-lg overflow-hidden">
-            <div className="overflow-x-auto max-h-[calc(100vh-200px)]">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-100 border-b sticky top-0">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">#</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">MIR No</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Mode</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Amount</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Date Issued</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Status</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {mirLoading ? (
-                    <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-gray-500">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                          Loading MIR entries...
-                        </div>
-                      </td>
-                    </tr>
-                  ) : mirEntries.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-gray-500">
-                        No MIR entries found. Issue your first imprest!
-                      </td>
-                    </tr>
-                  ) : (
-                    mirEntries.map((entry: any, idx: number) => (
-                      <tr key={entry.id} className="hover:bg-gray-50" data-testid={`row-mir-${entry.id}`}>
-                        <td className="px-3 py-2 text-xs">{idx + 1}</td>
-                        <td className="px-3 py-2 text-xs font-medium">{entry.id}</td>
-                        <td className="px-3 py-2 text-xs">{entry.mode || 'N/A'}</td>
-                        <td className="px-3 py-2 text-xs font-semibold">Ksh. {parseFloat(entry.receiptPayment || 0).toLocaleString()}</td>
-                        <td className="px-3 py-2 text-xs">{new Date(entry.createdAt).toLocaleDateString()}</td>
-                        <td className="px-3 py-2">
-                          <select
-                            value={entry.status}
-                            onChange={(e) => handleStatusUpdate(entry.id, e.target.value)}
-                            className={`text-xs px-2 py-1 rounded-full font-semibold border-0 ${
-                              entry.status === 'returned' ? 'bg-green-100 text-green-800' :
-                              entry.status === 'overdue' ? 'bg-red-100 text-red-800' :
-                              'bg-yellow-100 text-yellow-800'
-                            }`}
-                            data-testid={`select-status-${entry.id}`}
-                          >
-                            <option value="issued">Issued</option>
-                            <option value="returned">Returned</option>
-                            <option value="overdue">Overdue</option>
-                          </select>
-                        </td>
-                        <td className="px-3 py-2">
-                          <button
-                            onClick={() => handleDelete(entry.id)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Delete entry"
-                            data-testid={`button-delete-${entry.id}`}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-          </div>
-        </main>
-      </div>
-    </div>
-  );
+								{/* Submit Button */}
+								<button
+									type="submit"
+									disabled={createMirMutation.isPending}
+									className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition-colors"
+									data-testid="button-issue-imprest"
+								>
+									{createMirMutation.isPending
+										? "Processing..."
+										: "Issue Imprest"}
+								</button>
+							</form>
+						</div>
+
+						{/* RIGHT: MIR Entries List */}
+						<div>
+							<div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-t-lg">
+								<h3 className="text-lg font-semibold">
+									Master Imprest Register
+								</h3>
+							</div>
+
+							<div className="bg-white shadow-lg rounded-b-lg overflow-hidden">
+								<div className="overflow-x-auto max-h-[calc(100vh-200px)]">
+									<table className="w-full text-sm">
+										<thead className="bg-gray-100 border-b sticky top-0">
+											<tr>
+												<th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">
+													#
+												</th>
+												<th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">
+													MIR No
+												</th>
+												<th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">
+													Mode
+												</th>
+												<th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">
+													Amount
+												</th>
+												<th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">
+													Date Issued
+												</th>
+												<th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">
+													Status
+												</th>
+												<th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">
+													Action
+												</th>
+											</tr>
+										</thead>
+										<tbody className="divide-y divide-gray-200">
+											{mirLoading ? (
+												<tr>
+													<td
+														colSpan={7}
+														className="px-3 py-8 text-center text-gray-500"
+													>
+														<div className="flex items-center justify-center gap-2">
+															<div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+															Loading MIR entries...
+														</div>
+													</td>
+												</tr>
+											) : mirEntries.length === 0 ? (
+												<tr>
+													<td
+														colSpan={7}
+														className="px-3 py-8 text-center text-gray-500"
+													>
+														No MIR entries found. Issue your first imprest!
+													</td>
+												</tr>
+											) : (
+												mirEntries.map((entry: any, idx: number) => (
+													<tr
+														key={entry.id}
+														className="hover:bg-gray-50"
+														data-testid={`row-mir-${entry.id}`}
+													>
+														<td className="px-3 py-2 text-xs">{idx + 1}</td>
+														<td className="px-3 py-2 text-xs font-medium">
+															{entry.id}
+														</td>
+														<td className="px-3 py-2 text-xs">
+															{entry.mode || "N/A"}
+														</td>
+														<td className="px-3 py-2 text-xs font-semibold">
+															Ksh.{" "}
+															{parseFloat(
+																entry.receiptPayment || 0
+															).toLocaleString()}
+														</td>
+														<td className="px-3 py-2 text-xs">
+															{new Date(entry.createdAt).toLocaleDateString()}
+														</td>
+														<td className="px-3 py-2">
+															<Select
+																value={entry.status}
+																onValueChange={(val: string) =>
+																	handleStatusUpdate(entry.id, val)
+																}
+															>
+																<SelectTrigger
+																	data-testid={`select-status-${entry.id}`}
+																	className={`text-xs px-2 py-1 rounded-full font-semibold border-0 ${
+																		entry.status === "returned"
+																			? "bg-green-100 text-green-800"
+																			: entry.status === "overdue"
+																			? "bg-red-100 text-red-800"
+																			: "bg-yellow-100 text-yellow-800"
+																	}`}
+																>
+																	<SelectValue />
+																</SelectTrigger>
+																<SelectContent>
+																	<SelectItem value="issued">Issued</SelectItem>
+																	<SelectItem value="returned">
+																		Returned
+																	</SelectItem>
+																	<SelectItem value="overdue">
+																		Overdue
+																	</SelectItem>
+																</SelectContent>
+															</Select>
+														</td>
+														<td className="px-3 py-2">
+															<button
+																onClick={() => handleDelete(entry.id)}
+																className="text-red-600 hover:text-red-900"
+																title="Delete entry"
+																data-testid={`button-delete-${entry.id}`}
+															>
+																<Trash2 size={16} />
+															</button>
+														</td>
+													</tr>
+												))
+											)}
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
+				</main>
+			</div>
+		</div>
+	);
 }

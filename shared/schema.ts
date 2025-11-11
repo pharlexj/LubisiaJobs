@@ -281,11 +281,13 @@ export const religion = pgTable("religions", {
 });
 //Payroll Employees
 export const payroll = pgTable("payroll", {
-  id: serial("id").primaryKey(),
-  designation: varchar('designation', { length: 250 }).notNull(),
-  personalNumber: varchar('personal_number', { length: 13 }).notNull().unique(),  
-  idNumber: varchar('id_number', { length: 13 }).notNull().unique(),  
-  createdAt: timestamp("created_at").defaultNow(),
+	id: serial("id").primaryKey(),
+	designation: varchar("designation", { length: 250 }).notNull(),
+	personalNumber: varchar("personal_number", { length: 13 }).notNull().unique(),
+	idNumber: varchar("id_number", { length: 13 }).notNull().unique(),
+	dofa: date("dofa"), // Date of First Appointment
+	doca: date("doca"), // Date of Current Appointment
+	createdAt: timestamp("created_at").defaultNow(),
 });
 // County employees table for verification
 export const employees = pgTable("employees", {
@@ -748,7 +750,6 @@ export const otpVerification = pgTable("otp_verification", {
 // Vote Items - Budget line items (tbl_vote)
 export const votes = pgTable("votes", {
   id: serial("id").primaryKey(),
-  departmentId: integer("dept_id").references(() => departments.id),
   voteId: varchar("vote_id", { length: 50 }).notNull(),
   votedItems: varchar("voted_items", { length: 255 }).notNull(),
   voteType: varchar("vote_type", { length: 100 }), // Development, Recurrent
@@ -757,14 +758,12 @@ export const votes = pgTable("votes", {
 // Vote Accounts - Account numbers (tbl_vote_accounts)
 export const voteAccounts = pgTable("vote_accounts", {
   id: serial("id").primaryKey(),
-  departmentId: integer("dept_id").references(() => departments.id),
   account: varchar("account", { length: 20 }).notNull(),
 });
 
 // Budget Estimates (tbl_budget_estimate)
 export const budgets = pgTable("budgets", {
   id: serial("id").primaryKey(),
-  departmentId: integer("dept_id").references(() => departments.id),
   fy: varchar("fy", { length: 10 }).notNull(),
   voteId: varchar("vote_id", { length: 20 }),
   estimatedAmount: integer("estimated_amt").notNull(),
@@ -777,7 +776,6 @@ export const budgets = pgTable("budgets", {
 export const allowances = pgTable("allowances", {
   id: serial("id").primaryKey(),
   countryId: integer("country_id"),
-  departmentId: integer("dept_id").references(() => departments.id),
   placeId: integer("place_id"),
   scale: varchar("scale", { length: 6 }).notNull(),
   amounts: integer("amounts").notNull(),
@@ -791,7 +789,6 @@ export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
   fy: varchar("fy", { length: 10 }).notNull(),
   aieId: integer("aie_id"),
-  departmentId: integer("dept_id").references(() => departments.id),
   voteId: varchar("vote_id", { length: 20 }).notNull(),
   transactionType: varchar("transaction_type", { length: 100 }).notNull(), // claim, payment
   name: varchar("name", { length: 255 }).notNull(),
@@ -830,7 +827,6 @@ export const masterImprestRegister = pgTable("master_imprest_register", {
 // Audit Trail (tbl_audits)
 export const audits = pgTable("audits", {
   id: serial("id").primaryKey(),
-  departmentId: integer("dept_id").references(() => departments.id),
   userEmail: varchar("user_email", { length: 50 }).notNull(),
   userId: varchar("user_id", { length: 15 }).notNull(),
   ipAddress: varchar("ip_address", { length: 20 }),
@@ -862,6 +858,7 @@ export const rmsDocumentStatusEnum = pgEnum("rms_document_status", [
   "board_meeting",                     // Document in board meeting
   "decision_made",                     // Decision made in meeting
   "sent_to_records",                   // Board Secretary → Records Officer
+  "sent_to_records_to_file",           // Board Secretary → Records Officer
   "dispatched",                        // Records Officer dispatches document
   "filed"                              // Records Officer files document
 ]);
@@ -869,7 +866,8 @@ export const rmsDocumentStatusEnum = pgEnum("rms_document_status", [
 // Main documents table
 export const rmsDocuments = pgTable("rms_documents", {
   id: serial("id").primaryKey(),
-  referenceNumber: varchar("reference_number", { length: 100 }).unique().notNull(),
+  referenceNumber: varchar("reference_number", { length: 100 }).unique(),
+  theirReferenceNumber: varchar("their_reference_number", { length: 100 }),
   subject: varchar("subject", { length: 500 }).notNull(),
   initiatorDepartment: varchar("initiator_department", { length: 200 }).notNull(),
   initiatorName: varchar("initiator_name", { length: 200 }),

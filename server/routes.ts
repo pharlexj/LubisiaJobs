@@ -182,11 +182,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 				const file = req.file;
 				const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
 				if (!allowedTypes.includes(file.mimetype)) {
-					return res
-						.status(400)
-						.json({
-							message: "Invalid file type. Only JPEG and PNG are allowed.",
-						});
+					return res.status(400).json({
+						message: "Invalid file type. Only JPEG and PNG are allowed.",
+					});
 				}
 
 				// Generate file URL
@@ -459,12 +457,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 			} catch (err) {
 				// log detailed for debugging
 				console.error("sendOtp() failed for", phoneNumber, err);
-				return res
-					.status(500)
-					.json({
-						success: false,
-						message: "Failed to send verification code",
-					});
+				return res.status(500).json({
+					success: false,
+					message: "Failed to send verification code",
+				});
 			}
 			res.json({
 				success: true,
@@ -472,12 +468,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 			});
 		} catch (error: any) {
 			console.error("Send OTP error:", error);
-			res
-				.status(500)
-				.json({
-					success: false,
-					message: error.message || "Failed to send verification code",
-				});
+			res.status(500).json({
+				success: false,
+				message: error.message || "Failed to send verification code",
+			});
 		}
 	});
 
@@ -1319,12 +1313,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 			});
 		} catch (error) {
 			console.error("Error fetching config:", error);
-			res
-				.status(500)
-				.json({
-					message: "Failed to fetch configuration",
-					error: (error as Error).message,
-				});
+			res.status(500).json({
+				message: "Failed to fetch configuration",
+				error: (error as Error).message,
+			});
 		}
 	});
 	// Protected applicant routes
@@ -2790,12 +2782,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 						? error.message
 						: String(error);
 				console.error("Error fetching SMS applicants:", error);
-				res
-					.status(500)
-					.json({
-						message: "Failed to fetch applicants for SMS",
-						error: errMsg,
-					});
+				res.status(500).json({
+					message: "Failed to fetch applicants for SMS",
+					error: errMsg,
+				});
 			}
 		}
 	);
@@ -3493,12 +3483,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 					"image/png",
 				];
 				if (!allowedMimeTypes.includes(req.file.mimetype)) {
-					return res
-						.status(400)
-						.json({
-							message:
-								"Invalid file type. Only .ico and .png files are allowed.",
-						});
+					return res.status(400).json({
+						message: "Invalid file type. Only .ico and .png files are allowed.",
+					});
 				}
 
 				// Determine the target filename based on mime type
@@ -4348,6 +4335,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 			}
 		}
 	);
+	// Vote Routes
+	app.get("/api/accounting/votes", isAuthenticated, async (req: any, res) => {
+		try {
+			const user = await storage.getUser(req.user.id);
+			if (!user || !["accountant", "admin"].includes(user.role!)) {
+				return res.status(403).json({ message: "Access denied" });
+			}
+
+			const voteAccounts = await storage.getAllVote();
+			res.json(voteAccounts);
+		} catch (error) {
+			console.error("Error fetching vote accounts:", error);
+			res.status(500).json({ message: "Failed to fetch vote accounts" });
+		}
+	});
 
 	app.post(
 		"/api/accounting/vote-accounts",
@@ -4393,35 +4395,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 				const errors: any[] = [];
 				const created: any[] = [];
-
 				for (let i = 0; i < data.length; i++) {
 					const row = data[i];
-					// Expected columns: Code, Description, Allocated, FiscalYear
-					const code =
-						row.Code || row.code || row.VoteCode || row.Vote || row.voteCode;
-					const description =
-						row.Description || row.description || row.Desc || row.desc;
-					const allocated =
-						row.Allocated || row.allocated || row.Amount || row.amount || 0;
-					const fiscalYear =
-						row.FiscalYear ||
-						row.fiscalYear ||
-						new Date().getFullYear() + "/" + (new Date().getFullYear() + 1);
+					const voteId = row.VoteID;
+					const votedItems = row.Items;
+					const voteType = row.Type;
 
-					if (!code || !description) {
+					if (!voteId || !votedItems) {
 						errors.push({
 							row: i + 2,
-							message: "Missing required Code or Description",
+							message: "Missing required VoteId or Items",
 						});
 						continue;
 					}
 
 					try {
-						const createdAccount = await storage.createVoteAccount({
-							code,
-							description,
-							allocated: Number(allocated) || 0,
-							fiscalYear,
+						const createdAccount = await storage.createVote({
+							voteId,
+							votedItems,
+							voteType,
 						});
 						created.push(createdAccount);
 					} catch (err) {
@@ -4456,7 +4448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 	// Employee import (Excel/CSV) - creates payroll rows
 	app.post(
-		"/api/employee/import",
+		"/api/admin/import-employees",
 		isAuthenticated,
 		uploadEmployeeExcel.single("file"),
 		async (req: any, res) => {
@@ -4480,22 +4472,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 					personalNumber: string;
 					idNumber: string;
 					designation?: string;
+					dofa?: string;
+					doca?: string;
 				}> = [];
 				for (const row of data) {
-					const personalNumber = String(
-						row.PersonalNumber ||
-							row.personalNumber ||
-							row.personal_no ||
-							row.PersonalNo ||
-							""
-					).trim();
-					const idNumber = String(
-						row.IdNumber || row.idNumber || row.id_number || row.ID || ""
-					).trim();
-					const designation =
-						row.Designation || row.designation || row.design || "";
+					const personalNumber = String(row.personalNumber).trim();
+					const idNumber = String(row.idNumber).trim();
+					const designation = row.designation;
+					const dofa = row.dofa;
+					const doca = row.doca;
 					if (!personalNumber || !idNumber) continue;
-					rows.push({ personalNumber, idNumber, designation });
+					rows.push({ personalNumber, idNumber, designation, dofa, doca });
 				}
 
 				const created = await storage.bulkUpsertPayroll(rows);
@@ -5046,7 +5033,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
 	// ========================================
 	// ACCOUNTANT-SPECIFIC ROUTES (Frontend compatibility)
 	// ========================================
+	// Get dashboard stats for A.I.E Holder
+	app.get("/api/aie/stats", isAuthenticated, async (req: any, res) => {
+		try {
+			const user = await storage.getUser(req.user.id);
+			if (!user || user.role !== "accountant") {
+				return res.status(403).json({ message: "Access denied" });
+			}
 
+			const transactions = await storage.getTransactions();
+			const mirEntries = await storage.getAllMIREntries();
+			const budgets = await storage.getAllBudgets();
+
+			const pendingApprovals = transactions.filter(
+				(t) => t.state === "pending"
+			).length;
+			const approvedToday = transactions.filter(
+				(t) =>
+					t.state === "approved" &&
+					t.updatedAt &&
+					new Date(t.updatedAt).toDateString() === new Date().toDateString()
+			).length;
+			const activeMirs = mirEntries.filter(
+				(m) => m.status === "pending"
+			).length;
+
+			const currentMonth = new Date().getMonth();
+			const monthlySpend = transactions
+				.filter(
+					(t) =>
+						t.state === "approved" &&
+						t.createdAt &&
+						new Date(t.createdAt).getMonth() === currentMonth
+				)
+				.reduce((sum, t) => sum + (t.amounts || 0), 0);
+
+			const totalBudget = budgets.reduce(
+				(sum, b) => sum + (b.estimatedAmount || 0),
+				0
+			);
+			const utilized = transactions
+				.filter((t) => t.state === "approved")
+				.reduce((sum, t) => sum + (t.amounts || 0), 0);
+			const budgetBalance = totalBudget - utilized;
+			const utilizationRate =
+				totalBudget > 0 ? Math.round((utilized / totalBudget) * 100) : 0;
+
+			res.json({
+				pendingApprovals,
+				approvedToday,
+				activeMirs,
+				monthlySpend,
+				budgetBalance,
+				utilizationRate,
+			});
+		} catch (error) {
+			console.error("Error fetching A.I.E stats:", error);
+			res.status(500).json({ message: "Failed to fetch statistics" });
+		}
+	});
 	// Get all claims (transactions with type='claim')
 	app.get("/api/accountant/claims", isAuthenticated, async (req: any, res) => {
 		try {
@@ -5300,13 +5345,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 		async (req: any, res) => {
 			try {
 				const user = await storage.getUser(req.user.id);
-				if (!user || user.role !== "recordsOfficer") {
-					return res
-						.status(403)
-						.json({
-							message:
-								"Access denied. Only Records Officer can register documents.",
-						});
+				if (
+					!user ||
+					(user.role !== "recordsOfficer" && user.role !== "chiefOfficer")
+				) {
+					return res.status(403).json({
+						message:
+							"Access denied. Only Records Officer or Chief Officer can register documents.",
+					});
 				}
 
 				const documentData = {
@@ -5408,10 +5454,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 		}
 	});
 
-	// Forward document to next handler
+	// Forward document to next handler (Records Officer can attach file and update our reference)
 	app.post(
 		"/api/rms/documents/:id/forward",
 		isAuthenticated,
+		upload.single("document"),
 		async (req: any, res) => {
 			try {
 				const user = await storage.getUser(req.user.id);
@@ -5420,16 +5467,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 				}
 
 				const documentId = parseInt(req.params.id);
-				const { toHandler, toStatus, notes } = req.body;
+				const { toHandler, toStatus, notes, referenceNumber } = req.body;
 
 				const document = await storage.getRmsDocument(documentId);
 
 				// Update document
-				const updated = await storage.updateRmsDocument(documentId, {
+				const updates: any = {
 					status: toStatus,
 					currentHandler: toHandler,
 					updatedAt: new Date(),
-				});
+				};
+				if (req.file) {
+					updates.filePath = req.file.path;
+				}
+				if (referenceNumber) {
+					updates.referenceNumber = referenceNumber;
+				}
+
+				const updated = await storage.updateRmsDocument(documentId, updates);
 
 				// Log the action
 				await storage.createRmsWorkflowLog({
@@ -5447,6 +5502,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
 			} catch (error) {
 				console.error("Error forwarding document:", error);
 				res.status(500).json({ message: "Failed to forward document" });
+			}
+		}
+	);
+
+	// Chief Officer: attach file (optional) and send document to Records Officer
+	app.post(
+		"/api/rms/documents/:id/send-to-records",
+		isAuthenticated,
+		upload.single("document"),
+		async (req: any, res) => {
+			try {
+				const user = await storage.getUser(req.user.id);
+				if (!user || user.role !== "chiefOfficer") {
+					return res.status(403).json({
+						message: "Access denied. Only Chief Officer can send to records.",
+					});
+				}
+
+				const documentId = parseInt(req.params.id);
+				const { notes, yourRef } = req.body;
+
+				const document = await storage.getRmsDocument(documentId);
+
+				// Update document: attach filePath if provided and set handler/status to records
+				const updates: any = {
+					status: "sent_to_records",
+					currentHandler: "recordsOfficer",
+					updatedAt: new Date(),
+				};
+				if (req.file) {
+					updates.filePath = req.file.path;
+				}
+
+				const updated = await storage.updateRmsDocument(documentId, updates);
+
+				// Log the action
+				await storage.createRmsWorkflowLog({
+					documentId,
+					fromStatus: document.status,
+					toStatus: "sent_to_records",
+					fromHandler: document.currentHandler,
+					toHandler: "recordsOfficer",
+					actionBy: req.user.id,
+					actionType: "Sent to Records",
+					notes: notes,
+				});
+
+				// If the Chief Officer provided an external reference, save it as a comment
+				if (yourRef) {
+					await storage.createRmsComment({
+						documentId,
+						userId: req.user.id,
+						userRole: user.role,
+						commentType: "external_ref",
+						comment: yourRef,
+					});
+				}
+
+				res.json(updated);
+			} catch (error) {
+				console.error("Error sending document to records:", error);
+				res.status(500).json({ message: "Failed to send document to records" });
 			}
 		}
 	);
@@ -5551,36 +5668,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
 			try {
 				const user = await storage.getUser(req.user.id);
 				if (!user || user.role !== "recordsOfficer") {
-					return res
-						.status(403)
-						.json({
-							message:
-								"Access denied. Only Records Officer can dispatch documents.",
-						});
+					return res.status(403).json({
+						message:
+							"Access denied. Only Records Officer can dispatch documents.",
+					});
 				}
 
 				const documentId = parseInt(req.params.id);
-				const { decisionSummary } = req.body;
+				const { decisionSummary, outcome } = req.body;
 
-				const updated = await storage.updateRmsDocument(documentId, {
-					status: "dispatched",
-					dispatchedDate: new Date(),
-					dispatchedBy: req.user.id,
-					decisionSummary,
-					updatedAt: new Date(),
-				});
+				// Try to read current document status for better workflow logging
+				let fromStatus = "decision_made";
+				try {
+					if (typeof storage.getRmsDocument === "function") {
+						const current = await storage.getRmsDocument(documentId);
+						if (current && current.status) fromStatus = current.status;
+					}
+				} catch (err) {
+					// ignore - we'll fallback to a sensible default
+				}
 
-				// Log the action
-				await storage.createRmsWorkflowLog({
-					documentId,
-					fromStatus: "decision_made",
-					toStatus: "dispatched",
-					fromHandler: user.role,
-					toHandler: "initiator",
-					actionBy: req.user.id,
-					actionType: "Document Dispatched",
-					notes: "Decision communicated to initiator",
-				});
+				let updated: any;
+				if (outcome === "file") {
+					// File the document in the registry
+					updated = await storage.updateRmsDocument(documentId, {
+						status: "filed",
+						// record that registry is now the current handler; schema does not have filedDate/filedBy
+						currentHandler: "registry",
+						decisionSummary,
+						updatedAt: new Date(),
+					});
+
+					// Log the filing action
+					await storage.createRmsWorkflowLog({
+						documentId,
+						fromStatus,
+						toStatus: "filed",
+						fromHandler: user.role,
+						toHandler: "registry",
+						actionBy: req.user.id,
+						actionType: "Document Filed",
+						notes: "Filed in registry",
+					});
+				} else {
+					// Default to dispatch
+					updated = await storage.updateRmsDocument(documentId, {
+						status: "dispatched",
+						dispatchedDate: new Date(),
+						dispatchedBy: req.user.id,
+						decisionSummary,
+						updatedAt: new Date(),
+					});
+
+					// Log the dispatch action
+					await storage.createRmsWorkflowLog({
+						documentId,
+						fromStatus,
+						toStatus: "dispatched",
+						fromHandler: user.role,
+						toHandler: "initiator",
+						actionBy: req.user.id,
+						actionType: "Document Dispatched",
+						notes: "Decision communicated to initiator",
+					});
+				}
 
 				res.json(updated);
 			} catch (error) {

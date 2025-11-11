@@ -60,14 +60,39 @@ export default function EmployeeUpload() {
 			<CardContent>
 				<form onSubmit={submit} className="space-y-4">
 					<div>
-						<Label htmlFor="employee-file">Employee file (CSV / XLSX)</Label>
-						<Input
-							id="employee-file"
-							type="file"
-							accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-							onChange={handleFile}
-							data-testid="input-employee-import"
-						/>
+						<Label
+							htmlFor="employee-file"
+							className="block border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400"
+						>
+							<Input
+								id="employee-file"
+								type="file"
+								accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+								onChange={handleFile}
+                                data-testid="input-employee-import"
+                                className="hidden"
+							/>
+							<div className="flex flex-col items-center gap-2">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									className="h-8 w-8 text-red-600"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth="2"
+										d="M12 4v12m0 0l-4-4m4 4l4-4M21 12v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6"
+									/>
+								</svg>
+								<div className="text-sm text-gray-500">
+									Click to upload Employees Excel file
+								</div>
+								<div className="text-xs text-gray-400">.xlsx, .xls, .xlsm</div>
+							</div>
+						</Label>
 						{selected && (
 							<p className="text-sm text-gray-600 mt-1">
 								Selected: {selected.name}
