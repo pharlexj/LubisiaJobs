@@ -35,8 +35,8 @@ import {
 	panelScores,
 	noticeSubscriptions,
 	notifications,
-  notificationRecipients,
-  votes,
+	notificationRecipients,
+	votes,
 	voteAccounts,
 	budgets,
 	transactions,
@@ -44,6 +44,25 @@ import {
 	rmsDocuments,
 	rmsComments,
 	rmsWorkflowLog,
+	dialRecords,
+	spouses,
+	dependents,
+	statementItems,
+	uploadedFiles,
+	auditLogs,
+	type DialRecord,
+	type InsertDialRecord,
+	type Spouse,
+	type InsertSpouse,
+	type Dependent,
+	type InsertDependent,
+	type StatementItem,
+	type InsertStatementItem,
+	type UploadedFile,
+	type InsertUploadedFile,
+	type AuditLog,
+	type InsertAuditLog,
+	type DialRecordWithRelations,
 	type User,
 	type UpsertUser,
 	type Applicant,
@@ -86,8 +105,8 @@ import {
 	type InsertNotification,
 	type Ethnicity,
 	type AdminDocument,
-  type InsertAdminDocument,
-  type Vote,
+	type InsertAdminDocument,
+	type Vote,
 	type VoteAccount,
 	type Budget,
 	type Transaction,
@@ -360,6 +379,61 @@ export interface IStorage {
 		retirementVoucherNo: string
 	): Promise<any>;
 	getAllEmployees(): Promise<any[]>;
+	// DIAL Records
+	getDialRecord(id: number): Promise<DialRecordWithRelations | undefined>;
+	getDialRecordsByUserId(userId: string): Promise<DialRecordWithRelations[]>;
+	getDialRecordsByStatus(status: string): Promise<DialRecordWithRelations[]>;
+	getAllDialRecords(): Promise<DialRecordWithRelations[]>;
+	createDialRecord(dialRecord: InsertDialRecord): Promise<DialRecord>;
+	updateDialRecord(
+		id: number,
+		dialRecord: Partial<InsertDialRecord>
+	): Promise<DialRecord | undefined>;
+	deleteDialRecord(id: number): Promise<boolean>;
+
+	// Spouses
+	createSpouse(spouse: InsertSpouse): Promise<Spouse>;
+	updateSpouse(
+		id: number,
+		spouse: Partial<InsertSpouse>
+	): Promise<Spouse | undefined>;
+	deleteSpouse(id: number): Promise<boolean>;
+	deleteSpousesByDialRecordId(dialRecordId: number): Promise<boolean>;
+
+	// Dependents
+	createDependent(dependent: InsertDependent): Promise<Dependent>;
+	updateDependent(
+		id: number,
+		dependent: Partial<InsertDependent>
+	): Promise<Dependent | undefined>;
+	deleteDependent(id: number): Promise<boolean>;
+	deleteDependentsByDialRecordId(dialRecordId: number): Promise<boolean>;
+
+	// Statement Items
+	createStatementItem(item: InsertStatementItem): Promise<StatementItem>;
+	updateStatementItem(
+		id: number,
+		item: Partial<InsertStatementItem>
+	): Promise<StatementItem | undefined>;
+	deleteStatementItem(id: number): Promise<boolean>;
+	deleteStatementItemsByDialRecordId(dialRecordId: number): Promise<boolean>;
+
+	// Audit Logs
+	createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+	getAuditLogsByDialRecordId(dialRecordId: number): Promise<AuditLog[]>;
+
+	// Files
+	createUploadedFile(file: InsertUploadedFile): Promise<UploadedFile>;
+	getUploadedFilesByDialRecordId(dialRecordId: number): Promise<UploadedFile[]>;
+	deleteUploadedFile(id: number): Promise<boolean>;
+
+	// Stats
+	getDialStats(userId?: string): Promise<{
+		total: number;
+		draft: number;
+		submitted: number;
+		approved: number;
+	}>;
 }
 export class DatabaseStorage implements IStorage {
 	// User operations
@@ -1523,8 +1597,8 @@ export class DatabaseStorage implements IStorage {
 			personalNumber: string;
 			idNumber: string;
 			designation?: string;
-      dofa?: string;
-      doca?: string;
+			dofa?: string;
+			doca?: string;
 		}>
 	): Promise<number> {
 		if (!rows || rows.length === 0) return 0;
@@ -2985,10 +3059,7 @@ export class DatabaseStorage implements IStorage {
 		return voteAccount;
 	}
 	async createVote(data: any): Promise<Vote> {
-		const [voteAccount] = await db
-			.insert(votes)
-			.values(data)
-			.returning();
+		const [voteAccount] = await db.insert(votes).values(data).returning();
 		return voteAccount;
 	}
 
@@ -3115,19 +3186,19 @@ export class DatabaseStorage implements IStorage {
 
 	async getAllEmployees(): Promise<any[]> {
 		// Return users with accountant or applicant role as "employees"
-    const employeeUsers = await db
-      .select({
-        id: users.id,
-        name: sql<string>`CONCAT(${users.firstName}, ' ', ${users.surname})`,
-        email: users.email,
-        phoneNumber: users.phoneNumber,
-        personalNumber: payroll.personalNumber,
-        jg: employees.jg,
-        role: users.role,
-      })
-      .from(employees)
-      .leftJoin(payroll, eq(payroll.personalNumber, employees.personalNumber))
-      .leftJoin(users, eq(users.nationalId, payroll.idNumber));
+		const employeeUsers = await db
+			.select({
+				id: users.id,
+				name: sql<string>`CONCAT(${users.firstName}, ' ', ${users.surname})`,
+				email: users.email,
+				phoneNumber: users.phoneNumber,
+				personalNumber: payroll.personalNumber,
+				jg: employees.jg,
+				role: users.role,
+			})
+			.from(employees)
+			.leftJoin(payroll, eq(payroll.personalNumber, employees.personalNumber))
+			.leftJoin(users, eq(users.nationalId, payroll.idNumber));
 		return employeeUsers;
 	}
 
@@ -3262,6 +3333,283 @@ export class DatabaseStorage implements IStorage {
 			.from(rmsWorkflowLog)
 			.where(eq(rmsWorkflowLog.documentId, documentId))
 			.orderBy(rmsWorkflowLog.createdAt);
+	}
+	// DIAL Records
+	async getDialRecord(
+		id: number
+	): Promise<DialRecordWithRelations | undefined> {
+		const [record] = await db.query.dialRecords.findMany({
+			where: eq(dialRecords.id, id),
+			with: {
+				user: true,
+				employee: true,
+				spouses: true,
+				dependents: true,
+				statementItems: true,
+				uploadedFiles: true,
+				auditLogs: {
+					orderBy: desc(auditLogs.createdAt),
+				},
+			},
+		});
+
+		if (!record) return undefined;
+
+		// Normalize null related fields to undefined to satisfy DialRecordWithRelations types
+		const normalized: any = {
+			...record,
+			employee: record.employee ?? undefined,
+		};
+
+		return normalized as DialRecordWithRelations;
+	}
+
+	async getDialRecordsByUserId(
+		userId: string
+	): Promise<DialRecordWithRelations[]> {
+		return await db.query.dialRecords.findMany({
+			where: eq(dialRecords.userId, userId),
+			with: {
+				user: true,
+				employee: true,
+				spouses: true,
+				dependents: true,
+				statementItems: true,
+				uploadedFiles: true,
+			},
+			orderBy: desc(dialRecords.createdAt),
+		});
+	}
+
+	async getDialRecordsByStatus(
+		status: string
+	): Promise<DialRecordWithRelations[]> {
+		return await db.query.dialRecords.findMany({
+			where: eq(dialRecords.status, status as any),
+			with: {
+				user: true,
+				employee: true,
+				spouses: true,
+				dependents: true,
+				statementItems: true,
+				uploadedFiles: true,
+			},
+			orderBy: desc(dialRecords.submittedAt),
+		});
+	}
+
+	async getAllDialRecords(): Promise<DialRecordWithRelations[]> {
+		return await db.query.dialRecords.findMany({
+			with: {
+				user: true,
+				employee: true,
+				spouses: true,
+				dependents: true,
+				statementItems: true,
+				uploadedFiles: true,
+			},
+			orderBy: desc(dialRecords.createdAt),
+		});
+	}
+
+	async createDialRecord(
+		insertDialRecord: InsertDialRecord
+	): Promise<DialRecord> {
+		const [record] = await db
+			.insert(dialRecords)
+			.values(insertDialRecord)
+			.returning();
+		return record;
+	}
+
+	async updateDialRecord(
+		id: number,
+		updateData: Partial<InsertDialRecord>
+	): Promise<DialRecord | undefined> {
+		const [record] = await db
+			.update(dialRecords)
+			.set({ ...updateData, updatedAt: new Date() })
+			.where(eq(dialRecords.id, id))
+			.returning();
+		return record || undefined;
+	}
+
+	async deleteDialRecord(id: number): Promise<boolean> {
+		const result = await db.delete(dialRecords).where(eq(dialRecords.id, id));
+		return !!result;
+	}
+
+	// Spouses
+	async createSpouse(insertSpouse: InsertSpouse): Promise<Spouse> {
+		const [spouse] = await db.insert(spouses).values(insertSpouse).returning();
+		return spouse;
+	}
+
+	async updateSpouse(
+		id: number,
+		updateData: Partial<InsertSpouse>
+	): Promise<Spouse | undefined> {
+		const [spouse] = await db
+			.update(spouses)
+			.set(updateData)
+			.where(eq(spouses.id, id))
+			.returning();
+		return spouse || undefined;
+	}
+
+	async deleteSpouse(id: number): Promise<boolean> {
+		const result = await db.delete(spouses).where(eq(spouses.id, id));
+		return !!result;
+	}
+
+	async deleteSpousesByDialRecordId(dialRecordId: number): Promise<boolean> {
+		const result = await db
+			.delete(spouses)
+			.where(eq(spouses.dialRecordId, dialRecordId));
+		return !!result;
+	}
+
+	// Dependents
+	async createDependent(insertDependent: InsertDependent): Promise<Dependent> {
+		const [dependent] = await db
+			.insert(dependents)
+			.values(insertDependent)
+			.returning();
+		return dependent;
+	}
+
+	async updateDependent(
+		id: number,
+		updateData: Partial<InsertDependent>
+	): Promise<Dependent | undefined> {
+		const [dependent] = await db
+			.update(dependents)
+			.set(updateData)
+			.where(eq(dependents.id, id))
+			.returning();
+		return dependent || undefined;
+	}
+
+	async deleteDependent(id: number): Promise<boolean> {
+		const result = await db.delete(dependents).where(eq(dependents.id, id));
+		return !!result;
+	}
+
+	async deleteDependentsByDialRecordId(dialRecordId: number): Promise<boolean> {
+		const result = await db
+			.delete(dependents)
+			.where(eq(dependents.dialRecordId, dialRecordId));
+		return !!result;
+	}
+
+	// Statement Items
+	async createStatementItem(
+		insertItem: InsertStatementItem
+	): Promise<StatementItem> {
+		const [item] = await db
+			.insert(statementItems)
+			.values(insertItem)
+			.returning();
+		return item;
+	}
+
+	async updateStatementItem(
+		id: number,
+		updateData: Partial<InsertStatementItem>
+	): Promise<StatementItem | undefined> {
+		const [item] = await db
+			.update(statementItems)
+			.set(updateData)
+			.where(eq(statementItems.id, id))
+			.returning();
+		return item || undefined;
+	}
+
+	async deleteStatementItem(id: number): Promise<boolean> {
+		const result = await db
+			.delete(statementItems)
+			.where(eq(statementItems.id, id));
+		return !!result;
+	}
+
+	async deleteStatementItemsByDialRecordId(
+		dialRecordId: number
+	): Promise<boolean> {
+		const result = await db
+			.delete(statementItems)
+			.where(eq(statementItems.dialRecordId, dialRecordId));
+		return !!result;
+	}
+
+	// Audit Logs
+	async createAuditLog(insertLog: InsertAuditLog): Promise<AuditLog> {
+		const [log] = await db.insert(auditLogs).values(insertLog).returning();
+		return log;
+	}
+
+	async getAuditLogsByDialRecordId(dialRecordId: number): Promise<AuditLog[]> {
+		return await db
+			.select()
+			.from(auditLogs)
+			.where(eq(auditLogs.dialRecordId, dialRecordId))
+			.orderBy(desc(auditLogs.createdAt));
+	}
+
+	// Files
+	async createUploadedFile(
+		insertFile: InsertUploadedFile
+	): Promise<UploadedFile> {
+		const [file] = await db
+			.insert(uploadedFiles)
+			.values(insertFile)
+			.returning();
+		return file;
+	}
+
+	async getUploadedFilesByDialRecordId(
+		dialRecordId: number
+	): Promise<UploadedFile[]> {
+		return await db
+			.select()
+			.from(uploadedFiles)
+			.where(eq(uploadedFiles.dialRecordId, dialRecordId));
+	}
+
+	async deleteUploadedFile(id: number): Promise<boolean> {
+		const result = await db
+			.delete(uploadedFiles)
+			.where(eq(uploadedFiles.id, id));
+		return !!result;
+	}
+
+	// Stats
+	async getDialStats(userId?: string): Promise<{
+		total: number;
+		draft: number;
+		submitted: number;
+		approved: number;
+	}> {
+		let records: DialRecord[];
+
+		if (userId) {
+			records = await db
+				.select()
+				.from(dialRecords)
+				.where(eq(dialRecords.userId, userId));
+		} else {
+			records = await db.select().from(dialRecords);
+		}
+
+		return {
+			total: records.length,
+			draft: records.filter((r) => r.status === "draft").length,
+			submitted: records.filter(
+				(r) => r.status === "submitted" || r.status === "under_review"
+			).length,
+			approved: records.filter(
+				(r) => r.status === "approved" || r.status === "locked"
+			).length,
+		};
 	}
 }
 export const storage = new DatabaseStorage();

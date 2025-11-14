@@ -4,9 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
-import { ProtectedRoute } from "@/components/ProtectedRoute"; 
-
-
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 // Public pages
 import Home from "@/pages/Home";
@@ -64,280 +62,321 @@ import ChiefOfficer from "@/pages/rms/ChiefOfficer";
 import BoardCommittee from "@/pages/rms/BoardCommittee";
 import HR from "@/pages/rms/HR";
 
+// Dials
+
+import Dashboard from "@/pages/dials/dashboard";
+import DeclarationForm from "@/pages/dials/declaration-form";
+import DeclarationView from "@/pages/dials/declaration-view";
+import ReviewQueue from "@/pages/dials/review-queue";
+
 import { useEffect } from "react";
 import { AuthProvider, useAuthContext } from "@/context/AuthContext";
 import AuthDrawer from "@/components/layout/AuthDrawer";
-
+const dialsUsers = [
+	"applicant",
+	"dialReviewer",
+	"admin",
+	"board",
+	"accountant",
+	"a.i.e Holder",
+	"recordsOfficer",
+	"boardSecretary",
+	"boardChair",
+	"chiefOfficer",
+	"boardCommittee",
+	"HR",
+];
 function Router() {
-  useEffect(() => {
-    document.title = "County Website";
+	useEffect(() => {
+		document.title = "County Website";
 
-    // Set favicon dynamically from uploads
-    const setFavicon = () => {
-      // Remove any existing favicon links
-      const existingLinks = document.querySelectorAll(
-        'link[rel="icon"], link[rel="shortcut icon"]'
-      );
-      existingLinks.forEach((link) => link.remove());
+		// Set favicon dynamically from uploads
+		const setFavicon = () => {
+			// Remove any existing favicon links
+			const existingLinks = document.querySelectorAll(
+				'link[rel="icon"], link[rel="shortcut icon"]'
+			);
+			existingLinks.forEach((link) => link.remove());
 
-      // Create new favicon link
-      const link = document.createElement("link");
-      link.rel = "icon";
-      link.type = "image/x-icon";
-      link.href = "/uploads/favicon.ico";
+			// Create new favicon link
+			const link = document.createElement("link");
+			link.rel = "icon";
+			link.type = "image/x-icon";
+			link.href = "/uploads/favicon.ico";
 
-      // Add fallback if favicon doesn't exist
-      link.onerror = () => {
-        link.href =
-          'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🏛️</text></svg>';
-      };
+			// Add fallback if favicon doesn't exist
+			link.onerror = () => {
+				link.href =
+					'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🏛️</text></svg>';
+			};
 
-      document.head.appendChild(link);
-    };
+			document.head.appendChild(link);
+		};
 
-    setFavicon();
-  }, []);
+		setFavicon();
+	}, []);
 
-  return (
-    <Switch>
-      {/* Public routes */}
-      <Route path="/" component={Home} />
-      <Route path="/about" component={About} />
-      <Route path="/gallery" component={Gallery} />
-      <Route path="/faqs" component={FAQs} />
-      <Route path="/notices" component={Notices} />
-      <Route path="/jobs" component={Jobs} />
+	return (
+		<Switch>
+			{/* Public routes */}
+			<Route path="/" component={Home} />
+			<Route path="/about" component={About} />
+			<Route path="/gallery" component={Gallery} />
+			<Route path="/faqs" component={FAQs} />
+			<Route path="/notices" component={Notices} />
+			<Route path="/jobs" component={Jobs} />
 
-      {/* Applicant routes */}
-      <ProtectedRoute
-        path="/dashboard"
-        component={ApplicantDashboard}
-        allowedRoles={["applicant"]}
-      />
-      <ProtectedRoute
-        path="/profile"
-        component={ApplicantProfile}
-        allowedRoles={["applicant"]}
-      />
-      <ProtectedRoute
-        path="/applications"
-        component={ApplicantApplications}
-        allowedRoles={["applicant"]}
-      />
-      <ProtectedRoute
-        path="/documents"
-        component={ApplicantDocuments}
-        allowedRoles={["applicant"]}
-      />
+			{/* Applicant routes */}
+			<ProtectedRoute
+				path="/dashboard"
+				component={ApplicantDashboard}
+				allowedRoles={["applicant"]}
+			/>
+			<ProtectedRoute
+				path="/profile"
+				component={ApplicantProfile}
+				allowedRoles={["applicant"]}
+			/>
+			<ProtectedRoute
+				path="/applications"
+				component={ApplicantApplications}
+				allowedRoles={["applicant"]}
+			/>
+			<ProtectedRoute
+				path="/documents"
+				component={ApplicantDocuments}
+				allowedRoles={["applicant"]}
+			/>
 
-      {/* Admin routes */}
-      <ProtectedRoute
-        path="/admin"
-        component={AdminDashboard}
-        allowedRoles={["admin"]}
-      />
-      <ProtectedRoute
-        path="/admin/jobs"
-        component={AdminJobManagement}
-        allowedRoles={["admin"]}
-      />
-      <ProtectedRoute
-        path="/admin/applications"
-        component={AdminApplications}
-        allowedRoles={["admin"]}
-      />
-      <ProtectedRoute
-        path="/admin/reports"
-        component={AdminReports}
-        allowedRoles={["admin"]}
-      />
-      <ProtectedRoute
-        path="/admin/notifications"
-        component={AdminNotifications}
-        allowedRoles={["admin"]}
-      />
-      <ProtectedRoute
-        path="/admin/sms"
-        component={AdminSMSCommunications}
-        allowedRoles={["admin"]}
-      />
-      <ProtectedRoute
-        path="/admin/settings"
-        component={AdminSettings}
-        allowedRoles={["admin"]}
-      />
+			{/* Admin routes */}
+			<ProtectedRoute
+				path="/admin"
+				component={AdminDashboard}
+				allowedRoles={["admin"]}
+			/>
+			<ProtectedRoute
+				path="/admin/jobs"
+				component={AdminJobManagement}
+				allowedRoles={["admin"]}
+			/>
+			<ProtectedRoute
+				path="/admin/applications"
+				component={AdminApplications}
+				allowedRoles={["admin"]}
+			/>
+			<ProtectedRoute
+				path="/admin/reports"
+				component={AdminReports}
+				allowedRoles={["admin"]}
+			/>
+			<ProtectedRoute
+				path="/admin/notifications"
+				component={AdminNotifications}
+				allowedRoles={["admin"]}
+			/>
+			<ProtectedRoute
+				path="/admin/sms"
+				component={AdminSMSCommunications}
+				allowedRoles={["admin"]}
+			/>
+			<ProtectedRoute
+				path="/admin/settings"
+				component={AdminSettings}
+				allowedRoles={["admin"]}
+			/>
 
-      {/* Board routes */}
-      <ProtectedRoute
-        path="/board"
-        component={BoardDashboard}
-        allowedRoles={["board"]}
-      />
-      <ProtectedRoute
-        path="/board/schedule"
-        component={BoardScheduling}
-        allowedRoles={["board"]}
-      />
-      <ProtectedRoute
-        path="/board/shortlisting"
-        component={BoardShortlisting}
-        allowedRoles={["board"]}
-      />
-      <ProtectedRoute
-        path="/board/interviews"
-        component={BoardInterviews}
-        allowedRoles={["board"]}
-      />
-      <ProtectedRoute
-        path="/board/scoring"
-        component={BoardScoring}
-        allowedRoles={["board"]}
-      />
-      <ProtectedRoute
-        path="/board/hiring"
-        component={BoardHiring}
-        allowedRoles={["board"]}
-      />
-      <ProtectedRoute
-        path="/board/reports"
-        component={BoardReports}
-        allowedRoles={["board"]}
-      />
+			{/* Board routes */}
+			<ProtectedRoute
+				path="/board"
+				component={BoardDashboard}
+				allowedRoles={["board"]}
+			/>
+			<ProtectedRoute
+				path="/board/schedule"
+				component={BoardScheduling}
+				allowedRoles={["board"]}
+			/>
+			<ProtectedRoute
+				path="/board/shortlisting"
+				component={BoardShortlisting}
+				allowedRoles={["board"]}
+			/>
+			<ProtectedRoute
+				path="/board/interviews"
+				component={BoardInterviews}
+				allowedRoles={["board"]}
+			/>
+			<ProtectedRoute
+				path="/board/scoring"
+				component={BoardScoring}
+				allowedRoles={["board"]}
+			/>
+			<ProtectedRoute
+				path="/board/hiring"
+				component={BoardHiring}
+				allowedRoles={["board"]}
+			/>
+			<ProtectedRoute
+				path="/board/reports"
+				component={BoardReports}
+				allowedRoles={["board"]}
+			/>
 
-      {/* Accountant routes */}
-      <ProtectedRoute
-        path="/accountant"
-        component={AccountantDashboard}
-        allowedRoles={["accountant"]}
-      />
-      <ProtectedRoute
-        path="/accountant/claims"
-        component={AccountantClaims}
-        allowedRoles={["accountant"]}
-      />
-      <ProtectedRoute
-        path="/accountant/payments"
-        component={AccountantPayments}
-        allowedRoles={["accountant"]}
-      />
-      <ProtectedRoute
-        path="/accountant/mir"
-        component={AccountantMIR}
-        allowedRoles={["accountant"]}
-      />
-      <ProtectedRoute
-        path="/accountant/vote"
-        component={AccountantVote}
-        allowedRoles={["accountant"]}
-      />
-      <ProtectedRoute
-        path="/accountant/budget"
-        component={AccountantBudget}
-        allowedRoles={["accountant"]}
-      />
-      <ProtectedRoute
-        path="/accountant/employees"
-        component={AccountantEmployees}
-        allowedRoles={["accountant"]}
-      />
-      <ProtectedRoute
-        path="/accountant/reports"
-        component={AccountantReports}
-        allowedRoles={["accountant"]}
-      />
-      <ProtectedRoute
-        path="/accountant/charts"
-        component={AccountantCharts}
-        allowedRoles={["accountant"]}
-      />
-      <ProtectedRoute
-        path="/accountant/settings"
-        component={AccountantSettings}
-        allowedRoles={["accountant"]}
-      />
+			{/* Accountant routes */}
+			<ProtectedRoute
+				path="/accountant"
+				component={AccountantDashboard}
+				allowedRoles={["accountant"]}
+			/>
+			<ProtectedRoute
+				path="/accountant/claims"
+				component={AccountantClaims}
+				allowedRoles={["accountant"]}
+			/>
+			<ProtectedRoute
+				path="/accountant/payments"
+				component={AccountantPayments}
+				allowedRoles={["accountant"]}
+			/>
+			<ProtectedRoute
+				path="/accountant/mir"
+				component={AccountantMIR}
+				allowedRoles={["accountant"]}
+			/>
+			<ProtectedRoute
+				path="/accountant/vote"
+				component={AccountantVote}
+				allowedRoles={["accountant"]}
+			/>
+			<ProtectedRoute
+				path="/accountant/budget"
+				component={AccountantBudget}
+				allowedRoles={["accountant"]}
+			/>
+			<ProtectedRoute
+				path="/accountant/employees"
+				component={AccountantEmployees}
+				allowedRoles={["accountant"]}
+			/>
+			<ProtectedRoute
+				path="/accountant/reports"
+				component={AccountantReports}
+				allowedRoles={["accountant"]}
+			/>
+			<ProtectedRoute
+				path="/accountant/charts"
+				component={AccountantCharts}
+				allowedRoles={["accountant"]}
+			/>
+			<ProtectedRoute
+				path="/accountant/settings"
+				component={AccountantSettings}
+				allowedRoles={["accountant"]}
+			/>
 
-      {/* A.I.E Holder routes */}
-      <ProtectedRoute
-        path="/aie"
-        component={AIEDashboard}
-        allowedRoles={["a.i.e Holder"]}
-      />
-      <ProtectedRoute
-        path="/aie/requests"
-        component={AIERequests}
-        allowedRoles={["a.i.e Holder"]}
-      />
-      <ProtectedRoute
-        path="/aie/mir"
-        component={AIEMIRR}
-        allowedRoles={["a.i.e Holder"]}
-      />
+			{/* A.I.E Holder routes */}
+			<ProtectedRoute
+				path="/aie"
+				component={AIEDashboard}
+				allowedRoles={["a.i.e Holder"]}
+			/>
+			<ProtectedRoute
+				path="/aie/requests"
+				component={AIERequests}
+				allowedRoles={["a.i.e Holder"]}
+			/>
+			<ProtectedRoute
+				path="/aie/mir"
+				component={AIEMIRR}
+				allowedRoles={["a.i.e Holder"]}
+			/>
 
-      {/* RMS routes */}
-      <ProtectedRoute
-        path="/rms/records-officer"
-        component={RecordsOfficer}
-        allowedRoles={["recordsOfficer", "admin"]}
-      />
-      <ProtectedRoute
-        path="/rms/board-secretary"
-        component={BoardSecretary}
-        allowedRoles={["boardSecretary", "admin"]}
-      />
-      <ProtectedRoute
-        path="/rms/board-chair"
-        component={BoardChair}
-        allowedRoles={["boardChair", "admin"]}
-      />
-      <ProtectedRoute
-        path="/rms/chief-officer"
-        component={ChiefOfficer}
-        allowedRoles={["chiefOfficer", "admin"]}
-      />
-      <ProtectedRoute
-        path="/rms/board-committee"
-        component={BoardCommittee}
-        allowedRoles={["boardCommittee", "admin"]}
-      />
-      <ProtectedRoute
-        path="/rms/hr"
-        component={HR}
-        allowedRoles={["HR", "admin"]}
-      />
+			{/* RMS routes */}
+			<ProtectedRoute
+				path="/rms/records-officer"
+				component={RecordsOfficer}
+				allowedRoles={["recordsOfficer", "admin"]}
+			/>
+			<ProtectedRoute
+				path="/rms/board-secretary"
+				component={BoardSecretary}
+				allowedRoles={["boardSecretary", "admin"]}
+			/>
+			<ProtectedRoute
+				path="/rms/board-chair"
+				component={BoardChair}
+				allowedRoles={["boardChair", "admin"]}
+			/>
+			<ProtectedRoute
+				path="/rms/chief-officer"
+				component={ChiefOfficer}
+				allowedRoles={["chiefOfficer", "admin"]}
+			/>
+			<ProtectedRoute
+				path="/rms/board-committee"
+				component={BoardCommittee}
+				allowedRoles={["boardCommittee", "admin"]}
+			/>
+			<ProtectedRoute
+				path="/rms/hr"
+				component={HR}
+				allowedRoles={["HR", "admin"]}
+			/>
 
-      {/* Fallback */}
-      <Route component={NotFound} />
-    </Switch>
-  );
+			{/* Dials routes */}
+			<ProtectedRoute
+				path="/dial/new"
+				component={DeclarationForm}
+				allowedRoles={dialsUsers}
+			/>
+			<ProtectedRoute
+				path="/dial/view"
+				component={DeclarationView}
+				allowedRoles={["boardSecretary"]}
+			/>
+			<ProtectedRoute
+				path="/dial/review"
+				component={ReviewQueue}
+				allowedRoles={["boardSecretary"]}
+			/>
+			<ProtectedRoute
+				path="/dials/dashboard"
+				component={Dashboard}
+				allowedRoles={dialsUsers}
+			/>
+
+			{/* Fallback */}
+			<Route component={NotFound} />
+		</Switch>
+	);
 }
 
 function AuthDrawerWrapper() {
-  const { open, closeAuth, mode, openAuth, handleClick } = useAuthContext();
-  return (
-    <AuthDrawer
-      open={open}
-      onOpenChange={(val) => (val ? null : closeAuth())}
-      mode={mode ?? "login"}
-      onModeChange={(m) => openAuth(m)}
-      handleClick={() => handleClick()}
-    />
-  );
+	const { open, closeAuth, mode, openAuth, handleClick } = useAuthContext();
+	return (
+		<AuthDrawer
+			open={open}
+			onOpenChange={(val) => (val ? null : closeAuth())}
+			mode={mode ?? "login"}
+			onModeChange={(m) => openAuth(m)}
+			handleClick={() => handleClick()}
+		/>
+	);
 }
 
 function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <AuthProvider>
-          {/* ✅ Auth context now wraps everything */}
-          <Router />
-          <AuthDrawerWrapper />
-        </AuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
-  );
+	return (
+		<QueryClientProvider client={queryClient}>
+			<TooltipProvider>
+				<Toaster />
+				<AuthProvider>
+					{/* ✅ Auth context now wraps everything */}
+					<Router />
+					<AuthDrawerWrapper />
+				</AuthProvider>
+			</TooltipProvider>
+		</QueryClientProvider>
+	);
 }
 
 export default App;
-

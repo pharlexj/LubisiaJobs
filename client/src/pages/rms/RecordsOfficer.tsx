@@ -424,7 +424,7 @@ export default function RecordsOfficer() {
 															referenceNumber: e.target.value,
 														}))
 													}
-													placeholder="e.g., TNPSB/2024/001"
+													placeholder="e.g., CPSB/FIN/001/2024"
 													data-testid="input-reference-number"
 												/>
 											</div>
@@ -485,7 +485,7 @@ export default function RecordsOfficer() {
 														<SelectItem value="application">
 															Application
 														</SelectItem>
-														<SelectItem value="proposal">Proposal</SelectItem>
+														<SelectItem value="indents">Indents</SelectItem>
 														<SelectItem value="other">Other</SelectItem>
 													</SelectContent>
 												</Select>

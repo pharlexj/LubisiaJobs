@@ -25,6 +25,10 @@ const NotFound = () => {
       case 'chiefOfficer': return '/rms/chief-officer';
       case 'boardCommittee': return '/rms/board-committee';
       case 'HR': return '/rms/hr';
+      //DIAL roles -> route under /dials/*
+      case 'officer': return '/dials/dashboard';
+      case 'reviewer': return '/dials/review-queue';
+      case 'auditor': return '/dials/audit-queue';
       default: return '/';
     }
   };

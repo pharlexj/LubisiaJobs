@@ -45,7 +45,8 @@ export default function ChiefOfficer() {
 	// Register document state (copied from RecordsOfficer)
 	const [documentFile, setDocumentFile] = useState<File | null>(null);
 	const [documentForm, setDocumentForm] = useState({
-		referenceNumber: "",
+    referenceNumber: "",
+    	theirReferenceNumber: "",
 		subject: "",
 		initiatorDepartment: "",
 		initiatorName: "",
@@ -79,7 +80,8 @@ export default function ChiefOfficer() {
 			queryClient.invalidateQueries({ queryKey: ["/api/rms/stats"] });
 			setShowRegisterDialog(false);
 			setDocumentForm({
-				referenceNumber: "",
+        referenceNumber: "",
+        theirReferenceNumber: "",
 				subject: "",
 				initiatorDepartment: "",
 				initiatorName: "",
@@ -121,9 +123,9 @@ export default function ChiefOfficer() {
 	const relevantDocuments =
 		documents?.filter(
 			(d: any) =>
-				["sent_to_committee", "decision_made", "dispatched", "filed"].includes(
+				["sent_to_records", "received"].includes(
 					d.status
-				) || d.currentHandler === "chiefOfficer"
+				) && d.currentHandler === "chiefOfficer"
 		) || [];
 
 	const sendToRecordsMutation = useMutation({
@@ -280,7 +282,7 @@ export default function ChiefOfficer() {
 														className="border-b hover:bg-gray-50"
 													>
 														<td className="p-3 font-mono text-sm">
-															{doc.referenceNumber}
+															{doc.theirReferenceNumber}
 														</td>
 														<td className="p-3 max-w-xs truncate">
 															{doc.subject}
@@ -296,7 +298,8 @@ export default function ChiefOfficer() {
 																			setDocumentToView({
 																				id: doc.id,
 																				type: doc.documentType,
-																				fileName: doc.referenceNumber + ".pdf",
+																				fileName:
+																					doc.theirReferenceNumber + ".pdf",
 																				filePath: doc.filePath,
 																				mimeType: "application/pdf",
 																				createdAt: doc.createdAt,
@@ -355,11 +358,11 @@ export default function ChiefOfficer() {
 								<Label htmlFor="ref-number">Reference Number *</Label>
 								<Input
 									id="ref-number"
-									value={documentForm.referenceNumber}
+									value={documentForm.theirReferenceNumber}
 									onChange={(e) =>
 										setDocumentForm((prev) => ({
 											...prev,
-											referenceNumber: e.target.value,
+											theirReferenceNumber: e.target.value,
 										}))
 									}
 									placeholder="e.g., TNPSB/2024/001"
@@ -556,7 +559,7 @@ export default function ChiefOfficer() {
 							onClick={handleRegisterDocument}
 							disabled={
 								registerDocumentMutation.isPending ||
-								!documentForm.referenceNumber ||
+								!documentForm.theirReferenceNumber ||
 								!documentForm.subject
 							}
 							className="bg-gradient-to-r from-teal-600 to-teal-700 text-white"
@@ -580,7 +583,8 @@ export default function ChiefOfficer() {
 					<div className="space-y-4">
 						<div className="p-4 bg-teal-50 rounded-lg border border-teal-200">
 							<p className="text-sm text-teal-900">
-								<strong>Document:</strong> {selectedDocument?.referenceNumber}
+								<strong>Document:</strong>{" "}
+								{selectedDocument?.theirReferenceNumber}
 								<br />
 								<strong>Subject:</strong> {selectedDocument?.subject}
 							</p>

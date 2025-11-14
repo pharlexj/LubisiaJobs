@@ -8,7 +8,9 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import multer from "multer";
 import path from "path";
 import bcrypt from "bcrypt";
-import passport from "passport";
+import passport, { authenticate } from "passport";
+import crypto from "crypto";
+import * as fs from "fs";
 import {
 	sendOtp,
 	verifyOtp,
@@ -21,7 +23,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { boardMembers, carouselSlides } from "@shared/schema";
 import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
-import fs from "fs";
+// import fs from "fs";
 import numberToWords from "number-to-words";
 import * as XLSX from "xlsx";
 
@@ -49,7 +51,18 @@ const applicantService = new ApplicantService(storage);
 function generateOtp(): string {
 	return Math.floor(100000 + Math.random() * 900000).toString();
 }
-
+// Helper function to create audit log
+async function createAudit(dialRecordId: number | null, action: string, actorId: string, changes?: any) {
+  await storage.createAuditLog({
+    dialRecordId,
+    action: action as any,
+    actorId,
+    actorName: "System User",
+    changes: changes ? JSON.stringify(changes) : null,
+    ipAddress: null,
+    userAgent: null,
+  });
+}
 // Legacy SMS function for OTP (kept for backward compatibility)
 async function sendSmsOtp(
 	phoneNumber: string,
@@ -5325,18 +5338,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 	// Helper function to check RMS access
 	const hasRmsAccess = (role: string) => {
-		return [
-			"recordsOfficer",
-			"boardSecretary",
-			"chiefOfficer",
-			"boardChair",
-			"boardCommittee",
-			"HR",
-			"admin",
-			"board",
+		return [ "recordsOfficer","boardSecretary","chiefOfficer","boardChair", "boardCommittee","HR", "admin", "board",
 		].includes(role);
 	};
-
 	// Create/Upload new document (Records Officer)
 	app.post(
 		"/api/rms/documents",
@@ -5359,12 +5363,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 					...req.body,
 					filePath: req.file?.path,
 					createdBy: req.user.id,
-					currentHandler: "recordsOfficer",
+					currentHandler: req.user.role === "recordsOfficer" ? "recordsOfficer" : "chiefOfficer",
 					status: "received" as const,
 				};
 
 				const document = await storage.createRmsDocument(documentData);
-
 				// Log the action
 				await storage.createRmsWorkflowLog({
 					documentId: document.id,
@@ -5590,8 +5593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 	);
 
 	// Add comment/remark to document
-	app.post(
-		"/api/rms/documents/:id/comments",
+	app.post("/api/rms/documents/:id/comments",
 		isAuthenticated,
 		async (req: any, res) => {
 			try {
@@ -5740,7 +5742,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 			}
 		}
 	);
-
 	// Get RMS dashboard statistics
 	app.get("/api/rms/stats", isAuthenticated, async (req: any, res) => {
 		try {
@@ -5783,7 +5784,369 @@ export async function registerRoutes(app: Express): Promise<Server> {
 			res.status(500).json({ message: "Failed to fetch statistics" });
 		}
 	});
+// Get DIAL stats
+  app.get("/api/dial/stats",isAuthenticated, async (req: any, res) => {
+	try {
+	  const userId = req.query.userId as string | undefined;
+	  const stats = await storage.getDialStats(userId);
+	  res.json(stats);
+	} catch (error) {
+	  console.error("Error fetching stats:", error);
+	  res.status(500).json({ error: "Failed to fetch stats" });
+	}
+  });
 
+  // Get all DIAL records (with optional filtering)
+  app.get("/api/dial", isAuthenticated, async (req: any, res: any) => {
+	try {
+	  const { userId, status } = req.query;
+
+	  let records;
+	  if (userId) {
+		records = await storage.getDialRecordsByUserId(userId as string);
+	  } else if (status) {
+		records = await storage.getDialRecordsByStatus(status as string);
+	  } else {
+		records = await storage.getAllDialRecords();
+	  }
+
+	  res.json(records);
+	} catch (error) {
+	  console.error("Error fetching DIAL records:", error);
+	  res.status(500).json({ error: "Failed to fetch records" });
+	}
+  });
+
+  // Get single DIAL record
+  app.get("/api/dial/:id", isAuthenticated, async (req: any, res: any) => {
+	try {
+	  const id = parseInt(req.params.id);
+	  const record = await storage.getDialRecord(id);
+
+	  if (!record) {
+		return res.status(404).json({ error: "Record not found" });
+	  }
+
+	  res.json(record);
+	} catch (error) {
+	  console.error("Error fetching DIAL record:", error);
+	  res.status(500).json({ error: "Failed to fetch record" });
+	}
+  });
+
+  // Create new DIAL record
+  app.post("/api/dial", isAuthenticated, async (req: any, res: any) => {
+	try {
+	  const { spouses, dependents, statementItems, ...dialData } = req.body;
+
+	  // Default userId for demo (in production, get from auth session)
+	  const userId = dialData.userId || "mock-user-id";
+
+	  // Create the main DIAL record
+	  const record = await storage.createDialRecord({
+		...dialData,
+		userId,
+		status: "draft",
+	  });
+
+	  // Create related records
+	  if (spouses && Array.isArray(spouses)) {
+		for (const spouse of spouses) {
+		  await storage.createSpouse({
+			...spouse,
+			dialRecordId: record.id,
+		  });
+		}
+	  }
+
+	  if (dependents && Array.isArray(dependents)) {
+		for (const dependent of dependents) {
+		  await storage.createDependent({
+			...dependent,
+			dialRecordId: record.id,
+		  });
+		}
+	  }
+
+	  if (statementItems && Array.isArray(statementItems)) {
+		for (const item of statementItems) {
+		  await storage.createStatementItem({
+			...item,
+			dialRecordId: record.id,
+		  });
+		}
+	  }
+
+	  // Create audit log
+	  await createAudit(record.id, "created", userId);
+
+	  // Fetch the complete record with relations
+	  const completeRecord = await storage.getDialRecord(record.id);
+	  res.status(201).json(completeRecord);
+	} catch (error) {
+	  console.error("Error creating DIAL record:", error);
+	  res.status(500).json({ error: "Failed to create record" });
+	}
+  });
+
+  // Update DIAL record
+  app.patch("/api/dial/:id", isAuthenticated, async (req: any, res: any) => {
+	try {
+	  const id = parseInt(req.params.id);
+	  const { spouses, dependents, statementItems, ...dialData } = req.body;
+
+	  // Default userId for demo
+	  const userId = dialData.userId || "mock-user-id";
+
+	  // Update the main DIAL record
+	  const record = await storage.updateDialRecord(id, dialData);
+
+	  if (!record) {
+		return res.status(404).json({ error: "Record not found" });
+	  }
+
+	  // Update spouses - delete all and recreate
+	  if (spouses && Array.isArray(spouses)) {
+		await storage.deleteSpousesByDialRecordId(id);
+		for (const spouse of spouses) {
+		  await storage.createSpouse({
+			...spouse,
+			dialRecordId: id,
+		  });
+		}
+	  }
+
+	  // Update dependents - delete all and recreate
+	  if (dependents && Array.isArray(dependents)) {
+		await storage.deleteDependentsByDialRecordId(id);
+		for (const dependent of dependents) {
+		  await storage.createDependent({
+			...dependent,
+			dialRecordId: id,
+		  });
+		}
+	  }
+
+	  // Update statement items - delete all and recreate
+	  if (statementItems && Array.isArray(statementItems)) {
+		await storage.deleteStatementItemsByDialRecordId(id);
+		for (const item of statementItems) {
+		  await storage.createStatementItem({
+			...item,
+			dialRecordId: id,
+		  });
+		}
+	  }
+
+	  // Create audit log
+	  await createAudit(id, "updated", userId);
+
+	  // Fetch the complete record with relations
+	  const completeRecord = await storage.getDialRecord(id);
+	  res.json(completeRecord);
+	} catch (error) {
+	  console.error("Error updating DIAL record:", error);
+	  res.status(500).json({ error: "Failed to update record" });
+	}
+  });
+
+  // Submit DIAL record for review
+  app.post("/api/dial/:id/submit", isAuthenticated, async (req: any, res: any) => {
+	try {
+	  const id = parseInt(req.params.id);
+	  const userId = "mock-user-id"; // In production, get from auth session
+
+	  // Only set properties that exist on the update type
+	  const record = await storage.updateDialRecord(id, {
+		status: "submitted",
+	  });
+
+	  if (!record) {
+		return res.status(404).json({ error: "Record not found" });
+	  }
+
+	  // Create audit log
+	  await createAudit(id, "submitted", userId);
+
+	  const completeRecord = await storage.getDialRecord(id);
+	  res.json(completeRecord);
+	} catch (error) {
+	  console.error("Error submitting DIAL record:", error);
+	  res.status(500).json({ error: "Failed to submit record" });
+	}
+  });
+
+  // Approve DIAL record
+  app.post("/api/dial/:id/approve", isAuthenticated, async (req: any, res: any) => {
+	try {
+	  const id = parseInt(req.params.id);
+	  const userId = "mock-user-id"; // In production, get from auth session
+	  const { comments } = req.body;
+
+	  // Generate acknowledgment number
+	  const acknowledgmentNumber = `ACK-${Date.now()}-${id}`;
+
+	  const updates: any = {
+		status: "locked",
+		approvedAt: new Date(),
+		approvedBy: userId,
+		lockedAt: new Date(),
+		acknowledgmentNumber,
+	  };
+	  const record = await storage.updateDialRecord(id, updates);
+
+	  if (!record) {
+		return res.status(404).json({ error: "Record not found" });
+	  }
+
+	  // Create audit log
+	  await createAudit(id, "approved", userId, { comments });
+
+	  const completeRecord = await storage.getDialRecord(id);
+	  res.json(completeRecord);
+	} catch (error) {
+	  console.error("Error approving DIAL record:", error);
+	  res.status(500).json({ error: "Failed to approve record" });
+	}
+  });
+
+  // Reject DIAL record (request changes)
+  app.post("/api/dial/:id/reject", isAuthenticated, async (req: any, res: any) => {
+	try {
+	  const id = parseInt(req.params.id);
+	  const userId = "mock-user-id"; // In production, get from auth session
+	  const { comments } = req.body;
+
+	  const record = await storage.updateDialRecord(id, {
+		status: "draft",
+	  });
+
+	  if (!record) {
+		return res.status(404).json({ error: "Record not found" });
+	  }
+
+	  // Create audit log
+	  await createAudit(id, "rejected", userId, { comments });
+
+	  const completeRecord = await storage.getDialRecord(id);
+	  res.json(completeRecord);
+	} catch (error) {
+	  console.error("Error rejecting DIAL record:", error);
+	  res.status(500).json({ error: "Failed to reject record" });
+	}
+  });
+
+  // Get audit logs for a DIAL record
+  app.get("/api/dial/:id/audit", isAuthenticated, async (req: any, res: any) => {
+	try {
+	  const id = parseInt(req.params.id);
+	  const logs = await storage.getAuditLogsByDialRecordId(id);
+	  res.json(logs);
+	} catch (error) {
+	  console.error("Error fetching audit logs:", error);
+	  res.status(500).json({ error: "Failed to fetch audit logs" });
+	}
+  });
+
+  // Upload files for a DIAL record
+  app.post("/api/dial/:id/files", isAuthenticated, upload.single("file"), async (req: any, res: any) => {
+	try {
+	  const id = parseInt(req.params.id);
+	  const userId = "mock-user-id"; // In production, get from auth session
+
+	  if (!req.file) {
+			return res.status(400).json({ error: "No file uploaded" });
+		  }
+	
+		  // Calculate file hash
+		  const fileBuffer = await fs.promises.readFile(req.file.path);
+		  const hash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
+	
+		  const uploadedFile = await storage.createUploadedFile({
+			dialRecordId: id,
+			fileName: req.file.originalname,
+			fileType: req.file.mimetype,
+			fileSize: req.file.size,
+			filePath: req.file.path,
+			fileHash: hash,
+			uploadedBy: userId,
+		  });
+	
+		  res.status(201).json(uploadedFile);
+		} catch (error) {
+	  console.error("Error uploading file:", error);
+	  res.status(500).json({ error: "Failed to upload file" });
+	}
+  });
+
+  // Get files for a DIAL record
+  app.get("/api/dial/:id/files",isAuthenticated, async (req: any, res: any) => {
+	try {
+	  const id = parseInt(req.params.id);
+	  const files = await storage.getUploadedFilesByDialRecordId(id);
+	  res.json(files);
+	} catch (error) {
+	  console.error("Error fetching files:", error);
+	  res.status(500).json({ error: "Failed to fetch files" });
+	}
+  });
+
+  // Download file
+  app.get("/api/dial/:id/files/:fileId", isAuthenticated, async (req: any, res: any) => {
+	try {
+	  const fileId = parseInt(req.params.fileId);
+	  const files = await storage.getUploadedFilesByDialRecordId(parseInt(req.params.id));
+	  const file = files.find(f => f.id === fileId);
+
+	  if (!file) {
+		return res.status(404).json({ error: "File not found" });
+	  }
+
+	  res.download(file.filePath, file.fileName);
+	} catch (error) {
+	  console.error("Error downloading file:", error);
+	  res.status(500).json({ error: "Failed to download file" });
+	}
+  });
+
+  // Generate PDF (placeholder - would use a proper PDF library in production)
+  app.get("/api/dial/:id/pdf", isAuthenticated, async (req: any, res: any) => {
+	try {
+	  const id = parseInt(req.params.id);
+	  const record = await storage.getDialRecord(id);
+
+	  if (!record) {
+		return res.status(404).json({ error: "Record not found" });
+	  }
+
+	  // Create audit log
+	  const userId = "mock-user-id";
+	  await createAudit(id, "printed", userId);
+
+	  // In production, this would generate a proper PDF using a library like PDFKit or Puppeteer
+	  // For now, we'll return a simple text response
+	  res.setHeader("Content-Type", "application/pdf");
+	  res.setHeader("Content-Disposition", `attachment; filename="declaration-${id}.pdf"`);
+	  
+	  const pdfContent = `
+DECLARATION OF INCOME, ASSETS & LIABILITIES
+
+Officer: ${record.user?.firstName} ${record.user?.surname}
+Statement Date: ${record.statementDate}
+Period: ${record.periodStart} to ${record.periodEnd}
+
+Status: ${record.status}
+Acknowledgment Number: ${record.acknowledgmentNumber || "N/A"}
+
+This is a placeholder PDF. In production, this would be a properly formatted PDF document.
+	  `;
+
+	  res.send(Buffer.from(pdfContent));
+	} catch (error) {
+	  console.error("Error generating PDF:", error);
+	  res.status(500).json({ error: "Failed to generate PDF" });
+	}
+  });
 	const httpServer = createServer(app);
 	return httpServer;
 }
